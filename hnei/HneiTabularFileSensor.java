@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.wattdepot.client.OverwriteAttemptedException;
 import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
@@ -129,14 +128,10 @@ public class HneiTabularFileSensor {
 		// Grab data from CSV file.
 		HneiTabularFileSensor inputClient = null;
 		WattDepotClient client = new WattDepotClient(serverUri, username, password);
+		List<Source> sources = null;
 
 		try {
-			List<Source> sources = null;
-			try {
-				sources = client.getSources();
-			} catch (Exception e) {
-				System.err.println(e.toString());
-			}
+			sources = client.getSources();
 
 			String source = null;
 			String[] line = null;
@@ -146,26 +141,28 @@ public class HneiTabularFileSensor {
 				source = line[0];
 
 				inputClient = new HneiTabularFileSensor(filename, serverUri, source, username, password, true);
-				try {
-					inputClient.process(client, new Source(source, username, true), inputClient.parser.parseRow(line), sources);
-				} catch (RowParseException e) {
-					System.err.println(e.toString());
-				}
+				inputClient.process(client, new Source(source, username, true), inputClient.parser.parseRow(line), sources);
 			}
 		}
 		catch (IOException e) {
 			System.err.println("There was a problem reading in the input file:\n" + e.toString() + "\n\nExiting...");
 			System.exit(1);
 		}
+		catch (Exception e) {
+		    System.err.println(e.toString());
+		}
 
 		// Print list of sources.
 		try {
-			for (Source src : client.getSources()) {
+		    sources = client.getSources();
+			for (Source src : sources) {
 				System.out.println(src.toString());	
 			}
 		} catch (Exception e) {
 			System.err.println(e.toString());
 		}
+
+		System.out.println(sources.size() + " sources are on the server.");
 	}
 
 }
