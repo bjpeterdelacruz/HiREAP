@@ -58,13 +58,13 @@ public class HneiCsvRowParser extends RowParser {
 		// Sample row: (comma-delimited)
 		// 126580270205 , 10/8/2009 9:48:35 PM , 2144948 , 2 , 215 , 13248 , 13248 , 1/13/2011 8:09:35 AM , -152
 
-		if (col.length != 9 || col[5].equals("No Reading") || col[6].equals("No Reading")) {
-			if (col.length != 9) {
-				System.err.println("Row not in specified format. Skipping source...");
-			}
-			else {
-				System.err.println("No reading for source: " + col[0].toString());
-			}
+		if (col.length != 9) {
+		    System.err.println("Row not in specified format. Skipping source...");
+		    return null;
+		}
+
+		if (col[5].equals("No Reading") || col[6].equals("No Reading")) {
+			System.err.println("No reading for source: " + col[0].toString());
 			return null;
 		}
 
