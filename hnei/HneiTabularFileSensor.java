@@ -63,7 +63,7 @@ public class HneiTabularFileSensor {
 	    this.username   = username;
 	    this.password   = password;
 	    this.skipFirstRow = skipFirstRow;
-		this.parser = new HneiCsvRowParser("HneiTabularFileSensor", this.serverUri, this.sourceName);
+		this.parser = new HneiCsvRowParser(this.toolName, this.serverUri, this.sourceName);
 	}
 
     /**
