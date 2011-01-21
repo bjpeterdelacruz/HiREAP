@@ -15,7 +15,7 @@
 
     <ivy:retrieve organisation="net.sourceforge.opencsv"
                   module="opencsv"
-                  revision="${opencsv.version}"
+                  revision="1.8"
                   pattern="${lib.dir}/opencsv/[artifact].[ext]"
                   sync="false"
                   inline="true"
@@ -27,7 +27,7 @@
       <fileset dir="${lib.dir}/opencsv">
         <include name="*.jar" />
       </fileset>
-    </path>  	
+    </path>
 
     <ivy:retrieve organisation="org.wattdepot" module="wattdepot" revision="${wattdepot.version}" pattern="${lib.dir}/wattdepot/[artifact].[ext]" sync="true" inline="true" conf="default" log="download-only" transitive="true" type="jar,javadoc" />
     <path id="wattdepot.path">
@@ -52,6 +52,7 @@
   <path id="compile.classpath">
     <path refid="junit.path" />
     <path refid="wattdepot.path" />
+  	<path refid="opencsv.path" />
   </path>
 
 

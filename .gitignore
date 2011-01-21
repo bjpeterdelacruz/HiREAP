@@ -1,8 +1,6 @@
-.DS_Store
-*.csv
 bin/*
 build/*
 lib/*
+.DS_Store
+*.csv
 Thumbs.db
-.classpath
-.project
