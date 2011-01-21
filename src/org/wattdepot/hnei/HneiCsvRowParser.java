@@ -3,6 +3,8 @@ package org.wattdepot.hnei;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.resource.property.jaxb.Properties;
@@ -18,6 +20,9 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class HneiCsvRowParser extends RowParser {
 
+  /** Log file for the HneiTabularFileSensor application. */
+  private Logger log;
+
   /** Formats dates that are in the format MM/DD/YYYY hh/mm/ss (A.M.|P.M.). */
   private SimpleDateFormat formatDateTime;
 
@@ -30,11 +35,13 @@ public class HneiCsvRowParser extends RowParser {
    * @param toolName Name of the program.
    * @param serverUri URI of WattDepot server.
    * @param sourceName Source that is described by the sensor data.
+   * @param log Log file, created in the HneiTabularFileSensor class.
    */
-  public HneiCsvRowParser(String toolName, String serverUri, String sourceName) {
+  public HneiCsvRowParser(String toolName, String serverUri, String sourceName, Logger log) {
     super(toolName, serverUri, sourceName);
     this.formatDateTime = new SimpleDateFormat("hh/MM/yyyy hh:mm:ss a", Locale.US);
     this.formatDate = new SimpleDateFormat("hh/MM/yyyy", Locale.US);
+    this.log = log;
   }
 
   /**
@@ -46,7 +53,7 @@ public class HneiCsvRowParser extends RowParser {
   @Override
   public SensorData parseRow(String[] col) {
     if (col == null) {
-      System.err.println("No input row specified.");
+      this.log.log(Level.WARNING, "No input row specified.");
       return null;
     }
 
@@ -57,12 +64,11 @@ public class HneiCsvRowParser extends RowParser {
     // 1/13/2011 8:09:35 AM , -152
 
     if (col.length != 9) {
-      System.err.println("Row not in specified format. Skipping source...");
+      this.log.log(Level.WARNING, "Row not in specified format. Skipping entry...");
       return null;
     }
 
     if (col[5].equals("No Reading") || col[6].equals("No Reading")) {
-      System.err.println("No reading for source: " + col[0]);
       return null;
     }
 
@@ -78,7 +84,7 @@ public class HneiCsvRowParser extends RowParser {
         installDate = formatDate.parse(col[1]);
       }
       catch (java.text.ParseException pe) {
-        System.err.println("Bad timestamp found in input file: " + col[1]);
+        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[1]);
         return null;
       }
     }
@@ -100,7 +106,7 @@ public class HneiCsvRowParser extends RowParser {
         readingDate = formatDate.parse(col[7]);
       }
       catch (java.text.ParseException pe) {
-        System.err.println("Bad timestamp found in input file: " + col[7]);
+        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[7]);
         return null;
       }
     }

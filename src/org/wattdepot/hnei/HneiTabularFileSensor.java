@@ -3,9 +3,16 @@ package org.wattdepot.hnei;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.List;
+import java.util.Calendar;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import javax.xml.bind.JAXBException;
 import org.wattdepot.client.OverwriteAttemptedException;
 import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
@@ -18,6 +25,12 @@ import au.com.bytecode.opencsv.CSVReader;
  * @author BJ Peter DeLaCruz
  */
 public class HneiTabularFileSensor {
+
+  /** Log file for this application. */
+  private static final Logger log = Logger.getLogger(HneiTabularFileSensor.class.getName());
+
+  /** Output logging information to a text file. */
+  private static FileHandler txtFile;
 
   /** Name of the file to be input. */
   protected String filename;
@@ -43,25 +56,77 @@ public class HneiTabularFileSensor {
   /** The parser used to turn rows into SensorData objects. */
   protected RowParser parser;
 
+  /** Counts number of new sources added to the WattDepot server. */
+  protected int numNewSources;
+
+  /** Counts number of sources that are already on the WattDepot server. */
+  protected int numExistingSources;
+
+  /** Counts all sources that are in the CSV file. */
+  protected int numTotalSources;
+
+  /** Counts number of new data imported. */
+  protected int numNewData;
+
+  /** Counts number of data that already exists on the WattDepot server. */
+  protected int numExistingData;
+
   /**
    * Creates a new HneiTabularFileSensor object.
    * 
    * @param filename File that contains data for sources.
    * @param uri URI for WattDepot server.
-   * @param sourceName Source that is described by the sensor data.
    * @param username Owner of the WattDepot server.
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
    */
-  public HneiTabularFileSensor(String filename, String uri, String sourceName, String username,
-      String password, boolean skipFirstRow) {
+  public HneiTabularFileSensor(String filename, String uri, String username, String password,
+      boolean skipFirstRow) {
     this.filename = filename;
     this.serverUri = uri;
-    this.sourceName = sourceName;
+    this.sourceName = null;
     this.username = username;
     this.password = password;
     this.skipFirstRow = skipFirstRow;
-    this.parser = new HneiCsvRowParser(toolName, this.serverUri, this.sourceName);
+    this.parser = new HneiCsvRowParser(toolName, this.serverUri, null, log);
+    this.numNewSources = 0;
+    this.numExistingSources = 0;
+    this.numTotalSources = 0;
+    this.numNewData = 0;
+    this.numExistingData = 0;
+  }
+
+  /**
+   * Sets the source name.
+   * 
+   * @param sourceName Name of a source.
+   */
+  public void setSourceName(String sourceName) {
+    this.sourceName = sourceName;
+  }
+
+  /**
+   * Sets the parser. Called after setting source name.
+   */
+  public void setParser() {
+    this.parser = new HneiCsvRowParser(toolName, this.serverUri, this.sourceName, log);
+  }
+
+  /**
+   * Sets up the logger and file handler.
+   */
+  public static void setupLogger() {
+    log.setLevel(Level.INFO);
+    try {
+      long timeInMillis = Calendar.getInstance().getTimeInMillis();
+      txtFile = new FileHandler("HneiTabularFileSensorLog-" + timeInMillis + ".txt");
+      txtFile.setFormatter(new SimpleFormatter());
+    }
+    catch (IOException e) {
+      System.err.println("Unable to create file handler for logger.");
+      System.exit(1);
+    }
+    log.addHandler(txtFile);
   }
 
   /**
@@ -71,29 +136,42 @@ public class HneiTabularFileSensor {
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param source Source that is described by the sensor data.
    * @param datum Sensor data for a source.
-   * @param sources List of all sources currently on the WattDepot server.
-   * @return true if source and sensor data were stored successfully on WattDepot server.
+   * @return true if source and/or sensor data were stored successfully on WattDepot server.
    */
-  public boolean process(WattDepotClient client, Source source, SensorData datum,
-      List<Source> sources) {
+  public boolean process(WattDepotClient client, Source source, SensorData datum) {
+    if (datum == null) {
+      log.log(Level.INFO, "No data for source " + source.getName() + ".\n");
+      return false;
+    }
+
     try {
       try {
         client.storeSource(source, false);
+        this.numNewSources++;
       }
       catch (OverwriteAttemptedException e) {
-        System.err.println("Source already exists on server.");
+        this.numExistingSources++;
+        log.log(Level.INFO, "Source " + source.getName() + " already exists on server.\n");
       }
-      catch (Exception e) {
-        System.err.println(e.toString());
-      }
+      this.numTotalSources++;
       client.storeSensorData(datum);
+      this.numNewData++;
     }
     catch (OverwriteAttemptedException e) {
-      System.err.println("Data at " + datum.getTimestamp().toString() + " for " + source.getName()
-          + " already exists on server.");
+      this.numExistingData++;
+      String msg = "Data at " + datum.getTimestamp().toString() + " for " + source.getName();
+      msg += " already exists on server.\n";
+      log.log(Level.INFO, msg);
     }
-    catch (Exception e) {
+    catch (WattDepotClientException e) {
       System.err.println(e.toString());
+      log.log(Level.SEVERE, e.toString());
+      return false;
+    }
+    catch (JAXBException e) {
+      System.err.println(e.toString());
+      log.log(Level.SEVERE, e.toString());
+      return false;
     }
     return true;
   }
@@ -127,48 +205,52 @@ public class HneiTabularFileSensor {
     }
 
     // Grab data from CSV file.
-    HneiTabularFileSensor inputClient = null;
+    HneiTabularFileSensor inputClient =
+        new HneiTabularFileSensor(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
-    List<Source> sources = null;
 
+    setupLogger();
+
+    String source = null;
+    String[] line = null;
     try {
-      sources = client.getSources();
+      SensorData datum = null;
 
-      String source = null;
-      String[] line = null;
+      System.out.println("Reading in CSV file...\n");
       while ((line = reader.readNext()) != null) {
-        // Each line contains a possibly different source, so create a new HneiTabularFileSensor
-        // object each time.
-        line = reader.readNext();
         source = line[0];
-
-        inputClient =
-            new HneiTabularFileSensor(filename, serverUri, source, username, password, true);
-        inputClient.process(client, new Source(source, username, true), inputClient.parser
-            .parseRow(line), sources);
+        inputClient.setSourceName(source);
+        inputClient.setParser();
+        try {
+          datum = inputClient.parser.parseRow(line);
+          inputClient.process(client, new Source(source, username, true), datum);
+        }
+        catch (RowParseException e) {
+          log.log(Level.SEVERE, "There was a problem parsing the entry for source " + source);
+        }
       }
     }
     catch (IOException e) {
-      System.err.println("There was a problem reading in the input file:\n" + e.toString()
-          + "\n\nExiting...");
+      String msg = "There was a problem reading in the input file:\n" + e.toString();
+      msg += "\n\nExiting...";
+      System.err.println(msg);
+      log.log(Level.SEVERE, msg);
       System.exit(1);
-    }
-    catch (Exception e) {
-      System.err.println(e.toString());
     }
 
     // Print list of sources.
-    try {
-      sources = client.getSources();
-      for (Source src : sources) {
-        System.out.println(src.toString());
-      }
-    }
-    catch (Exception e) {
-      System.err.println(e.toString());
-    }
+    /*
+     * try { sources = client.getSources(); for (Source src : sources) {
+     * System.out.println(src.toString()); } } catch (Exception e) {
+     * System.err.println(e.toString()); }
+     */
 
-    System.out.println(sources.size() + " sources are on the server.");
+    System.out.println("Statistics:\n");
+    System.out.println("New Sources: " + inputClient.numNewSources);
+    System.out.println("Existing Sources: " + inputClient.numExistingSources);
+    System.out.println("Total Sources: " + inputClient.numTotalSources);
+    System.out.println("New Data: " + inputClient.numNewData);
+    System.out.println("Existing Data: " + inputClient.numExistingData + "\n");
   }
 
 }
