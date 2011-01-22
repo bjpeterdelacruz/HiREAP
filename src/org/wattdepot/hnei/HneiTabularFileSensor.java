@@ -71,6 +71,15 @@ public class HneiTabularFileSensor {
   /** Counts number of data that already exists on the WattDepot server. */
   protected int numExistingData;
 
+  /** Counts number of entries added to server. */
+  protected int numEntriesProcessed;
+
+  /** Counts number of entries that are invalid, e.g. do not contain any readings. */
+  protected int numInvalidEntries;
+
+  /** Counts total number of entries found in CSV file. */
+  protected int numTotalEntries;
+
   /**
    * Creates a new HneiTabularFileSensor object.
    * 
@@ -94,6 +103,9 @@ public class HneiTabularFileSensor {
     this.numTotalSources = 0;
     this.numNewData = 0;
     this.numExistingData = 0;
+    this.numInvalidEntries = 0;
+    this.numEntriesProcessed = 0;
+    this.numTotalEntries = 0;
   }
 
   /**
@@ -110,6 +122,21 @@ public class HneiTabularFileSensor {
    */
   public void setParser() {
     this.parser = new HneiCsvRowParser(toolName, this.serverUri, this.sourceName, log);
+  }
+
+  /**
+   * Converts the runtime in milliseconds to the string format hh:mm:ss.
+   * 
+   * @param startTime Start time of a run.
+   * @param endTime End time of a run.
+   * @return Time in string format hh:mm:ss.
+   */
+  public static String getRuntime(long startTime, long endTime) {
+    long milliseconds = endTime - startTime;
+    long hours = milliseconds / (1000 * 60 * 60);
+    long minutes = (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
+    long seconds = ((milliseconds % (1000 * 60 * 60)) % (1000 * 60)) / 1000;
+    return String.format("%02d:%02d:%02d", hours, minutes, seconds);
   }
 
   /**
@@ -136,14 +163,9 @@ public class HneiTabularFileSensor {
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param source Source that is described by the sensor data.
    * @param datum Sensor data for a source.
-   * @return true if source and/or sensor data were stored successfully on WattDepot server.
+   * @return True if source and/or sensor data were stored successfully on WattDepot server.
    */
   public boolean process(WattDepotClient client, Source source, SensorData datum) {
-    if (datum == null) {
-      log.log(Level.INFO, "No data for source " + source.getName() + ".\n");
-      return false;
-    }
-
     try {
       try {
         client.storeSource(source, false);
@@ -174,6 +196,42 @@ public class HneiTabularFileSensor {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Prints results of parsing CSV file to standard output and log file.
+   * 
+   * @param inputClient Contains statistics to print.
+   * @param startTime Start time of run.
+   * @param endTime End time of run.
+   */
+  public static void printStats(HneiTabularFileSensor inputClient, long startTime, long endTime) {
+    String msg = "\n\n==================================================\n";
+    msg += "Statistics\n";
+    msg += "--------------------------------------------------\n";
+    msg += "Filename                      : " + inputClient.filename;
+    msg += "\n\nEntries Processed             : " + inputClient.numEntriesProcessed + "\n";
+    msg += "Invalid Entries               : " + inputClient.numInvalidEntries + "\n";
+    msg += "Percentage of Invalid Entries : ";
+    double percentage =
+        ((double) inputClient.numInvalidEntries / (double) inputClient.numTotalEntries) * 100.0;
+    msg += String.format("%.2f", percentage);
+    msg += "%\n";
+    msg += "Total Number of Entries       : " + inputClient.numTotalEntries;
+    msg += "\n\nNew Sources                   : " + inputClient.numNewSources + "\n";
+    msg += "Existing Sources              : " + inputClient.numExistingSources + "\n";
+    msg += "Total Number of Sources       : " + inputClient.numTotalSources;
+    msg += "\n\nNew Data                      : " + inputClient.numNewData + "\n";
+    msg += "Existing Data                 : " + inputClient.numExistingData + "\n";
+    msg +=
+        "Total Number of Data Imported : " + (inputClient.numNewData + inputClient.numExistingData);
+    msg += "\n\nTotal Runtime                 : " + getRuntime(startTime, endTime) + "\n\n";
+    if ((endTime - startTime) != 0) {
+      long numSourcesPerSecond = inputClient.numTotalSources / ((endTime - startTime) / 1000);
+      msg += numSourcesPerSecond + " sources processed per second.\n";
+    }
+    log.log(Level.INFO, msg);
+    System.out.print(msg);
   }
 
   /**
@@ -211,24 +269,44 @@ public class HneiTabularFileSensor {
 
     setupLogger();
 
-    String source = null;
-    String[] line = null;
+    long startTime = 0;
+    long endTime = 0;
     try {
+      boolean isImported = false;
+      String source = null;
+      String[] line = null;
       SensorData datum = null;
 
       System.out.println("Reading in CSV file...\n");
+      startTime = Calendar.getInstance().getTimeInMillis();
+      // for (int i = 0; i < 1000; i++) {
+        // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
         try {
           datum = inputClient.parser.parseRow(line);
-          inputClient.process(client, new Source(source, username, true), datum);
+          if (datum == null) {
+            inputClient.numInvalidEntries++;
+          }
+          else {
+            isImported = inputClient.process(client, new Source(source, username, true), datum);
+            if (isImported) {
+              inputClient.numEntriesProcessed++;
+            }
+            else {
+              inputClient.numInvalidEntries++;
+            }
+          }
         }
         catch (RowParseException e) {
           log.log(Level.SEVERE, "There was a problem parsing the entry for source " + source);
+          inputClient.numInvalidEntries++;
         }
+        inputClient.numTotalEntries++;
       }
+      endTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IOException e) {
       String msg = "There was a problem reading in the input file:\n" + e.toString();
@@ -238,19 +316,8 @@ public class HneiTabularFileSensor {
       System.exit(1);
     }
 
-    // Print list of sources.
-    /*
-     * try { sources = client.getSources(); for (Source src : sources) {
-     * System.out.println(src.toString()); } } catch (Exception e) {
-     * System.err.println(e.toString()); }
-     */
+    printStats(inputClient, startTime, endTime);
 
-    System.out.println("Statistics:\n");
-    System.out.println("New Sources: " + inputClient.numNewSources);
-    System.out.println("Existing Sources: " + inputClient.numExistingSources);
-    System.out.println("Total Sources: " + inputClient.numTotalSources);
-    System.out.println("New Data: " + inputClient.numNewData);
-    System.out.println("Existing Data: " + inputClient.numExistingData + "\n");
   }
 
 }

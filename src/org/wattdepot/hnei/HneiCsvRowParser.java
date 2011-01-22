@@ -53,7 +53,7 @@ public class HneiCsvRowParser extends RowParser {
   @Override
   public SensorData parseRow(String[] col) {
     if (col == null) {
-      this.log.log(Level.WARNING, "No input row specified.");
+      this.log.log(Level.WARNING, "No input row specified.\n");
       return null;
     }
 
@@ -64,11 +64,13 @@ public class HneiCsvRowParser extends RowParser {
     // 1/13/2011 8:09:35 AM , -152
 
     if (col.length != 9) {
-      this.log.log(Level.WARNING, "Row not in specified format. Skipping entry...");
+      this.log.log(Level.WARNING, "Row not in specified format. Skipping entry...\n");
       return null;
     }
 
     if (col[5].equals("No Reading") || col[6].equals("No Reading")) {
+      String msg = "No reading for source " + this.sourceName + ". Skipping entry...\n";
+      this.log.log(Level.INFO, msg);
       return null;
     }
 
@@ -84,7 +86,7 @@ public class HneiCsvRowParser extends RowParser {
         installDate = formatDate.parse(col[1]);
       }
       catch (java.text.ParseException pe) {
-        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[1]);
+        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[1] + "\n");
         return null;
       }
     }
@@ -106,7 +108,7 @@ public class HneiCsvRowParser extends RowParser {
         readingDate = formatDate.parse(col[7]);
       }
       catch (java.text.ParseException pe) {
-        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[7]);
+        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[7] + "\n");
         return null;
       }
     }
