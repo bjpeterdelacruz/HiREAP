@@ -57,6 +57,8 @@ public class HneiCsvRowParser extends RowParser {
       return null;
     }
 
+    NumericValue validateNumber = new NumericValue();
+
     // If some values are missing or no readings were taken, ignore row.
 
     // Sample row: (comma-delimited)
@@ -93,7 +95,13 @@ public class HneiCsvRowParser extends RowParser {
     XMLGregorianCalendar installTimestamp = Tstamp.makeTimestamp(installDate.getTime());
     properties.getProperty().add(new Property("installDate", installTimestamp.toString()));
 
-    properties.getProperty().add(new Property("mtuID", col[2]));
+    if (validateNumber.validateEntry(col[2])) {
+      properties.getProperty().add(new Property("mtuID", col[2]));
+    }
+    else {
+      return null;
+    }
+
     properties.getProperty().add(new Property("port", col[3]));
     properties.getProperty().add(new Property("meterType", col[4]));
     properties.getProperty().add(new Property("rawRead", col[5]));

@@ -279,9 +279,9 @@ public class HneiTabularFileSensor {
 
       System.out.println("Reading in CSV file...\n");
       startTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 1000; i++) {
-        // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 100; i++) {
+        line = reader.readNext();
+      // while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();

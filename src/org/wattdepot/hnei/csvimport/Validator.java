@@ -15,7 +15,7 @@ public interface Validator {
    * @param entry The entry to validate.
    * @return True if entry passes validation, false otherwise.
    */
-  public boolean validateEntry(String entry);
+  public boolean validateEntry(Object entry);
 
   /**
    * Returns a string explaining why validation failed for an entry.
