@@ -7,7 +7,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class ReadingData {
+public class Entry {
 
   /** Source of power consumed. */
   private String sourceName;
@@ -25,7 +25,7 @@ public class ReadingData {
    * @param timestamp Timestamp at which reading took place.
    * @param reading Power consumed by a source.
    */
-  public ReadingData(String sourceName, String reading, XMLGregorianCalendar timestamp) {
+  public Entry(String sourceName, String reading, XMLGregorianCalendar timestamp) {
     this.sourceName = sourceName;
     this.timestamp = timestamp;
     this.reading = reading;

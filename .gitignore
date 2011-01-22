@@ -3,5 +3,5 @@ build/*
 lib/*
 .DS_Store
 *.csv
-*.txt
+*.log
 Thumbs.db

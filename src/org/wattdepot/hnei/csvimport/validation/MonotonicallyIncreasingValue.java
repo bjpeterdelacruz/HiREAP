@@ -52,9 +52,9 @@ public class MonotonicallyIncreasingValue implements Validator {
   @Override
   public boolean validateEntry(Object entry) {
     // Unpack
-    String sourceName = ((ReadingData) entry).getSourceName();
-    int currReading = Integer.parseInt(((ReadingData) entry).getReading());
-    XMLGregorianCalendar currTimestamp = ((ReadingData) entry).getTimestamp();
+    String sourceName = ((Entry) entry).getSourceName();
+    int currReading = Integer.parseInt(((Entry) entry).getReading());
+    XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
     XMLGregorianCalendar prevTimestamp = Tstamp.incrementHours(currTimestamp, -2);
     try {
@@ -116,7 +116,7 @@ public class MonotonicallyIncreasingValue implements Validator {
         e.printStackTrace();
         System.exit(1);
       }
-      ReadingData currentData = new ReadingData("994702074677", "016635", currTimestamp);
+      Entry currentData = new Entry("994702074677", "016635", currTimestamp);
       System.out.println(validator.validateEntry(currentData));
     }
     else {

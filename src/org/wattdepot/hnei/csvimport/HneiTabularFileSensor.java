@@ -146,7 +146,7 @@ public class HneiTabularFileSensor {
     log.setLevel(Level.INFO);
     try {
       long timeInMillis = Calendar.getInstance().getTimeInMillis();
-      txtFile = new FileHandler("HneiTabularFileSensorLog-" + timeInMillis + ".txt");
+      txtFile = new FileHandler("HneiTabularFileSensorLog-" + timeInMillis + ".log");
       txtFile.setFormatter(new SimpleFormatter());
     }
     catch (IOException e) {

@@ -9,11 +9,11 @@
 [ ] The time interval of the run (first entry date and last entry date). (Start time and end time)
 [X] The total elapsed time for the run.
 
-[X] Summary statistics go both places.
+[X] Print summary statistics to standard output and log file.
 [ ] Individual entry feedback is a "verbose" setting.
 
 What is the best possible design relationship between TabularFileSensor and HNEITabularFileSensor so that:
-[ ] they do not produce any replicated code;
+[ ] they do not produce any replicated code
 [ ] they support the next person who comes along and wants a tabular file sensor.
 Work with Robert to create the right structure.
 
