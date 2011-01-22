@@ -1,0 +1,37 @@
+[X] Count of number of new sources.
+[X] Count of number of existing sources.
+[X] Count of new data and pre-existing data.
+[X] Average number of data items imported per second.
+[X] The name of the file that was processed.
+[X] How many entries were processed.
+[X] How many entries were not valid.
+[X] The percentage of invalid entries.
+[ ] The time interval of the run (first entry date and last entry date). (Start time and end time)
+[X] The total elapsed time for the run.
+
+[X] Summary statistics go both places.
+[ ] Individual entry feedback is a "verbose" setting.
+
+What is the best possible design relationship between TabularFileSensor and HNEITabularFileSensor so that:
+[ ] they do not produce any replicated code;
+[ ] they support the next person who comes along and wants a tabular file sensor.
+Work with Robert to create the right structure.
+
+[X] Use Ivy to download opencsv.
+[X] Convert Eclipse build library references to project-relative locations.
+
+Validator
+Please create a flexible, "smart import" facility that will subject each entry record to a set of validation functions, for example:
+[X] Entry is numeric.
+[X] Entry has no missing values.
+[X] Entry is not lower than last entry value.
+[ ] Entry is less than 20kW * time since last entry's value.
+
+Package structure:
+
+[X] org.wattdepot.hnei.csvimport.*
+    [X] Contains all classes to read in the CSV files and send to a server.
+    [X] Validator interface
+      [X] NumericValue implements Validator
+      [X] NoMissingFields implements Validator
+      [X] MonotonicallyIncreasing implements Validator
