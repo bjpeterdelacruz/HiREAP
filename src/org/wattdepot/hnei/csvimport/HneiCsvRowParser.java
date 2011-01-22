@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.datainput.RowParser;
+import org.wattdepot.hnei.csvimport.validation.NumericValue;
 import org.wattdepot.resource.property.jaxb.Properties;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;

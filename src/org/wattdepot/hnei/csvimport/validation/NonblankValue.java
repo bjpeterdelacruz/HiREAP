@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.validation;
 
 /**
  * A Validator that checks to make sure that an entry is non-blank.

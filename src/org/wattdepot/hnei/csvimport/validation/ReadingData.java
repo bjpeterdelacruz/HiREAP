@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.validation;
 
 import javax.xml.datatype.XMLGregorianCalendar;
 

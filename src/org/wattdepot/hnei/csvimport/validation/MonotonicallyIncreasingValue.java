@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.validation;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -60,9 +60,6 @@ public class MonotonicallyIncreasingValue implements Validator {
     try {
       List<SensorData> sensorDatas =
           client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      // for (SensorData data : sensorDatas) {
-      // System.out.println(data.getProperty("reading") + "\t" + data.getTimestamp());
-      // }
       if (sensorDatas.size() == 1
           && sensorDatas.get(0).getTimestamp().toString().equals(currTimestamp.toString())) {
         // No other data exist but the data at the current timestamp, so return.
@@ -73,7 +70,6 @@ public class MonotonicallyIncreasingValue implements Validator {
       this.currentData = client.getSensorData(sourceName, currTimestamp);
       int prevReading = Integer.parseInt(this.previousData.getProperty("reading"));
       if (currReading > prevReading) {
-        // System.out.println(this.previousData.getProperty("reading"));
         return true;
       }
     }

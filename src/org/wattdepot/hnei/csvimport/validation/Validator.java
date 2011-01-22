@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.validation;
 
 /**
  * Classes that implement this interface will validate an entry based on a condition. For example,
