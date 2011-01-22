@@ -1,4 +1,4 @@
-package org.wattdepot.hnei;
+package org.wattdepot.hnei.csvimport;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
