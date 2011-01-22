@@ -1,7 +1,7 @@
 package org.wattdepot.hnei.csvimport;
 
 /**
- * A Validator that checks to make sure that an entry is a valid number.
+ * A Validator that checks to make sure that the value of an entry is a valid number.
  * 
  * @author BJ Peter DeLaCruz
  */
