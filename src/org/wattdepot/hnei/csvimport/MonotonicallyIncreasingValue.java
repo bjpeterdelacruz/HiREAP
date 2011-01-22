@@ -21,8 +21,11 @@ public class MonotonicallyIncreasingValue implements Validator {
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
 
-  /** Error message. */
-  private static final String errorMessage = "";
+  /** Sensor data for a source at a previous timestamp. */
+  private SensorData previousData;
+
+  /** Sensor data for a source at the current timestamp. */
+  private SensorData currentData;
 
   /** Used to make a timestamp in the test program. */
   private SimpleDateFormat formatDateTime;
@@ -48,21 +51,29 @@ public class MonotonicallyIncreasingValue implements Validator {
    */
   @Override
   public boolean validateEntry(Object entry) {
+    // Unpack
     String sourceName = ((ReadingData) entry).getSourceName();
     int currReading = Integer.parseInt(((ReadingData) entry).getReading());
     XMLGregorianCalendar currTimestamp = ((ReadingData) entry).getTimestamp();
+
     XMLGregorianCalendar prevTimestamp = Tstamp.incrementHours(currTimestamp, -2);
     try {
       List<SensorData> sensorDatas =
           client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
+      // for (SensorData data : sensorDatas) {
+      // System.out.println(data.getProperty("reading") + "\t" + data.getTimestamp());
+      // }
       if (sensorDatas.size() == 1
           && sensorDatas.get(0).getTimestamp().toString().equals(currTimestamp.toString())) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
-      SensorData data = sensorDatas.get(0);
-      int prevReading = Integer.parseInt(data.getProperty("reading"));
+
+      this.previousData = sensorDatas.get(sensorDatas.size() - 2);
+      this.currentData = client.getSensorData(sourceName, currTimestamp);
+      int prevReading = Integer.parseInt(this.previousData.getProperty("reading"));
       if (currReading > prevReading) {
+        // System.out.println(this.previousData.getProperty("reading"));
         return true;
       }
     }
@@ -79,6 +90,10 @@ public class MonotonicallyIncreasingValue implements Validator {
    */
   @Override
   public String getErrorMessage() {
+    String errorMessage = "The reading at " + this.previousData.getTimestamp();
+    errorMessage += " (" + this.previousData.getProperty("reading") + ") is greater than or equal ";
+    errorMessage += "to the reading at " + this.currentData.getTimestamp() + " (";
+    errorMessage += this.currentData.getProperty("reading") + ").";
     return errorMessage;
   }
 
