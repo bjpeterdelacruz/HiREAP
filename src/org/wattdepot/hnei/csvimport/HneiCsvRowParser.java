@@ -64,7 +64,7 @@ public class HneiCsvRowParser extends RowParser {
 
     // Sample row: (comma-delimited)
     // 126580270205 , 10/8/2009 9:48:35 PM , 2144948 , 2 , 215 , 13248 , 13248 ,
-    // 1/13/2011 8:09:35 AM , -152
+    ///////////////// 1/13/2011 8:09:35 AM , -152
 
     if (col.length != 9) {
       this.log.log(Level.WARNING, "Row not in specified format. Skipping entry...\n");

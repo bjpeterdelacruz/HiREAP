@@ -60,8 +60,7 @@ public class MonotonicallyIncreasingValue implements Validator {
     try {
       List<SensorData> sensorDatas =
           client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.size() == 1
-          && sensorDatas.get(0).getTimestamp().toString().equals(currTimestamp.toString())) {
+      if (sensorDatas.size() == 1) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }

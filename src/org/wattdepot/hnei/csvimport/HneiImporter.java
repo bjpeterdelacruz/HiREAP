@@ -302,12 +302,13 @@ public class HneiImporter {
             inputClient.numInvalidEntries++;
           }
           else {
-            if (startTimestamp == null) {
-              startTimestamp = datum.getTimestamp();
-            }
             isImported = inputClient.process(client, new Source(source, username, true), datum);
             if (isImported) {
               inputClient.numEntriesProcessed++;
+              if (startTimestamp == null) {
+                startTimestamp = datum.getTimestamp();
+              }
+              endTimestamp = datum.getTimestamp();
             }
             else {
               inputClient.numInvalidEntries++;
@@ -331,9 +332,6 @@ public class HneiImporter {
       System.err.println(msg);
       log.log(Level.SEVERE, msg);
       System.exit(1);
-    }
-    if (datum != null) {
-      endTimestamp = datum.getTimestamp();
     }
 
     printStats(inputClient, startTime, endTime, startTimestamp, endTimestamp);
