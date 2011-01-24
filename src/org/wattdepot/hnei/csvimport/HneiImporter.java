@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import javax.xml.bind.JAXBException;
+import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.OverwriteAttemptedException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
@@ -20,14 +21,14 @@ import au.com.bytecode.opencsv.CSVReader;
 
 /**
  * Reads data from CSV files provided by HNEI (delimited by commas), creates a SensorData object for
- * each line, object for each line, and sends the SensorData objects to a WattDepot server.
+ * each line, and sends the SensorData objects to a WattDepot server.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiTabularFileSensor {
+public class HneiImporter {
 
   /** Log file for this application. */
-  private static final Logger log = Logger.getLogger(HneiTabularFileSensor.class.getName());
+  private static final Logger log = Logger.getLogger(HneiImporter.class.getName());
 
   /** Output logging information to a text file. */
   private static FileHandler txtFile;
@@ -89,7 +90,7 @@ public class HneiTabularFileSensor {
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
    */
-  public HneiTabularFileSensor(String filename, String uri, String username, String password,
+  public HneiImporter(String filename, String uri, String username, String password,
       boolean skipFirstRow) {
     this.filename = filename;
     this.serverUri = uri;
@@ -204,12 +205,17 @@ public class HneiTabularFileSensor {
    * @param inputClient Contains statistics to print.
    * @param startTime Start time of run.
    * @param endTime End time of run.
+   * @param startTimestamp Date of first entry in CSV file.
+   * @param endTimestamp Date of last entry in CSV file.
    */
-  public static void printStats(HneiTabularFileSensor inputClient, long startTime, long endTime) {
+  public static void printStats(HneiImporter inputClient, long startTime, long endTime,
+      XMLGregorianCalendar startTimestamp, XMLGregorianCalendar endTimestamp) {
     String msg = "\n\n==================================================\n";
     msg += "Statistics\n";
     msg += "--------------------------------------------------\n";
     msg += "Filename                      : " + inputClient.filename;
+    msg += "\n\nFirst Entry Date              : " + startTimestamp.toString() + "\n";
+    msg += "Last Entry Date               : " + endTimestamp.toString();
     msg += "\n\nEntries Processed             : " + inputClient.numEntriesProcessed + "\n";
     msg += "Invalid Entries               : " + inputClient.numInvalidEntries + "\n";
     msg += "Percentage of Invalid Entries : ";
@@ -226,9 +232,12 @@ public class HneiTabularFileSensor {
     msg +=
         "Total Number of Data Imported : " + (inputClient.numNewData + inputClient.numExistingData);
     msg += "\n\nTotal Runtime                 : " + getRuntime(startTime, endTime) + "\n\n";
-    if ((endTime - startTime) != 0) {
+    try {
       long numSourcesPerSecond = inputClient.numTotalSources / ((endTime - startTime) / 1000);
       msg += numSourcesPerSecond + " sources processed per second.\n";
+    }
+    catch (ArithmeticException e) {
+      msg += "Number of sources processed per second is immeasurable.";
     }
     log.log(Level.INFO, msg);
     System.out.print(msg);
@@ -263,25 +272,27 @@ public class HneiTabularFileSensor {
     }
 
     // Grab data from CSV file.
-    HneiTabularFileSensor inputClient =
-        new HneiTabularFileSensor(filename, serverUri, username, password, true);
+    HneiImporter inputClient = new HneiImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
 
     setupLogger();
 
     long startTime = 0;
     long endTime = 0;
+    XMLGregorianCalendar startTimestamp = null;
+    XMLGregorianCalendar endTimestamp = null;
+    SensorData datum = null;
     try {
       boolean isImported = false;
       String source = null;
       String[] line = null;
-      SensorData datum = null;
 
       System.out.println("Reading in CSV file...\n");
       startTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 100; i++) {
-        line = reader.readNext();
-      // while ((line = reader.readNext()) != null) {
+      int counter = 0;
+      // for (int i = 0; i < 5; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
@@ -291,6 +302,9 @@ public class HneiTabularFileSensor {
             inputClient.numInvalidEntries++;
           }
           else {
+            if (startTimestamp == null) {
+              startTimestamp = datum.getTimestamp();
+            }
             isImported = inputClient.process(client, new Source(source, username, true), datum);
             if (isImported) {
               inputClient.numEntriesProcessed++;
@@ -305,6 +319,9 @@ public class HneiTabularFileSensor {
           inputClient.numInvalidEntries++;
         }
         inputClient.numTotalEntries++;
+        if ((++counter % 500) == 0) {
+          System.out.println("Processing line " + counter + " in " + inputClient.filename + "...");
+        }
       }
       endTime = Calendar.getInstance().getTimeInMillis();
     }
@@ -315,8 +332,11 @@ public class HneiTabularFileSensor {
       log.log(Level.SEVERE, msg);
       System.exit(1);
     }
+    if (datum != null) {
+      endTimestamp = datum.getTimestamp();
+    }
 
-    printStats(inputClient, startTime, endTime);
+    printStats(inputClient, startTime, endTime, startTimestamp, endTimestamp);
 
   }
 

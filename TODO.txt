@@ -6,7 +6,7 @@
 [X] How many entries were processed.
 [X] How many entries were not valid.
 [X] The percentage of invalid entries.
-[ ] The time interval of the run (first entry date and last entry date). (Start time and end time)
+[X] The time interval of the run (first entry date and last entry date).
 [X] The total elapsed time for the run.
 
 [X] Print summary statistics to standard output and log file.
@@ -26,6 +26,18 @@ Please create a flexible, "smart import" facility that will subject each entry r
 [X] Entry has no missing values.
 [X] Entry is not lower than last entry value.
 [ ] Entry is less than 20kW * time since last entry's value.
+
+[ ] Apply validation to MTU ID, Port, Meter Type, etc. and record errors in log file.
+
+[X] These validation functions may change, and there may be more of them over time, so what you want to do is define a Java interface called
+    "Validator" which has a boolean function called "validate" that accepts an entry and returns true if the entry passes that particular
+    validation function.
+
+    Then your system can implement as many Validator classes as we want, and you just make an instance of each of them, store them in a List,
+    and apply each of them to each entry.
+
+[ ] If any return false, then you print out (or log) the problematic entry along with which validator(s) failed.  I guess there needs to be a
+    getExplanation() method that returns a String for each Validator class so you can describe what went wrong in easily understandable terms.
 
 Package structure:
 
