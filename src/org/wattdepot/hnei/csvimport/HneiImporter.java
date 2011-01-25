@@ -38,7 +38,7 @@ public class HneiImporter {
   private static final Logger log = Logger.getLogger(HneiImporter.class.getName());
 
   /** Output logging information to a text file. */
-  private static FileHandler txtFile;
+  protected FileHandler txtFile;
 
   /** Name of the file to be input. */
   protected String filename;
@@ -151,7 +151,7 @@ public class HneiImporter {
    * @param endTime End time of a run.
    * @return Time in string format hh:mm:ss.
    */
-  public static String getRuntime(long startTime, long endTime) {
+  public String getRuntime(long startTime, long endTime) {
     long milliseconds = endTime - startTime;
     long hours = milliseconds / (1000 * 60 * 60);
     long minutes = (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
@@ -161,8 +161,10 @@ public class HneiImporter {
 
   /**
    * Sets up the logger and file handler.
+   * 
+   * @return True if successful, false otherwise.
    */
-  public static void setupLogger() {
+  public boolean setupLogger() {
     log.setLevel(Level.INFO);
     try {
       long timeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -171,9 +173,10 @@ public class HneiImporter {
     }
     catch (IOException e) {
       System.err.println("Unable to create file handler for logger.");
-      System.exit(1);
+      return false;
     }
     log.addHandler(txtFile);
+    return true;
   }
 
   /**
@@ -221,7 +224,6 @@ public class HneiImporter {
   /**
    * Prints results of parsing CSV file to standard output and log file.
    * 
-   * @param inputClient Contains statistics to print.
    * @param importStartTime Start time of import.
    * @param importEndTime End time of import.
    * @param startTimestamp Date of first entry in CSV file.
@@ -229,49 +231,49 @@ public class HneiImporter {
    * @param validateStartTime Start time of validation.
    * @param validateEndTime End time of validation.
    */
-  public static void printStats(HneiImporter inputClient, long importStartTime, long importEndTime,
+  public void printStats(long importStartTime, long importEndTime,
       XMLGregorianCalendar startTimestamp, XMLGregorianCalendar endTimestamp,
       long validateStartTime, long validateEndTime) {
     String msg = "\n\n==================================================\n";
     msg += "Statistics\n";
     msg += "--------------------------------------------------\n";
-    msg += "Filename                      : " + inputClient.filename;
+    msg += "Filename                      : " + this.filename;
     msg += "\n\nFirst Entry Date              : " + startTimestamp.toString() + "\n";
     msg += "Last Entry Date               : " + endTimestamp.toString();
-    msg += "\n\nEntries Processed             : " + inputClient.numEntriesProcessed + "\n";
-    msg += "Invalid Entries               : " + inputClient.numInvalidEntries + "\n";
+    msg += "\n\nEntries Processed             : " + this.numEntriesProcessed + "\n";
+    msg += "Invalid Entries               : " + this.numInvalidEntries + "\n";
     msg += "Percentage of Invalid Entries : ";
-    double percentage =
-        ((double) inputClient.numInvalidEntries / (double) inputClient.numTotalEntries) * 100.0;
+    double percentage = ((double) this.numInvalidEntries / (double) this.numTotalEntries) * 100.0;
     msg += String.format("%.2f", percentage);
     msg += "%\n";
-    msg += "Total Number of Entries       : " + inputClient.numTotalEntries;
-    msg += "\n\nNew Sources                   : " + inputClient.numNewSources + "\n";
-    msg += "Existing Sources              : " + inputClient.numExistingSources + "\n";
-    msg += "Total Number of Sources       : " + inputClient.numTotalSources;
-    msg += "\n\nNumber of Hourly Data         : " + inputClient.numHourly + "\n";
-    msg += "Number of Daily Data          : " + inputClient.numDaily;
-    msg += "\n\nNew Data                      : " + inputClient.numNewData + "\n";
-    msg += "Existing Data                 : " + inputClient.numExistingData + "\n";
+    msg += "Total Number of Entries       : " + this.numTotalEntries;
+    msg += "\n\nNew Sources                   : " + this.numNewSources + "\n";
+    msg += "Existing Sources              : " + this.numExistingSources + "\n";
+    msg += "Total Number of Sources       : " + this.numTotalSources;
+    msg += "\n\nNumber of Hourly Data         : " + this.numHourly + "\n";
+    msg += "Number of Daily Data          : " + this.numDaily;
+    msg += "\n\nNew Data                      : " + this.numNewData + "\n";
+    msg += "Existing Data                 : " + this.numExistingData + "\n";
+    msg += "Total Number of Data Imported : " + (this.numNewData + this.numExistingData);
     msg +=
-        "Total Number of Data Imported : " + (inputClient.numNewData + inputClient.numExistingData);
+        "\n\nImport Runtime                : " + this.getRuntime(importStartTime, importEndTime)
+            + "\n";
     msg +=
-        "\n\nImport Runtime                : " + getRuntime(importStartTime, importEndTime) + "\n";
+        "Validation Runtime            : " + this.getRuntime(validateStartTime, validateEndTime)
+            + "\n";
     msg +=
-        "Validation Runtime            : " + getRuntime(validateStartTime, validateEndTime) + "\n";
-    msg +=
-        "Total Runtime                 : " + getRuntime(importStartTime, validateEndTime) + "\n\n";
+        "Total Runtime                 : " + this.getRuntime(importStartTime, validateEndTime)
+            + "\n\n";
     try {
-      long numSourcesPerSecond =
-          inputClient.numTotalSources / ((importEndTime - importStartTime) / 1000);
+      long numSourcesPerSecond = this.numTotalSources / ((importEndTime - importStartTime) / 1000);
       msg += "-- " + numSourcesPerSecond + " entries processed per second.\n";
     }
     catch (ArithmeticException e) {
       msg += "-- Number of entries processed per second is immeasurable.\n";
     }
     msg +=
-        "-- There are " + inputClient.numNonmonoIncrVals
-            + " entries with data that are non-monotonically increasing.";
+        "-- Number of entries with data that are not monotonically increasing: "
+            + this.numNonmonoIncrVals;
     log.log(Level.INFO, msg);
     System.out.print(msg);
   }
@@ -307,12 +309,17 @@ public class HneiImporter {
     // Grab data from CSV file.
     HneiImporter inputClient = new HneiImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
-    if (!client.isHealthy() || !client.isAuthenticated()) {
+    if (client.isHealthy() && client.isAuthenticated()) {
+      System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
+    }
+    else {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
 
-    setupLogger();
+    if (!inputClient.setupLogger()) {
+      System.exit(1);
+    }
 
     List<Entry> entries = new ArrayList<Entry>();
     long importStartTime = 0;
@@ -332,7 +339,7 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 600; i++) {
         line = reader.readNext();
         // while ((line = reader.readNext()) != null) {
         source = line[0];
@@ -377,73 +384,60 @@ public class HneiImporter {
       System.exit(1);
     }
 
-    // Validate all entries to see if the values are monotonically increasing.
-    System.out.println("Checking if readings are monotonically increasing...");
+    // Done importing file. Now do some post-processing.
+    System.out.print("Checking if readings are monotonically increasing and ");
+    System.out.println("are either hourly or daily... This may take a while.");
+
     int counter = 1;
+    List<SensorData> data = null;
+
     validateStartTime = Calendar.getInstance().getTimeInMillis();
     try {
       Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
       for (Entry e : entries) {
         datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
+
+        // Check if readings are monotonically increasing.
         if (!monoIncrVal.validateEntry(e)) {
           client.deleteSensorData(e.getSourceName(), e.getTimestamp());
           datum.getProperties().getProperty()
               .remove(new Property("isMonotonicallyIncreasing", Boolean.toString(true)));
           datum.getProperties().getProperty()
               .add(new Property("isMonotonicallyIncreasing", Boolean.toString(false)));
-          client.storeSensorData(datum);
           inputClient.numNonmonoIncrVals++;
+          client.storeSensorData(datum);
         }
-        if (++counter % 500 == 0) {
-          System.out.println("Processing entry " + counter + "...");
-        }
-      }
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    catch (JAXBException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
 
-    // Determine if entries are hourly or daily.
-    System.out.println("Checking if entries are hourly or daily...");
-    counter = 1;
-    try {
-      List<SensorData> data = null;
-      XMLGregorianCalendar prevTimestamp = null;
-      for (Entry e : entries) {
-        prevTimestamp = Tstamp.incrementDays(e.getTimestamp(), -1);
-        data = client.getSensorDatas(e.getSourceName(), prevTimestamp, e.getTimestamp());
-        datum = data.get(data.size() - 1);
-        client.deleteSensorData(e.getSourceName(), e.getTimestamp());
+        // Set data to hourly or daily.
+        Calendar day = Calendar.getInstance();
+        day.set(e.getTimestamp().getYear(), e.getTimestamp().getMonth() - 1, e.getTimestamp()
+            .getDay(), 0, 0, 0);
+        XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
+        XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
+
+        data = client.getSensorDatas(e.getSourceName(), start, end);
         if (data.size() == 1) {
+          datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
+          client.deleteSensorData(e.getSourceName(), e.getTimestamp());
           datum.getProperties().getProperty()
               .remove(new Property("hourly", Boolean.toString(true)));
+          client.storeSensorData(datum);
           inputClient.numDaily++;
         }
         else {
-          SensorData prevDatum = data.get(data.size() - 2);
-          long prevTimeInMillis = prevDatum.getTimestamp().toGregorianCalendar().getTimeInMillis();
-          long currTimeInMillis = datum.getTimestamp().toGregorianCalendar().getTimeInMillis();
-          if ((currTimeInMillis - prevTimeInMillis) < 7200000) { // 2 hours
-            datum.getProperties().getProperty()
-                .remove(new Property("daily", Boolean.toString(true)));
-            inputClient.numHourly++;
+          for (SensorData d : data) {
+            client.deleteSensorData(e.getSourceName(), d.getTimestamp());
+            d.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
+            client.storeSensorData(d);
           }
-          else {
-            datum.getProperties().getProperty()
-                .remove(new Property("hourly", Boolean.toString(true)));
-            inputClient.numDaily++;
-          }
+          inputClient.numHourly++;
         }
-        client.storeSensorData(datum);
+
         if (++counter % 500 == 0) {
           System.out.println("Processing entry " + counter + "...");
         }
       }
+      validateEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
@@ -451,10 +445,10 @@ public class HneiImporter {
     }
     catch (JAXBException e) {
       e.printStackTrace();
+      System.exit(1);
     }
-    validateEndTime = Calendar.getInstance().getTimeInMillis();
 
-    printStats(inputClient, importStartTime, importEndTime, startTimestamp, endTimestamp,
+    inputClient.printStats(importStartTime, importEndTime, startTimestamp, endTimestamp,
         validateStartTime, validateEndTime);
 
   }
