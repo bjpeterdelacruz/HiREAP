@@ -25,7 +25,7 @@ Please create a flexible, "smart import" facility that will subject each entry r
 [X] Entry is numeric.
 [X] Entry has no missing values.
 [X] Entry is not lower than last entry value.
-[ ] Entry is less than 20kW * time since last entry's value.
+[X] Entry is less than 20kW * time since last entry's value.
 
 [ ] Apply validation to MTU ID, Port, Meter Type, etc. and record errors in log file.
 
@@ -46,3 +46,28 @@ Package structure:
       [X] NumericValue implements Validator
       [X] NoMissingFields implements Validator
       [X] MonotonicallyIncreasing implements Validator
+
+HNEIImporter
+   [ ] has the main method.
+   [ ] may need some Logging classes.
+   [ ] Set a property for each source called samplingInterval to be either 'daily' or 'hourly' based upon which it is.
+
+org.wattdepot.hnei.export.*
+   [ ] Contains classes to read data from a server and output data in a format that they like.
+   HNEIExporter
+      [ ] has a main method.
+      [ ] takes arguments:
+          [ ] start day
+          [ ] end day
+          [ ] sampling interval [daily | hourly]
+          [ ] source(s)
+
+org.wattdepot.hnei.analysis.*
+  (Future work)
+
+Google Project Hosting:
+ [ ] Convert to wattdepot-hnei
+ [ ] Import into SVN
+     - Be careful not to import bin, build, or lib directories into SVN.
+
+Next meeting: Friday, Jan 28, 2:00 P.M.
