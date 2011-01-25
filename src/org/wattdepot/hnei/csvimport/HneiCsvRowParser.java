@@ -1,13 +1,17 @@
 package org.wattdepot.hnei.csvimport;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.datainput.RowParser;
+import org.wattdepot.hnei.csvimport.validation.NonblankValue;
 import org.wattdepot.hnei.csvimport.validation.NumericValue;
+import org.wattdepot.hnei.csvimport.validation.Validator;
 import org.wattdepot.resource.property.jaxb.Properties;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -30,6 +34,9 @@ public class HneiCsvRowParser extends RowParser {
   /** Formats dates that are in the format MM/DD/YYYY. */
   private SimpleDateFormat formatDate;
 
+  /** List of validators to verify that entry is valid. */
+  private List<Validator> validators;
+
   /**
    * Creates a new HneiCsvRowParser object.
    * 
@@ -40,9 +47,12 @@ public class HneiCsvRowParser extends RowParser {
    */
   public HneiCsvRowParser(String toolName, String serverUri, String sourceName, Logger log) {
     super(toolName, serverUri, sourceName);
-    this.formatDateTime = new SimpleDateFormat("hh/MM/yyyy hh:mm:ss a", Locale.US);
-    this.formatDate = new SimpleDateFormat("hh/MM/yyyy", Locale.US);
+    this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
+    this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     this.log = log;
+    validators = new ArrayList<Validator>();
+    validators.add(new NumericValue());
+    validators.add(new NonblankValue());
   }
 
   /**
@@ -58,27 +68,40 @@ public class HneiCsvRowParser extends RowParser {
       return null;
     }
 
-    NumericValue validateNumber = new NumericValue();
-
     // If some values are missing or no readings were taken, ignore row.
 
     // Sample row: (comma-delimited)
     // 126580270205 , 10/8/2009 9:48:35 PM , 2144948 , 2 , 215 , 13248 , 13248 ,
-    // 1/13/2011 8:09:35 AM , -152
+    ///////////////// 1/13/2011 8:09:35 AM , -152
 
     if (col.length != 9) {
-      this.log.log(Level.WARNING, "Row not in specified format. Skipping entry...\n");
+      String msg = "Row not in specified format:\n" + rowToString(col);
+      this.log.log(Level.WARNING, msg);
       return null;
     }
 
     if (col[5].equals("No Reading") || col[6].equals("No Reading")) {
-      String msg = "No reading for source " + this.sourceName + ". Skipping entry...\n";
+      String msg = "No reading for source: " + col[0] + "\n" + rowToString(col);
+      System.err.print(msg);
       this.log.log(Level.INFO, msg);
       return null;
     }
 
+    for (int i = 2; i < 9; i++) {
+      // col[7] is a timestamp, so skip it.
+      if (i != 7) {
+        for (Validator v : validators) {
+          if (!v.validateEntry(col[i])) {
+            String msg = "[" + col[i] + "] " + v.getErrorMessage() + "\n" + rowToString(col);
+            System.err.print(msg);
+            this.log.log(Level.WARNING, msg);
+            return null;
+          }
+        }
+      }
+    }
+
     Properties properties = new Properties();
-    // properties.getProperty().add(new Property("account", col[0]));
 
     Date installDate = null;
     try {
@@ -89,20 +112,15 @@ public class HneiCsvRowParser extends RowParser {
         installDate = formatDate.parse(col[1]);
       }
       catch (java.text.ParseException pe) {
-        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[1] + "\n");
+        String msg = "Bad timestamp found in input file: " + col[1] + "\n" + rowToString(col);
+        this.log.log(Level.WARNING, msg);
         return null;
       }
     }
     XMLGregorianCalendar installTimestamp = Tstamp.makeTimestamp(installDate.getTime());
     properties.getProperty().add(new Property("installDate", installTimestamp.toString()));
 
-    if (validateNumber.validateEntry(col[2])) {
-      properties.getProperty().add(new Property("mtuID", col[2]));
-    }
-    else {
-      return null;
-    }
-
+    properties.getProperty().add(new Property("mtuID", col[2]));
     properties.getProperty().add(new Property("port", col[3]));
     properties.getProperty().add(new Property("meterType", col[4]));
     properties.getProperty().add(new Property("rawRead", col[5]));
@@ -117,15 +135,37 @@ public class HneiCsvRowParser extends RowParser {
         readingDate = formatDate.parse(col[7]);
       }
       catch (java.text.ParseException pe) {
-        this.log.log(Level.WARNING, "Bad timestamp found in input file: " + col[7] + "\n");
+        String msg = "Bad timestamp found in input file: " + col[7] + "\n" + rowToString(col);
+        this.log.log(Level.WARNING, msg);
         return null;
       }
     }
     properties.getProperty().add(new Property("rssi", col[8]));
 
+    // Update the following properties in the HneiImporter class.
+    properties.getProperty().add(new Property("isMonotonicallyIncreasing", "true"));
+    properties.getProperty().add(new Property("hourly", "true"));
+    properties.getProperty().add(new Property("daily", "true"));
+
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
+
     return new SensorData(timestamp, this.toolName, Source.sourceToUri(this.sourceName,
         this.serverUri), properties);
   }
 
+  /**
+   * Converts a row of entries to one long String.
+   * 
+   * @param col Array of entries.
+   * @return Row from CSV file that did not pass validation.
+   */
+  private String rowToString(String[] col) {
+    String temp = null;
+    StringBuffer buffer = new StringBuffer();
+    for (String s : col) {
+      temp = s + " ";
+      buffer.append(temp);
+    }
+    return buffer.toString() + "\n";
+  }
 }
