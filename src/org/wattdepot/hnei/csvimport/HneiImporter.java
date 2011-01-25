@@ -339,9 +339,9 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 600; i++) {
-        line = reader.readNext();
-        // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 600; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
@@ -408,7 +408,7 @@ public class HneiImporter {
           client.storeSensorData(datum);
         }
 
-        // Set data to hourly or daily.
+        // Classify data as either hourly or daily.
         Calendar day = Calendar.getInstance();
         day.set(e.getTimestamp().getYear(), e.getTimestamp().getMonth() - 1, e.getTimestamp()
             .getDay(), 0, 0, 0);
@@ -416,20 +416,18 @@ public class HneiImporter {
         XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
 
         data = client.getSensorDatas(e.getSourceName(), start, end);
+
+        datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
+        client.deleteSensorData(e.getSourceName(), e.getTimestamp());
         if (data.size() == 1) {
-          datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
-          client.deleteSensorData(e.getSourceName(), e.getTimestamp());
           datum.getProperties().getProperty()
               .remove(new Property("hourly", Boolean.toString(true)));
           client.storeSensorData(datum);
           inputClient.numDaily++;
         }
         else {
-          for (SensorData d : data) {
-            client.deleteSensorData(e.getSourceName(), d.getTimestamp());
-            d.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
-            client.storeSensorData(d);
-          }
+          datum.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
+          client.storeSensorData(datum);
           inputClient.numHourly++;
         }
 
