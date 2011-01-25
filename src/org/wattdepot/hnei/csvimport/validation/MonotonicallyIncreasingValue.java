@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
+import org.wattdepot.client.ResourceNotFoundException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -37,7 +38,7 @@ public class MonotonicallyIncreasingValue implements Validator {
    */
   public MonotonicallyIncreasingValue(WattDepotClient client) {
     this.client = client;
-    this.formatDateTime = new SimpleDateFormat("hh/MM/yyyy hh:mm:ss a", Locale.US);
+    this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
   }
 
   /**
@@ -53,24 +54,29 @@ public class MonotonicallyIncreasingValue implements Validator {
   public boolean validateEntry(Object entry) {
     // Unpack
     String sourceName = ((Entry) entry).getSourceName();
-    int currReading = Integer.parseInt(((Entry) entry).getReading());
     XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
-    XMLGregorianCalendar prevTimestamp = Tstamp.incrementHours(currTimestamp, -2);
+    String reading = "reading";
+    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -1);
     try {
       List<SensorData> sensorDatas =
-          client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.size() == 1) {
+          this.client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
+      if (sensorDatas.size() <= 1) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
 
       this.previousData = sensorDatas.get(sensorDatas.size() - 2);
       this.currentData = client.getSensorData(sourceName, currTimestamp);
-      int prevReading = Integer.parseInt(this.previousData.getProperty("reading"));
+      int currReading = Integer.parseInt(this.currentData.getProperty(reading));
+      int prevReading = Integer.parseInt(this.previousData.getProperty(reading));
       if (currReading > prevReading) {
         return true;
       }
+    }
+    catch (ResourceNotFoundException e) {
+      // Source is being added for the first time.
+      return true;
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
@@ -85,10 +91,11 @@ public class MonotonicallyIncreasingValue implements Validator {
    */
   @Override
   public String getErrorMessage() {
+    String reading = "reading";
     String errorMessage = "The reading at " + this.previousData.getTimestamp();
-    errorMessage += " (" + this.previousData.getProperty("reading") + ") is greater than or equal ";
+    errorMessage += " (" + this.previousData.getProperty(reading) + ") is greater than or equal ";
     errorMessage += "to the reading at " + this.currentData.getTimestamp() + " (";
-    errorMessage += this.currentData.getProperty("reading") + ").";
+    errorMessage += this.currentData.getProperty(reading) + ").";
     return errorMessage;
   }
 

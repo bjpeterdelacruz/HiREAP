@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
+import org.wattdepot.client.ResourceNotFoundException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -41,7 +42,7 @@ public class NotGreaterThanPower implements Validator {
    */
   public NotGreaterThanPower(WattDepotClient client) {
     this.client = client;
-    this.formatDateTime = new SimpleDateFormat("hh/MM/yyyy hh:mm:ss a", Locale.US);
+    this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
   }
 
   /**
@@ -62,34 +63,29 @@ public class NotGreaterThanPower implements Validator {
     try {
       List<SensorData> sensorDatas =
           client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.size() == 1) {
+      if (sensorDatas.size() <= 1) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
 
       SensorData previousData = sensorDatas.get(sensorDatas.size() - 2);
       this.currentData = client.getSensorData(sourceName, currTimestamp);
+      // If SensorData is daily, set maxValue to 20 kW; otherwise, set to 480 kW.
+      // TODO: See parseRow in HneiCsvRowParser class.
       int currentReading = Integer.parseInt(this.currentData.getProperty("reading"));
       long prevTimeInMillis =
           previousData.getTimestamp().toGregorianCalendar().getTime().getTime();
       long currTimeInMillis =
           this.currentData.getTimestamp().toGregorianCalendar().getTime().getTime();
       double timeSinceLastEntry = (currTimeInMillis - prevTimeInMillis) / 1000.0 / 60.0 / 60.0;
-      /*
-       * System.out.println("Previous timestamp    : " + this.previousData.getTimestamp());
-       * System.out.println("Current timestamp     : " + this.currentData.getTimestamp() + "\n");
-       * System.out.println("Reading               : " + currentReading + " W");
-       * System.out.println("Time Since Last Entry : " + String.format("%.2f hours",
-       ***** timeSinceLastEntry)); */
       maxPower = maxValue * timeSinceLastEntry;
-      /* System.out.print("Power                 : " + String.format("%.2f Wh", maxPower)); */
-      /* System.out.println(); */
       if (currentReading <= maxPower) {
         return true;
       }
-      else {
-        System.err.println(this.getErrorMessage());
-      }
+    }
+    catch (ResourceNotFoundException e) {
+      // Source is being added for the first time.
+      return true;
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
@@ -137,15 +133,15 @@ public class NotGreaterThanPower implements Validator {
       NotGreaterThanPower validator = new NotGreaterThanPower(client);
       XMLGregorianCalendar currTimestamp = null;
       try {
-        Date timestamp = validator.formatDateTime.parse("1/12/2011 4:48:58 PM");
+        Date timestamp = validator.formatDateTime.parse("1/12/2011 12:07:19 PM");
         currTimestamp = Tstamp.makeTimestamp(timestamp.getTime());
       }
       catch (ParseException e) {
         e.printStackTrace();
         System.exit(1);
       }
-      Entry currentData = new Entry("994101147077", null, currTimestamp);
-      validator.validateEntry(currentData);
+      Entry currentData = new Entry("126582753104", null, currTimestamp);
+      System.out.println(validator.validateEntry(currentData));
     }
     else {
       System.err.println("Unable to connect to WattDepot server.");

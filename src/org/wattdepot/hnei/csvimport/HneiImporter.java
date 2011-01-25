@@ -274,6 +274,7 @@ public class HneiImporter {
     // Grab data from CSV file.
     HneiImporter inputClient = new HneiImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
+    HneiCsvRowParser.setWattDepotClient(client);
 
     setupLogger();
 
@@ -282,17 +283,18 @@ public class HneiImporter {
     XMLGregorianCalendar startTimestamp = null;
     XMLGregorianCalendar endTimestamp = null;
     SensorData datum = null;
+
     try {
       boolean isImported = false;
       String source = null;
       String[] line = null;
 
       System.out.println("Reading in CSV file...\n");
+      int counter = 1;
       startTime = Calendar.getInstance().getTimeInMillis();
-      int counter = 0;
-      // for (int i = 0; i < 5; i++) {
-        // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 100; i++) {
+        line = reader.readNext();
+      // while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
