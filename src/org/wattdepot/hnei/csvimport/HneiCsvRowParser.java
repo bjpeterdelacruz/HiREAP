@@ -8,10 +8,7 @@ import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
-import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.datainput.RowParser;
-import org.wattdepot.hnei.csvimport.validation.Entry;
-import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
 import org.wattdepot.hnei.csvimport.validation.NonblankValue;
 import org.wattdepot.hnei.csvimport.validation.NumericValue;
 import org.wattdepot.hnei.csvimport.validation.Validator;
@@ -40,9 +37,6 @@ public class HneiCsvRowParser extends RowParser {
   /** List of validators to verify that entry is valid. */
   private List<Validator> validators;
 
-  /** Used for entry validation. */
-  private static WattDepotClient client;
-
   /**
    * Creates a new HneiCsvRowParser object.
    * 
@@ -59,15 +53,6 @@ public class HneiCsvRowParser extends RowParser {
     validators = new ArrayList<Validator>();
     validators.add(new NumericValue());
     validators.add(new NonblankValue());
-  }
-
-  /**
-   * Sets the WattDepotClient object.
-   * 
-   * @param wattDepotClient Used for entry validation.
-   */
-  public static void setWattDepotClient(WattDepotClient wattDepotClient) {
-    client = wattDepotClient;
   }
 
   /**
@@ -96,7 +81,8 @@ public class HneiCsvRowParser extends RowParser {
     }
 
     if (col[5].equals("No Reading") || col[6].equals("No Reading")) {
-      String msg = "No reading for source:\n" + rowToString(col);
+      String msg = "No reading for source: " + col[0] + "\n" + rowToString(col);
+      System.err.print(msg);
       this.log.log(Level.INFO, msg);
       return null;
     }
@@ -156,20 +142,12 @@ public class HneiCsvRowParser extends RowParser {
     }
     properties.getProperty().add(new Property("rssi", col[8]));
 
+    // Update the following properties in the HneiImporter class.
+    properties.getProperty().add(new Property("isMonotonicallyIncreasing", "true"));
+    properties.getProperty().add(new Property("hourly", "true"));
+    properties.getProperty().add(new Property("daily", "true"));
+
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
-
-    Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
-    if (monoIncrVal.validateEntry(new Entry(col[0], col[6], timestamp))) {
-      properties.getProperty().add(new Property("isMonotonicallyIncreasing", "true"));
-    }
-    else {
-      properties.getProperty().add(new Property("isMonotonicallyIncreasing", "false"));
-    }
-
-    // TODO: Check if data is hourly or daily here. If two timestamps are more than two hours
-    // apart, data is daily; otherwise, the data is hourly.
-
-    System.out.println(properties.toString());
 
     return new SensorData(timestamp, this.toolName, Source.sourceToUri(this.sourceName,
         this.serverUri), properties);
@@ -188,6 +166,6 @@ public class HneiCsvRowParser extends RowParser {
       temp = s + " ";
       buffer.append(temp);
     }
-    return buffer.toString();
+    return buffer.toString() + "\n";
   }
 }

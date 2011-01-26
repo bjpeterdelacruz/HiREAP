@@ -3,7 +3,9 @@ package org.wattdepot.hnei.csvimport;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,8 +17,13 @@ import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.datainput.RowParser;
+import org.wattdepot.hnei.csvimport.validation.Entry;
+import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
+import org.wattdepot.hnei.csvimport.validation.Validator;
+import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
+import org.wattdepot.util.tstamp.Tstamp;
 import au.com.bytecode.opencsv.CSVReader;
 
 /**
@@ -31,7 +38,7 @@ public class HneiImporter {
   private static final Logger log = Logger.getLogger(HneiImporter.class.getName());
 
   /** Output logging information to a text file. */
-  private static FileHandler txtFile;
+  protected FileHandler txtFile;
 
   /** Name of the file to be input. */
   protected String filename;
@@ -81,6 +88,15 @@ public class HneiImporter {
   /** Counts total number of entries found in CSV file. */
   protected int numTotalEntries;
 
+  /** Number of entries whose values are not monotonically increasing over time. */
+  protected int numNonmonoIncrVals;
+
+  /** Number of daily readings. */
+  protected int numDaily;
+
+  /** Number of hourly readings. */
+  protected int numHourly;
+
   /**
    * Creates a new HneiTabularFileSensor object.
    * 
@@ -107,6 +123,9 @@ public class HneiImporter {
     this.numInvalidEntries = 0;
     this.numEntriesProcessed = 0;
     this.numTotalEntries = 0;
+    this.numNonmonoIncrVals = 0;
+    this.numDaily = 0;
+    this.numHourly = 0;
   }
 
   /**
@@ -132,7 +151,7 @@ public class HneiImporter {
    * @param endTime End time of a run.
    * @return Time in string format hh:mm:ss.
    */
-  public static String getRuntime(long startTime, long endTime) {
+  public String getRuntime(long startTime, long endTime) {
     long milliseconds = endTime - startTime;
     long hours = milliseconds / (1000 * 60 * 60);
     long minutes = (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
@@ -142,8 +161,10 @@ public class HneiImporter {
 
   /**
    * Sets up the logger and file handler.
+   * 
+   * @return True if successful, false otherwise.
    */
-  public static void setupLogger() {
+  public boolean setupLogger() {
     log.setLevel(Level.INFO);
     try {
       long timeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -152,9 +173,10 @@ public class HneiImporter {
     }
     catch (IOException e) {
       System.err.println("Unable to create file handler for logger.");
-      System.exit(1);
+      return false;
     }
     log.addHandler(txtFile);
+    return true;
   }
 
   /**
@@ -202,43 +224,56 @@ public class HneiImporter {
   /**
    * Prints results of parsing CSV file to standard output and log file.
    * 
-   * @param inputClient Contains statistics to print.
-   * @param startTime Start time of run.
-   * @param endTime End time of run.
+   * @param importStartTime Start time of import.
+   * @param importEndTime End time of import.
    * @param startTimestamp Date of first entry in CSV file.
    * @param endTimestamp Date of last entry in CSV file.
+   * @param validateStartTime Start time of validation.
+   * @param validateEndTime End time of validation.
    */
-  public static void printStats(HneiImporter inputClient, long startTime, long endTime,
-      XMLGregorianCalendar startTimestamp, XMLGregorianCalendar endTimestamp) {
+  public void printStats(long importStartTime, long importEndTime,
+      XMLGregorianCalendar startTimestamp, XMLGregorianCalendar endTimestamp,
+      long validateStartTime, long validateEndTime) {
     String msg = "\n\n==================================================\n";
     msg += "Statistics\n";
     msg += "--------------------------------------------------\n";
-    msg += "Filename                      : " + inputClient.filename;
+    msg += "Filename                      : " + this.filename;
     msg += "\n\nFirst Entry Date              : " + startTimestamp.toString() + "\n";
     msg += "Last Entry Date               : " + endTimestamp.toString();
-    msg += "\n\nEntries Processed             : " + inputClient.numEntriesProcessed + "\n";
-    msg += "Invalid Entries               : " + inputClient.numInvalidEntries + "\n";
+    msg += "\n\nEntries Processed             : " + this.numEntriesProcessed + "\n";
+    msg += "Invalid Entries               : " + this.numInvalidEntries + "\n";
     msg += "Percentage of Invalid Entries : ";
-    double percentage =
-        ((double) inputClient.numInvalidEntries / (double) inputClient.numTotalEntries) * 100.0;
+    double percentage = ((double) this.numInvalidEntries / (double) this.numTotalEntries) * 100.0;
     msg += String.format("%.2f", percentage);
     msg += "%\n";
-    msg += "Total Number of Entries       : " + inputClient.numTotalEntries;
-    msg += "\n\nNew Sources                   : " + inputClient.numNewSources + "\n";
-    msg += "Existing Sources              : " + inputClient.numExistingSources + "\n";
-    msg += "Total Number of Sources       : " + inputClient.numTotalSources;
-    msg += "\n\nNew Data                      : " + inputClient.numNewData + "\n";
-    msg += "Existing Data                 : " + inputClient.numExistingData + "\n";
+    msg += "Total Number of Entries       : " + this.numTotalEntries;
+    msg += "\n\nNew Sources                   : " + this.numNewSources + "\n";
+    msg += "Existing Sources              : " + this.numExistingSources + "\n";
+    msg += "Total Number of Sources       : " + this.numTotalSources;
+    msg += "\n\nNumber of Hourly Data         : " + this.numHourly + "\n";
+    msg += "Number of Daily Data          : " + this.numDaily;
+    msg += "\n\nNew Data                      : " + this.numNewData + "\n";
+    msg += "Existing Data                 : " + this.numExistingData + "\n";
+    msg += "Total Number of Data Imported : " + (this.numNewData + this.numExistingData);
     msg +=
-        "Total Number of Data Imported : " + (inputClient.numNewData + inputClient.numExistingData);
-    msg += "\n\nTotal Runtime                 : " + getRuntime(startTime, endTime) + "\n\n";
+        "\n\nImport Runtime                : " + this.getRuntime(importStartTime, importEndTime)
+            + "\n";
+    msg +=
+        "Validation Runtime            : " + this.getRuntime(validateStartTime, validateEndTime)
+            + "\n";
+    msg +=
+        "Total Runtime                 : " + this.getRuntime(importStartTime, validateEndTime)
+            + "\n\n";
     try {
-      long numSourcesPerSecond = inputClient.numTotalSources / ((endTime - startTime) / 1000);
-      msg += numSourcesPerSecond + " sources processed per second.\n";
+      long numSourcesPerSecond = this.numTotalSources / ((importEndTime - importStartTime) / 1000);
+      msg += "-- " + numSourcesPerSecond + " entries processed per second.\n";
     }
     catch (ArithmeticException e) {
-      msg += "Number of sources processed per second is immeasurable.";
+      msg += "-- Number of entries processed per second is immeasurable.\n";
     }
+    msg +=
+        "-- Number of entries with data that are not monotonically increasing: "
+            + this.numNonmonoIncrVals;
     log.log(Level.INFO, msg);
     System.out.print(msg);
   }
@@ -274,27 +309,39 @@ public class HneiImporter {
     // Grab data from CSV file.
     HneiImporter inputClient = new HneiImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
-    HneiCsvRowParser.setWattDepotClient(client);
+    if (client.isHealthy() && client.isAuthenticated()) {
+      System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
+    }
+    else {
+      System.err.println("Unable to connect to WattDepot server.");
+      System.exit(1);
+    }
 
-    setupLogger();
+    if (!inputClient.setupLogger()) {
+      System.exit(1);
+    }
 
-    long startTime = 0;
-    long endTime = 0;
+    List<Entry> entries = new ArrayList<Entry>();
+    long importStartTime = 0;
+    long importEndTime = 0;
+    long validateStartTime = 0;
+    long validateEndTime = 0;
+    SensorData datum = null;
     XMLGregorianCalendar startTimestamp = null;
     XMLGregorianCalendar endTimestamp = null;
-    SensorData datum = null;
 
     try {
       boolean isImported = false;
+      int counter = 1;
       String source = null;
       String[] line = null;
 
       System.out.println("Reading in CSV file...\n");
-      int counter = 1;
-      startTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 100; i++) {
-        line = reader.readNext();
-      // while ((line = reader.readNext()) != null) {
+
+      importStartTime = Calendar.getInstance().getTimeInMillis();
+      // for (int i = 0; i < 600; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
@@ -304,6 +351,7 @@ public class HneiImporter {
             inputClient.numInvalidEntries++;
           }
           else {
+            entries.add(new Entry(source, datum.getProperty("reading"), datum.getTimestamp()));
             isImported = inputClient.process(client, new Source(source, username, true), datum);
             if (isImported) {
               inputClient.numEntriesProcessed++;
@@ -326,7 +374,7 @@ public class HneiImporter {
           System.out.println("Processing line " + counter + " in " + inputClient.filename + "...");
         }
       }
-      endTime = Calendar.getInstance().getTimeInMillis();
+      importEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IOException e) {
       String msg = "There was a problem reading in the input file:\n" + e.toString();
@@ -336,7 +384,70 @@ public class HneiImporter {
       System.exit(1);
     }
 
-    printStats(inputClient, startTime, endTime, startTimestamp, endTimestamp);
+    // Done importing file. Now do some post-processing.
+    System.out.print("Checking if readings are monotonically increasing and ");
+    System.out.println("are either hourly or daily... This may take a while.");
+
+    int counter = 1;
+    List<SensorData> data = null;
+
+    validateStartTime = Calendar.getInstance().getTimeInMillis();
+    try {
+      Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
+      for (Entry e : entries) {
+        datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
+
+        // Check if readings are monotonically increasing.
+        if (!monoIncrVal.validateEntry(e)) {
+          client.deleteSensorData(e.getSourceName(), e.getTimestamp());
+          datum.getProperties().getProperty()
+              .remove(new Property("isMonotonicallyIncreasing", Boolean.toString(true)));
+          datum.getProperties().getProperty()
+              .add(new Property("isMonotonicallyIncreasing", Boolean.toString(false)));
+          inputClient.numNonmonoIncrVals++;
+          client.storeSensorData(datum);
+        }
+
+        // Classify data as either hourly or daily.
+        Calendar day = Calendar.getInstance();
+        day.set(e.getTimestamp().getYear(), e.getTimestamp().getMonth() - 1, e.getTimestamp()
+            .getDay(), 0, 0, 0);
+        XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
+        XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
+
+        data = client.getSensorDatas(e.getSourceName(), start, end);
+
+        datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
+        client.deleteSensorData(e.getSourceName(), e.getTimestamp());
+        if (data.size() == 1) {
+          datum.getProperties().getProperty()
+              .remove(new Property("hourly", Boolean.toString(true)));
+          client.storeSensorData(datum);
+          inputClient.numDaily++;
+        }
+        else {
+          datum.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
+          client.storeSensorData(datum);
+          inputClient.numHourly++;
+        }
+
+        if (++counter % 500 == 0) {
+          System.out.println("Processing entry " + counter + "...");
+        }
+      }
+      validateEndTime = Calendar.getInstance().getTimeInMillis();
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+    catch (JAXBException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+
+    inputClient.printStats(importStartTime, importEndTime, startTimestamp, endTimestamp,
+        validateStartTime, validateEndTime);
 
   }
 

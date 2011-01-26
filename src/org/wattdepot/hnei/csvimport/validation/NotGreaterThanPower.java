@@ -59,11 +59,11 @@ public class NotGreaterThanPower implements Validator {
     String sourceName = ((Entry) entry).getSourceName();
     XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
-    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -1);
+    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -2);
     try {
       List<SensorData> sensorDatas =
           client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.size() <= 1) {
+      if (sensorDatas.size() == 1) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }

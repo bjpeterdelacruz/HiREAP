@@ -57,11 +57,11 @@ public class MonotonicallyIncreasingValue implements Validator {
     XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
     String reading = "reading";
-    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -1);
+    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -2);
     try {
       List<SensorData> sensorDatas =
           this.client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.size() <= 1) {
+      if (sensorDatas.size() == 1) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
