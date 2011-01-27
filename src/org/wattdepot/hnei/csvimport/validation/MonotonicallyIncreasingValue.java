@@ -95,7 +95,8 @@ public class MonotonicallyIncreasingValue implements Validator {
     String errorMessage = "The reading at " + this.previousData.getTimestamp();
     errorMessage += " (" + this.previousData.getProperty(reading) + ") is greater than or equal ";
     errorMessage += "to the reading at " + this.currentData.getTimestamp() + " (";
-    errorMessage += this.currentData.getProperty(reading) + ").";
+    errorMessage += this.currentData.getProperty(reading) + ") for ";
+    errorMessage += this.currentData.getSource() + ".";
     return errorMessage;
   }
 

@@ -38,11 +38,11 @@ public class HneiExporter {
   public void getHelp() {
     Iterator<Entry<String, Retriever>> i = this.commands.entrySet().iterator();
     System.out.println("\n**********\n");
-    System.out.println("To use this program, type one of the following commands:\n\n");
-    System.out.println(">> q | quit\nQuits the program.\n\n");
-    System.out.println(">> h | help\nDisplays this help message.\n\n");
+    System.out.println("To use this program, type one of the following commands:\n");
+    System.out.println(">> q | quit\nQuits the program.");
+    System.out.println(">> h | help\nDisplays this help message.");
     while (i.hasNext()) {
-      System.out.println(i.next().getValue().getHelp());
+      System.out.print(i.next().getValue().getHelp());
     }
     System.out.println("**********\n");
   }

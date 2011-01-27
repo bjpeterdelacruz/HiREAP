@@ -399,6 +399,7 @@ public class HneiImporter {
 
         // Check if readings are monotonically increasing.
         if (!monoIncrVal.validateEntry(e)) {
+          log.log(Level.WARNING, monoIncrVal.getErrorMessage());
           client.deleteSensorData(e.getSourceName(), e.getTimestamp());
           datum.getProperties().getProperty()
               .remove(new Property("isMonotonicallyIncreasing", Boolean.toString(true)));
