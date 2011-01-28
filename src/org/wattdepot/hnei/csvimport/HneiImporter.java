@@ -339,7 +339,7 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 600; i++) {
+      // for (int i = 0; i < 1000; i++) {
         // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         source = line[0];

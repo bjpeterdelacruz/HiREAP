@@ -70,7 +70,7 @@ public class MonotonicallyIncreasingValue implements Validator {
       this.currentData = client.getSensorData(sourceName, currTimestamp);
       int currReading = Integer.parseInt(this.currentData.getProperty(reading));
       int prevReading = Integer.parseInt(this.previousData.getProperty(reading));
-      if (currReading > prevReading) {
+      if (currReading >= prevReading) {
         return true;
       }
     }
