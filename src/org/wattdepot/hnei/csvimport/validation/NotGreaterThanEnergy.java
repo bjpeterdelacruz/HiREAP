@@ -18,7 +18,7 @@ import org.wattdepot.util.tstamp.Tstamp;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class NotGreaterThanPower implements Validator {
+public class NotGreaterThanEnergy implements Validator {
 
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
@@ -29,8 +29,11 @@ public class NotGreaterThanPower implements Validator {
   /** Used to make a timestamp in the test program. */
   private SimpleDateFormat formatDateTime;
 
-  /** Value of entry cannot be greater than power (maxValue * time since last entry). */
-  private static final int maxValue = 20000;
+  /** Value of entry cannot be greater than energy (maxValueHourly * time since last entry). */
+  private static final int maxValueHourly = 20000;
+
+  /** Value of entry cannot be greater than energy (maxValueDaily * time since last entry). */
+  private static final int maxValueDaily = 480000;
 
   /** Value of entry cannot be greater than power (maxValue * time since last entry). */
   private double maxPower;
@@ -40,7 +43,7 @@ public class NotGreaterThanPower implements Validator {
    * 
    * @param client Used to grab sensor data from the WattDepot server to use for validation.
    */
-  public NotGreaterThanPower(WattDepotClient client) {
+  public NotGreaterThanEnergy(WattDepotClient client) {
     this.client = client;
     this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
   }
@@ -63,22 +66,31 @@ public class NotGreaterThanPower implements Validator {
     try {
       List<SensorData> sensorDatas =
           client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.size() == 1) {
+      if (sensorDatas.size() < 2) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
 
       SensorData previousData = sensorDatas.get(sensorDatas.size() - 2);
       this.currentData = client.getSensorData(sourceName, currTimestamp);
-      // If SensorData is daily, set maxValue to 20 kW; otherwise, set to 480 kW.
-      // TODO: See parseRow in HneiCsvRowParser class.
+      boolean isHourly = true;
+      if (this.currentData.getProperty("daily") != null &&
+          this.currentData.getProperty("daily").equals("true")) {
+        isHourly = false;
+      }
+
       int currentReading = Integer.parseInt(this.currentData.getProperty("reading"));
       long prevTimeInMillis =
           previousData.getTimestamp().toGregorianCalendar().getTime().getTime();
       long currTimeInMillis =
           this.currentData.getTimestamp().toGregorianCalendar().getTime().getTime();
       double timeSinceLastEntry = (currTimeInMillis - prevTimeInMillis) / 1000.0 / 60.0 / 60.0;
-      maxPower = maxValue * timeSinceLastEntry;
+      if (isHourly) {
+        maxPower = maxValueHourly * timeSinceLastEntry;
+      }
+      else {
+        maxPower = maxValueDaily * timeSinceLastEntry;
+      }
       if (currentReading <= maxPower) {
         return true;
       }
@@ -130,7 +142,7 @@ public class NotGreaterThanPower implements Validator {
 
     WattDepotClient client = new WattDepotClient(args[0], args[1], args[2]);
     if (client.isHealthy() && client.isAuthenticated()) {
-      NotGreaterThanPower validator = new NotGreaterThanPower(client);
+      NotGreaterThanEnergy validator = new NotGreaterThanEnergy(client);
       XMLGregorianCalendar currTimestamp = null;
       try {
         Date timestamp = validator.formatDateTime.parse("1/12/2011 12:07:19 PM");
@@ -140,7 +152,7 @@ public class NotGreaterThanPower implements Validator {
         e.printStackTrace();
         System.exit(1);
       }
-      Entry currentData = new Entry("126582753104", null, currTimestamp);
+      Entry currentData = new Entry("126580270905", null, currTimestamp);
       System.out.println(validator.validateEntry(currentData));
     }
     else {
