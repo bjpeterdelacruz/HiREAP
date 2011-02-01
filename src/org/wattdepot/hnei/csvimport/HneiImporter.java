@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -103,11 +104,14 @@ public class HneiImporter {
   /** List of all entries in CSV file. */
   protected List<Entry> entries;
 
-  /** List of all sources and their MTU IDs. */
-  protected List<SourceMtu> allSourceMtus;
+  /** List of all sources and their MTU IDs, with duplicates. */
+  protected List<SourceMtu> allSources;
+
+  /** List of all sources and their MTU IDs, no duplicates. */
+  protected Set<SourceMtu> allMtus;
 
   /** List of all sources that have multiple MTU IDs. */
-  protected Set<SourceMtu> duplicateMtus;
+  protected List<SourceMtu> allDuplicateMtus;
 
   /**
    * Creates a new HneiTabularFileSensor object.
@@ -139,8 +143,9 @@ public class HneiImporter {
     this.numDaily = 0;
     this.numHourly = 0;
     this.entries = new ArrayList<Entry>();
-    this.allSourceMtus = new ArrayList<SourceMtu>();
-    this.duplicateMtus = new HashSet<SourceMtu>();
+    this.allSources = new ArrayList<SourceMtu>();
+    this.allMtus = new HashSet<SourceMtu>();
+    this.allDuplicateMtus = new ArrayList<SourceMtu>();
   }
 
   /**
@@ -237,24 +242,108 @@ public class HneiImporter {
   }
 
   /**
+   * Checks to see if value of entry is monotonically increasing.
+   * 
+   * @param client WattDepotClient used to connect to the WattDepot server.
+   * @param entry Current entry in CSV file.
+   * @param datum SensorData for a source.
+   * @return Updated SensorData for a source.
+   */
+  public SensorData checkValue(WattDepotClient client, Entry entry, SensorData datum) {
+    String isIncreasing = "isMonotonicallyIncreasing";
+    Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
+    if (!monoIncrVal.validateEntry(entry)) {
+      log.log(Level.WARNING, monoIncrVal.getErrorMessage());
+      datum.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
+      datum.getProperties().getProperty().add(new Property(isIncreasing, "false"));
+      this.numNonmonoIncrVals++;
+    }
+    return datum;
+  }
+
+  /**
+   * Sets the sampling interval, either hourly or daily, for a SensorData object.
+   * 
+   * @param client WattDepotClient used to connect to the WattDepot server.
+   * @param entry Current entry in CSV file.
+   * @param datum SensorData for a source.
+   * @return Updated SensorData for a source.
+   */
+  public SensorData setSamplingInterval(WattDepotClient client, Entry entry, SensorData datum) {
+    Calendar day = Calendar.getInstance();
+    int d = entry.getTimestamp().getDay();
+    day.set(entry.getTimestamp().getYear(), entry.getTimestamp().getMonth() - 1, d, 0, 0, 0);
+    XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
+    XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
+
+    List<SensorData> data;
+    try {
+      data = client.getSensorDatas(entry.getSourceName(), start, end);
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      return null;
+    }
+
+    if (data.size() == 1) {
+      datum.getProperties().getProperty().remove(new Property("hourly", "true"));
+      this.numDaily++;
+    }
+    else {
+      datum.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
+      this.numHourly++;
+    }
+    return datum;
+  }
+
+  /**
+   * Adds all sources that have multiple MTU IDs to a list.
+   */
+  public void getMultipleMtuIds() {
+    this.allMtus = new HashSet<SourceMtu>(this.allSources);
+    List<SourceMtu> sourceMtus = new ArrayList<SourceMtu>();
+    for (SourceMtu s : this.allMtus) {
+      sourceMtus.add(s);
+    }
+
+    Collections.sort(sourceMtus);
+
+    Set<SourceMtu> mtus = new HashSet<SourceMtu>();
+    for (int index = 0; index < sourceMtus.size() - 1; index++) {
+      if (sourceMtus.get(index).getSourceName().equals(sourceMtus.get(index + 1).getSourceName())) {
+        mtus.add(sourceMtus.get(index));
+        mtus.add(sourceMtus.get(index + 1));
+      }
+    }
+
+    sourceMtus.clear();
+    for (SourceMtu s : mtus) {
+      sourceMtus.add(s);
+    }
+
+    Collections.sort(sourceMtus);
+    for (SourceMtu s : sourceMtus) {
+      this.allDuplicateMtus.add(s);
+    }
+  }
+
+  /**
    * Prints results of parsing CSV file to standard output and log file.
    * 
    * @param importStartTime Start time of import.
    * @param importEndTime End time of import.
-   * @param startTimestamp Date of first entry in CSV file.
-   * @param endTimestamp Date of last entry in CSV file.
    * @param validateStartTime Start time of validation.
    * @param validateEndTime End time of validation.
    */
-  public void printStats(long importStartTime, long importEndTime,
-      XMLGregorianCalendar startTimestamp, XMLGregorianCalendar endTimestamp,
-      long validateStartTime, long validateEndTime) {
+  public void printStats(long importStartTime, long importEndTime, long validateStartTime,
+      long validateEndTime) {
     String msg = "\n\n==================================================\n";
     msg += "Statistics\n";
     msg += "--------------------------------------------------\n";
     msg += "Filename                      : " + this.filename;
-    msg += "\n\nFirst Entry Date              : " + startTimestamp.toString() + "\n";
-    msg += "Last Entry Date               : " + endTimestamp.toString();
+    msg += "\n\nFirst Entry Date              : " + this.entries.get(0).getTimestamp().toString();
+    XMLGregorianCalendar endTimestamp = this.entries.get(this.entries.size() - 1).getTimestamp();
+    msg += "\nLast Entry Date               : " + endTimestamp.toString();
     msg += "\n\nEntries Processed             : " + this.numEntriesProcessed + "\n";
     msg += "Invalid Entries               : " + this.numInvalidEntries + "\n";
     msg += "Percentage of Invalid Entries : ";
@@ -289,11 +378,12 @@ public class HneiImporter {
     msg +=
         "-- Number of entries with data that are not monotonically increasing: "
             + this.numNonmonoIncrVals;
-    if (!this.duplicateMtus.isEmpty()) {
-      msg += "\n\nDisplaying all sources that have multiple MTU IDs...\n\n";
+    if (!this.allDuplicateMtus.isEmpty()) {
+      msg += "\n\nDisplaying all " + this.allDuplicateMtus.size() + " sources that have multiple ";
+      msg += "MTU IDs...\n\n";
       String str = null;
       StringBuffer buffer = new StringBuffer();
-      for (SourceMtu s : this.duplicateMtus) {
+      for (SourceMtu s : this.allDuplicateMtus) {
         str = s.toString() + "\n";
         buffer.append(str);
       }
@@ -351,11 +441,9 @@ public class HneiImporter {
     long validateStartTime = 0;
     long validateEndTime = 0;
     SensorData datum = null;
-    XMLGregorianCalendar startTimestamp = null;
-    XMLGregorianCalendar endTimestamp = null;
 
     try {
-      boolean isImported = false;
+      Entry entry = null;
       int counter = 1;
       String source = null;
       String[] line = null;
@@ -363,27 +451,23 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 10; i++) {
-        line = reader.readNext();
-        // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 100; i++) {
+      // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
         try {
-          datum = inputClient.parser.parseRow(line);
-          if (datum == null) {
+          if ((datum = inputClient.parser.parseRow(line)) == null) {
             inputClient.numInvalidEntries++;
           }
           else {
-            inputClient.entries.add(new Entry(source, datum.getProperty("reading"), datum
-                .getTimestamp(), datum.getProperty("mtuID")));
-            isImported = inputClient.process(client, new Source(source, username, true), datum);
-            if (isImported) {
+            entry = new Entry(source, datum.getProperty("reading"), datum.getTimestamp(), null);
+            entry.setMtuId(datum.getProperty("mtuID"));
+            inputClient.entries.add(entry);
+
+            if (inputClient.process(client, new Source(source, username, true), datum)) {
               inputClient.numEntriesProcessed++;
-              if (startTimestamp == null) {
-                startTimestamp = datum.getTimestamp();
-              }
-              endTimestamp = datum.getTimestamp();
             }
             else {
               inputClient.numInvalidEntries++;
@@ -409,52 +493,27 @@ public class HneiImporter {
       System.exit(1);
     }
 
-    // Done importing file. Now do some post-processing.
+    // /////////////////////////////////////////////////////
+    // Done importing file. Now do some post-processing. //
+    // /////////////////////////////////////////////////////
     System.out.print("Checking if readings are monotonically increasing and ");
     System.out.println("are either hourly or daily... This may take a while.");
 
     int counter = 1;
-    List<SensorData> data = null;
-
     validateStartTime = Calendar.getInstance().getTimeInMillis();
     try {
-      Calendar day = null;
-      String isIncreasing = "isMonotonicallyIncreasing";
-      Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
-      XMLGregorianCalendar start = null;
-      XMLGregorianCalendar end = null;
       for (Entry e : inputClient.entries) {
         datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
-        if (!monoIncrVal.validateEntry(e)) {
-          log.log(Level.WARNING, monoIncrVal.getErrorMessage());
-          datum.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
-          datum.getProperties().getProperty().add(new Property(isIncreasing, "false"));
-          inputClient.numNonmonoIncrVals++;
-        }
+        datum = inputClient.checkValue(client, e, datum);
 
         // Classify data as either hourly or daily.
-        day = Calendar.getInstance();
-        day.set(e.getTimestamp().getYear(), e.getTimestamp().getMonth() - 1, e.getTimestamp()
-            .getDay(), 0, 0, 0);
-        start = Tstamp.makeTimestamp(day.getTime().getTime());
-        end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
+        datum = inputClient.setSamplingInterval(client, e, datum);
 
-        data = client.getSensorDatas(e.getSourceName(), start, end);
+        inputClient.allSources.add(new SourceMtu(e.getSourceName(), e.getMtuId()));
 
-        if (data.size() == 1) {
-          datum.getProperties().getProperty().remove(new Property("hourly", "true"));
-          inputClient.numDaily++;
-        }
-        else {
-          datum.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
-          inputClient.numHourly++;
-        }
-
-        inputClient.allSourceMtus.add(new SourceMtu(e.getSourceName(), e.getMtuId()));
-
-        // Update sensor data.
+        // Update sensor data on server.
         client.deleteSensorData(e.getSourceName(), e.getTimestamp());
         client.storeSensorData(datum);
 
@@ -473,11 +532,12 @@ public class HneiImporter {
       System.exit(1);
     }
 
-    // Now grab all sources that have multiple MTU IDs.
-    inputClient.duplicateMtus = new HashSet<SourceMtu>(inputClient.allSourceMtus);
+    // Get all sources that have multiple MTU IDs.
+    inputClient.getMultipleMtuIds();
 
-    inputClient.printStats(importStartTime, importEndTime, startTimestamp, endTimestamp,
-        validateStartTime, validateEndTime);
+    Collections.sort(inputClient.entries);
+
+    inputClient.printStats(importStartTime, importEndTime, validateStartTime, validateEndTime);
   }
 
 }

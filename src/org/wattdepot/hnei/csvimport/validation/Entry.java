@@ -7,7 +7,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class Entry {
+public class Entry implements Comparable<Entry> {
 
   /** Source of power consumed. */
   private String sourceName;
@@ -19,7 +19,7 @@ public class Entry {
   private XMLGregorianCalendar timestamp;
 
   /** MTU ID. */
-  private String mtuId;
+  private String mtuID;
 
   /**
    * Creates a new ReadingData object.
@@ -33,7 +33,7 @@ public class Entry {
     this.sourceName = sourceName;
     this.timestamp = timestamp;
     this.reading = reading;
-    this.mtuId = mtuId;
+    this.mtuID = mtuId;
   }
 
   /**
@@ -96,7 +96,7 @@ public class Entry {
    * @param mtuId MTU ID.
    */
   public void setMtuId(String mtuId) {
-    this.mtuId = mtuId;
+    this.mtuID = mtuId;
   }
 
   /**
@@ -105,7 +105,78 @@ public class Entry {
    * @return MTU ID.
    */
   public String getMtuId() {
-    return mtuId;
+    return mtuID;
+  }
+
+  /**
+   * Gets the String representation of an Entry object.
+   * 
+   * @return Source name, MTU ID, and timestamp.
+   */
+  public String toString() {
+    String msg = "Source: " + this.sourceName + " -- MTU ID: " + this.mtuID;
+    msg += " -- Timestamp: " + this.timestamp;
+    return msg;
+  }
+
+  /**
+   * Used to test if two Entry objects are the same.
+   * 
+   * @param o Entry object to compare with.
+   * @return True if both objects are equal, false otherwise.
+   */
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Entry e = (Entry) o;
+    return (this.sourceName.equals(e.sourceName) && this.mtuID.equals(e.mtuID)
+        && this.reading.equals(e.reading) && this.timestamp.equals(e.timestamp));
+  }
+
+  /**
+   * Gets the hash code for an Entry object.
+   * 
+   * @return Hash code of Entry object.
+   */
+  public int hashCode() {
+    int hashCode = 0;
+    if (this.sourceName == null && this.reading == null && this.timestamp == null) {
+      return hashCode;
+    }
+    else if (this.timestamp == null) {
+      return this.sourceName.hashCode() + this.reading.hashCode();
+    }
+    else if (this.reading == null) {
+      return this.sourceName.hashCode() + this.timestamp.hashCode();
+    }
+    else if (this.sourceName == null) {
+      return this.reading.hashCode() + this.timestamp.hashCode();
+    }
+    else {
+      return this.sourceName.hashCode() + this.reading.hashCode() + this.timestamp.hashCode();
+    }
+  }
+
+  /**
+   * Used to compare two Entry objects together.
+   * 
+   * @param e Entry object to compare with.
+   * @return 0 if equal, less than 0 if first argument is greater than second argument, greater than
+   * 0 if vice versa
+   */
+  @Override
+  public int compareTo(Entry e) {
+    int result = this.timestamp.toString().compareTo(e.timestamp.toString());
+    if (result == 0) {
+      return this.sourceName.compareTo(e.sourceName);
+    }
+    else {
+      return result;
+    }
   }
 
 }

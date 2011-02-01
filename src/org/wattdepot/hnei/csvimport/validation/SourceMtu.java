@@ -61,7 +61,7 @@ public class SourceMtu implements Comparable<SourceMtu> {
   }
 
   /**
-   * Get String representation of a SourceMtu object.
+   * Gets the String representation of a SourceMtu object.
    * 
    * @return Source name and MTU ID.
    */
@@ -70,7 +70,7 @@ public class SourceMtu implements Comparable<SourceMtu> {
   }
 
   /**
-   * Used to compare two SourceMtu objects together.
+   * Used to test if two SourceMtu objects are the same.
    * 
    * @param o SourceMtu object to compare with.
    * @return True if both objects are equal, false otherwise.
@@ -116,7 +116,13 @@ public class SourceMtu implements Comparable<SourceMtu> {
    */
   @Override
   public int compareTo(SourceMtu sourceMtu) {
-    return this.sourceName.compareTo(sourceMtu.sourceName);
+    int result = this.sourceName.compareTo(sourceMtu.sourceName);
+    if (result == 0) {
+      return this.mtuID.compareTo(sourceMtu.mtuID);
+    }
+    else {
+      return result;
+    }
   }
 
 }
