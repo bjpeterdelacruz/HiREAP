@@ -61,7 +61,7 @@ public class MonotonicallyIncreasingValue implements Validator {
     try {
       List<SensorData> sensorDatas =
           this.client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.isEmpty() || sensorDatas.size() == 1) {
+      if (sensorDatas.size() < 2) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
@@ -123,7 +123,7 @@ public class MonotonicallyIncreasingValue implements Validator {
         e.printStackTrace();
         System.exit(1);
       }
-      Entry currentData = new Entry("994702074677", "016635", currTimestamp);
+      Entry currentData = new Entry("994702074677", "016635", currTimestamp, null);
       System.out.println(validator.validateEntry(currentData));
     }
     else {

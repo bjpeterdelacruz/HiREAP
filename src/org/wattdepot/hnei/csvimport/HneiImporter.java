@@ -5,7 +5,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,6 +21,7 @@ import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
+import org.wattdepot.hnei.csvimport.validation.SourceMtu;
 import org.wattdepot.hnei.csvimport.validation.Validator;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -97,6 +100,15 @@ public class HneiImporter {
   /** Number of hourly readings. */
   protected int numHourly;
 
+  /** List of all entries in CSV file. */
+  protected List<Entry> entries;
+
+  /** List of all sources and their MTU IDs. */
+  protected List<SourceMtu> allSourceMtus;
+
+  /** List of all sources that have multiple MTU IDs. */
+  protected Set<SourceMtu> duplicateMtus;
+
   /**
    * Creates a new HneiTabularFileSensor object.
    * 
@@ -126,6 +138,9 @@ public class HneiImporter {
     this.numNonmonoIncrVals = 0;
     this.numDaily = 0;
     this.numHourly = 0;
+    this.entries = new ArrayList<Entry>();
+    this.allSourceMtus = new ArrayList<SourceMtu>();
+    this.duplicateMtus = new HashSet<SourceMtu>();
   }
 
   /**
@@ -274,6 +289,16 @@ public class HneiImporter {
     msg +=
         "-- Number of entries with data that are not monotonically increasing: "
             + this.numNonmonoIncrVals;
+    if (!this.duplicateMtus.isEmpty()) {
+      msg += "\n\nDisplaying all sources that have multiple MTU IDs...\n\n";
+      String str = null;
+      StringBuffer buffer = new StringBuffer();
+      for (SourceMtu s : this.duplicateMtus) {
+        str = s.toString() + "\n";
+        buffer.append(str);
+      }
+      msg += buffer.toString();
+    }
     log.log(Level.INFO, msg);
     System.out.print(msg);
   }
@@ -321,7 +346,6 @@ public class HneiImporter {
       System.exit(1);
     }
 
-    List<Entry> entries = new ArrayList<Entry>();
     long importStartTime = 0;
     long importEndTime = 0;
     long validateStartTime = 0;
@@ -339,9 +363,9 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 600; i++) {
-      // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 10; i++) {
+        line = reader.readNext();
+        // while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
@@ -351,7 +375,8 @@ public class HneiImporter {
             inputClient.numInvalidEntries++;
           }
           else {
-            entries.add(new Entry(source, datum.getProperty("reading"), datum.getTimestamp()));
+            inputClient.entries.add(new Entry(source, datum.getProperty("reading"), datum
+                .getTimestamp(), datum.getProperty("mtuID")));
             isImported = inputClient.process(client, new Source(source, username, true), datum);
             if (isImported) {
               inputClient.numEntriesProcessed++;
@@ -393,12 +418,12 @@ public class HneiImporter {
 
     validateStartTime = Calendar.getInstance().getTimeInMillis();
     try {
-      Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
       Calendar day = null;
+      String isIncreasing = "isMonotonicallyIncreasing";
+      Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
       XMLGregorianCalendar start = null;
       XMLGregorianCalendar end = null;
-      String isIncreasing = "isMonotonicallyIncreasing";
-      for (Entry e : entries) {
+      for (Entry e : inputClient.entries) {
         datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
@@ -427,6 +452,8 @@ public class HneiImporter {
           inputClient.numHourly++;
         }
 
+        inputClient.allSourceMtus.add(new SourceMtu(e.getSourceName(), e.getMtuId()));
+
         // Update sensor data.
         client.deleteSensorData(e.getSourceName(), e.getTimestamp());
         client.storeSensorData(datum);
@@ -446,9 +473,11 @@ public class HneiImporter {
       System.exit(1);
     }
 
+    // Now grab all sources that have multiple MTU IDs.
+    inputClient.duplicateMtus = new HashSet<SourceMtu>(inputClient.allSourceMtus);
+
     inputClient.printStats(importStartTime, importEndTime, startTimestamp, endTimestamp,
         validateStartTime, validateEndTime);
-
   }
 
 }
