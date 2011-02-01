@@ -152,7 +152,7 @@ public class NotGreaterThanEnergy implements Validator {
         e.printStackTrace();
         System.exit(1);
       }
-      Entry currentData = new Entry("126580270905", null, currTimestamp);
+      Entry currentData = new Entry("126580270905", null, currTimestamp, null);
       System.out.println(validator.validateEntry(currentData));
     }
     else {
