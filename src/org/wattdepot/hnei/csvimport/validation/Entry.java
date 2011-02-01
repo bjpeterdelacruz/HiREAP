@@ -22,6 +22,12 @@ public class Entry implements Comparable<Entry> {
   private String mtuID;
 
   /**
+   * True if data for source at current timestamp is greater than data at previous timestamp, false
+   * otherwise.
+   */
+  private boolean isMonotonicallyIncreasing;
+
+  /**
    * Creates a new ReadingData object.
    * 
    * @param sourceName Name of source where power is consumed.
@@ -34,6 +40,7 @@ public class Entry implements Comparable<Entry> {
     this.timestamp = timestamp;
     this.reading = reading;
     this.mtuID = mtuId;
+    this.isMonotonicallyIncreasing = true;
   }
 
   /**
@@ -109,13 +116,36 @@ public class Entry implements Comparable<Entry> {
   }
 
   /**
+   * Sets isMonotonicallyIncreasing to true if data is monotonically increasing, false otherwise.
+   * 
+   * @param isMonotonicallyIncreasing True if data is monotonically increasing, false otherwise.
+   */
+  public void setMonotonicallyIncreasing(boolean isMonotonicallyIncreasing) {
+    this.isMonotonicallyIncreasing = isMonotonicallyIncreasing;
+  }
+
+  /**
+   * Returns true if data is monotonically increasing, false otherwise.
+   * 
+   * @return True if data is monotonically increasing, false otherwise.
+   */
+  public boolean isMonotonicallyIncreasing() {
+    return isMonotonicallyIncreasing;
+  }
+
+  /**
    * Gets the String representation of an Entry object.
    * 
    * @return Source name, MTU ID, and timestamp.
    */
   public String toString() {
     String msg = "Source: " + this.sourceName + " -- MTU ID: " + this.mtuID;
-    msg += " -- Timestamp: " + this.timestamp;
+    if (this.timestamp != null) {
+      msg += " -- Reading: " + this.reading + " -- Timestamp: " + this.timestamp;
+    }
+    if (!this.isMonotonicallyIncreasing && this.timestamp == null) {
+      msg += " -- Data from this source is not monotonically increasing.";
+    }
     return msg;
   }
 
@@ -133,8 +163,14 @@ public class Entry implements Comparable<Entry> {
       return false;
     }
     Entry e = (Entry) o;
-    return (this.sourceName.equals(e.sourceName) && this.mtuID.equals(e.mtuID)
-        && this.reading.equals(e.reading) && this.timestamp.equals(e.timestamp));
+    if (this.reading == null || this.timestamp == null ||
+        e.reading == null || e.timestamp == null) {
+      return (this.sourceName.equals(e.sourceName) && this.mtuID.equals(e.mtuID));
+    }
+    else {
+      return (this.sourceName.equals(e.sourceName) && this.reading.equals(e.reading)
+          && this.timestamp.equals(e.timestamp) && this.mtuID.equals(e.mtuID));
+    }
   }
 
   /**
@@ -144,21 +180,23 @@ public class Entry implements Comparable<Entry> {
    */
   public int hashCode() {
     int hashCode = 0;
-    if (this.sourceName == null && this.reading == null && this.timestamp == null) {
+    if (this.sourceName == null && this.reading == null && this.timestamp == null
+        && this.mtuID == null) {
       return hashCode;
     }
-    else if (this.timestamp == null) {
-      return this.sourceName.hashCode() + this.reading.hashCode();
+    if (this.sourceName != null) {
+      hashCode += this.sourceName.hashCode();
     }
-    else if (this.reading == null) {
-      return this.sourceName.hashCode() + this.timestamp.hashCode();
+    if (this.reading != null) {
+      hashCode += this.reading.hashCode();
     }
-    else if (this.sourceName == null) {
-      return this.reading.hashCode() + this.timestamp.hashCode();
+    if (this.timestamp != null) {
+      hashCode += this.timestamp.hashCode();
     }
-    else {
-      return this.sourceName.hashCode() + this.reading.hashCode() + this.timestamp.hashCode();
+    if (this.mtuID != null) {
+      hashCode += this.mtuID.hashCode();
     }
+    return hashCode;
   }
 
   /**
@@ -170,12 +208,24 @@ public class Entry implements Comparable<Entry> {
    */
   @Override
   public int compareTo(Entry e) {
-    int result = this.timestamp.toString().compareTo(e.timestamp.toString());
-    if (result == 0) {
-      return this.sourceName.compareTo(e.sourceName);
+    int result;
+    if (this.timestamp == null || e.timestamp == null) {
+      result = this.sourceName.compareTo(e.sourceName);
+      if (result == 0) {
+        return this.mtuID.compareTo(e.mtuID);
+      }
+      else {
+        return result;
+      }
     }
     else {
-      return result;
+      result = this.timestamp.toString().compareTo(e.timestamp.toString());
+      if (result == 0) {
+        return this.sourceName.compareTo(e.sourceName);
+      }
+      else {
+        return result;
+      }
     }
   }
 

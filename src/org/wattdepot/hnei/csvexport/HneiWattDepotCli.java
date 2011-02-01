@@ -15,7 +15,7 @@ import org.wattdepot.client.WattDepotClient;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiExporter {
+public class HneiWattDepotCli {
 
   /** A list of commands that will grab data from the WattDepot server. */
   private Map<String, Retriever> commands;
@@ -25,7 +25,7 @@ public class HneiExporter {
    * 
    * @param client Used to connect to WattDepot server.
    */
-  public HneiExporter(WattDepotClient client) {
+  public HneiWattDepotCli(WattDepotClient client) {
     this.commands = new HashMap<String, Retriever>();
     this.commands.put("daily", new DailySensorData(client));
     this.commands.put("hourly", new HourlySensorData(client));
@@ -69,7 +69,7 @@ public class HneiExporter {
     }
     System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
 
-    HneiExporter hneiExporter = new HneiExporter(client);
+    HneiWattDepotCli hneiExporter = new HneiWattDepotCli(client);
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
     String line = null;

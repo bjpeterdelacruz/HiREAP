@@ -22,7 +22,6 @@ import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
-import org.wattdepot.hnei.csvimport.validation.SourceMtu;
 import org.wattdepot.hnei.csvimport.validation.Validator;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -92,9 +91,6 @@ public class HneiImporter {
   /** Counts total number of entries found in CSV file. */
   protected int numTotalEntries;
 
-  /** Number of entries whose values are not monotonically increasing over time. */
-  protected int numNonmonoIncrVals;
-
   /** Number of daily readings. */
   protected int numDaily;
 
@@ -105,13 +101,16 @@ public class HneiImporter {
   protected List<Entry> entries;
 
   /** List of all sources and their MTU IDs, with duplicates. */
-  protected List<SourceMtu> allSources;
+  protected List<Entry> allSources;
 
   /** List of all sources and their MTU IDs, no duplicates. */
-  protected Set<SourceMtu> allMtus;
+  protected Set<Entry> allMtus;
 
   /** List of all sources that have multiple MTU IDs. */
-  protected List<SourceMtu> allDuplicateMtus;
+  protected List<Entry> allDuplicateMtus;
+
+  /** List of all entries that have values that not monotonically increasing. */
+  protected List<Entry> allNonmonoIncrVals;
 
   /**
    * Creates a new HneiTabularFileSensor object.
@@ -139,13 +138,13 @@ public class HneiImporter {
     this.numInvalidEntries = 0;
     this.numEntriesProcessed = 0;
     this.numTotalEntries = 0;
-    this.numNonmonoIncrVals = 0;
     this.numDaily = 0;
     this.numHourly = 0;
     this.entries = new ArrayList<Entry>();
-    this.allSources = new ArrayList<SourceMtu>();
-    this.allMtus = new HashSet<SourceMtu>();
-    this.allDuplicateMtus = new ArrayList<SourceMtu>();
+    this.allSources = new ArrayList<Entry>();
+    this.allMtus = new HashSet<Entry>();
+    this.allDuplicateMtus = new ArrayList<Entry>();
+    this.allNonmonoIncrVals = new ArrayList<Entry>();
   }
 
   /**
@@ -216,7 +215,7 @@ public class HneiImporter {
       }
       catch (OverwriteAttemptedException e) {
         this.numExistingSources++;
-        log.log(Level.INFO, "Source " + source.getName() + " already exists on server.\n");
+        // log.log(Level.INFO, "Source " + source.getName() + " already exists on server.\n");
       }
       this.numTotalSources++;
       client.storeSensorData(datum);
@@ -256,7 +255,8 @@ public class HneiImporter {
       log.log(Level.WARNING, monoIncrVal.getErrorMessage());
       datum.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
       datum.getProperties().getProperty().add(new Property(isIncreasing, "false"));
-      this.numNonmonoIncrVals++;
+      entry.setMonotonicallyIncreasing(false);
+      this.allNonmonoIncrVals.add(entry);
     }
     return datum;
   }
@@ -300,15 +300,15 @@ public class HneiImporter {
    * Adds all sources that have multiple MTU IDs to a list.
    */
   public void getMultipleMtuIds() {
-    this.allMtus = new HashSet<SourceMtu>(this.allSources);
-    List<SourceMtu> sourceMtus = new ArrayList<SourceMtu>();
-    for (SourceMtu s : this.allMtus) {
-      sourceMtus.add(s);
+    this.allMtus = new HashSet<Entry>(this.allSources);
+    List<Entry> sourceMtus = new ArrayList<Entry>();
+    for (Entry e : this.allMtus) {
+      sourceMtus.add(e);
     }
 
     Collections.sort(sourceMtus);
 
-    Set<SourceMtu> mtus = new HashSet<SourceMtu>();
+    Set<Entry> mtus = new HashSet<Entry>();
     for (int index = 0; index < sourceMtus.size() - 1; index++) {
       if (sourceMtus.get(index).getSourceName().equals(sourceMtus.get(index + 1).getSourceName())) {
         mtus.add(sourceMtus.get(index));
@@ -317,13 +317,13 @@ public class HneiImporter {
     }
 
     sourceMtus.clear();
-    for (SourceMtu s : mtus) {
-      sourceMtus.add(s);
+    for (Entry e : mtus) {
+      sourceMtus.add(e);
     }
 
     Collections.sort(sourceMtus);
-    for (SourceMtu s : sourceMtus) {
-      this.allDuplicateMtus.add(s);
+    for (Entry e : sourceMtus) {
+      this.allDuplicateMtus.add(e);
     }
   }
 
@@ -334,57 +334,97 @@ public class HneiImporter {
    * @param importEndTime End time of import.
    * @param validateStartTime Start time of validation.
    * @param validateEndTime End time of validation.
+   * @param numNoReadings Number of entries in CSV file that have no readings.
+   * @param numNonnumericValues Number of entries in CSV file that have non-numeric values.
+   * @param numBlankValues Number of entries in CSV file that have blank values.
    */
   public void printStats(long importStartTime, long importEndTime, long validateStartTime,
-      long validateEndTime) {
+      long validateEndTime, int numNoReadings, int numNonnumericValues, int numBlankValues) {
     String msg = "\n\n==================================================\n";
     msg += "Statistics\n";
     msg += "--------------------------------------------------\n";
-    msg += "Filename                      : " + this.filename;
-    msg += "\n\nFirst Entry Date              : " + this.entries.get(0).getTimestamp().toString();
+    msg += "Filename                           : " + this.filename;
+    msg +=
+        "\n\nFirst Entry Date                   : " + this.entries.get(0).getTimestamp().toString();
     XMLGregorianCalendar endTimestamp = this.entries.get(this.entries.size() - 1).getTimestamp();
-    msg += "\nLast Entry Date               : " + endTimestamp.toString();
-    msg += "\n\nEntries Processed             : " + this.numEntriesProcessed + "\n";
-    msg += "Invalid Entries               : " + this.numInvalidEntries + "\n";
-    msg += "Percentage of Invalid Entries : ";
+    msg += "\nLast Entry Date                    : " + endTimestamp.toString();
+    msg += "\n\nEntries Processed                  : " + this.numEntriesProcessed + "\n";
+    msg += "Invalid Entries                    : " + this.numInvalidEntries + "\n";
+    msg += "Percentage of Invalid Entries      : ";
     double percentage = ((double) this.numInvalidEntries / (double) this.numTotalEntries) * 100.0;
     msg += String.format("%.2f", percentage);
     msg += "%\n";
-    msg += "Total Number of Entries       : " + this.numTotalEntries;
-    msg += "\n\nNew Sources                   : " + this.numNewSources + "\n";
-    msg += "Existing Sources              : " + this.numExistingSources + "\n";
-    msg += "Total Number of Sources       : " + this.numTotalSources;
-    msg += "\n\nNumber of Hourly Data         : " + this.numHourly + "\n";
-    msg += "Number of Daily Data          : " + this.numDaily;
-    msg += "\n\nNew Data                      : " + this.numNewData + "\n";
-    msg += "Existing Data                 : " + this.numExistingData + "\n";
-    msg += "Total Number of Data Imported : " + (this.numNewData + this.numExistingData);
+    msg += "Total Number of Entries            : " + this.numTotalEntries;
+    msg += "\n\nBlank Values                       : " + numBlankValues + "\n";
+    msg += "Non-numeric Values                 : " + numNonnumericValues + "\n";
+    msg += "No Readings                        : " + numNoReadings + "\n";
+    msg += "Non-monotonically Increasing Data  : " + this.allNonmonoIncrVals.size() + "\n";
+    int totalViolations = numNonnumericValues + numNoReadings + numBlankValues;
+    totalViolations += this.allNonmonoIncrVals.size();
+    msg += "Total Number of Failed Validations : " + totalViolations;
+    msg += "\n\nNew Sources                        : " + this.numNewSources + "\n";
+    msg += "Existing Sources                   : " + this.numExistingSources + "\n";
+    msg += "Total Number of Sources            : " + this.numTotalSources;
+    msg += "\n\nNumber of Hourly Data              : " + this.numHourly + "\n";
+    msg += "Number of Daily Data               : " + this.numDaily;
+    msg += "\n\nNew Data                           : " + this.numNewData + "\n";
+    msg += "Existing Data                      : " + this.numExistingData + "\n";
+    msg += "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
     msg +=
-        "\n\nImport Runtime                : " + this.getRuntime(importStartTime, importEndTime)
-            + "\n";
+        "\n\nImport Runtime                     : "
+            + this.getRuntime(importStartTime, importEndTime) + "\n";
     msg +=
-        "Validation Runtime            : " + this.getRuntime(validateStartTime, validateEndTime)
-            + "\n";
+        "Validation Runtime                 : "
+            + this.getRuntime(validateStartTime, validateEndTime) + "\n";
     msg +=
-        "Total Runtime                 : " + this.getRuntime(importStartTime, validateEndTime)
-            + "\n\n";
+        "Total Runtime                      : "
+            + this.getRuntime(importStartTime, validateEndTime) + "\n\n";
     try {
       long numSourcesPerSecond = this.numTotalSources / ((importEndTime - importStartTime) / 1000);
-      msg += "-- " + numSourcesPerSecond + " entries processed per second.\n";
+      msg += numSourcesPerSecond;
+      if (numSourcesPerSecond > 1) {
+        msg += " entries imported per second.\n";
+      }
+      else {
+        msg += " entry imported per second.\n";
+      }
+      numSourcesPerSecond = this.numTotalSources / ((validateEndTime - validateStartTime) / 1000);
+      msg += numSourcesPerSecond;
+      if (numSourcesPerSecond > 1) {
+        msg += " entries validated per second.\n";
+      }
+      else {
+        msg += " entry validated per second.\n";
+      }
     }
     catch (ArithmeticException e) {
-      msg += "-- Number of entries processed per second is immeasurable.\n";
+      msg += "Number of entries processed per second is immeasurable.\n";
     }
-    msg +=
-        "-- Number of entries with data that are not monotonically increasing: "
-            + this.numNonmonoIncrVals;
-    if (!this.allDuplicateMtus.isEmpty()) {
-      msg += "\n\nDisplaying all " + this.allDuplicateMtus.size() + " sources that have multiple ";
-      msg += "MTU IDs...\n\n";
+    msg += "\n--------------------------------------------------\n";
+    if (this.allNonmonoIncrVals.isEmpty()) {
+      msg += "\nNo non-monotonically increasing data were found during import.";
+    }
+    else {
+      msg += "\nNumber of entries with non-monotonically increasing data: ";
+      msg += this.allNonmonoIncrVals.size() + "\n\n";
       String str = null;
       StringBuffer buffer = new StringBuffer();
-      for (SourceMtu s : this.allDuplicateMtus) {
-        str = s.toString() + "\n";
+      for (Entry e : this.allNonmonoIncrVals) {
+        str = e.toString() + "\n";
+        buffer.append(str);
+      }
+      msg += buffer.toString();
+    }
+    msg += "\n--------------------------------------------------\n";
+    if (this.allDuplicateMtus.isEmpty()) {
+      msg += "\nNo sources have multiple MTU IDs.";
+    }
+    else {
+      msg += "\nNumber of sources with multiple MTU IDs: " + this.allDuplicateMtus.size() + "\n\n";
+      String str = null;
+      StringBuffer buffer = new StringBuffer();
+      for (Entry e : this.allDuplicateMtus) {
+        str = e.toString() + "\n";
         buffer.append(str);
       }
       msg += buffer.toString();
@@ -451,9 +491,9 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 100; i++) {
-      // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 100; i++) {
+        line = reader.readNext();
+      // while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
@@ -502,6 +542,7 @@ public class HneiImporter {
     int counter = 1;
     validateStartTime = Calendar.getInstance().getTimeInMillis();
     try {
+      Entry temp = null;
       for (Entry e : inputClient.entries) {
         datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
@@ -511,7 +552,11 @@ public class HneiImporter {
         // Classify data as either hourly or daily.
         datum = inputClient.setSamplingInterval(client, e, datum);
 
-        inputClient.allSources.add(new SourceMtu(e.getSourceName(), e.getMtuId()));
+        temp = new Entry(e.getSourceName(), null, null, e.getMtuId());
+        if (datum.getProperty("isMonotonicallyIncreasing").equals("false")) {
+          temp.setMonotonicallyIncreasing(false);
+        }
+        inputClient.allSources.add(temp);
 
         // Update sensor data on server.
         client.deleteSensorData(e.getSourceName(), e.getTimestamp());
@@ -536,8 +581,12 @@ public class HneiImporter {
     inputClient.getMultipleMtuIds();
 
     Collections.sort(inputClient.entries);
+    int numNoReadings = ((HneiCsvRowParser) inputClient.parser).getNumNoReadings();
+    int numNonnumericValues = ((HneiCsvRowParser) inputClient.parser).getNumNonnumericValues();
+    int numBlankValues = ((HneiCsvRowParser) inputClient.parser).getNumBlankValues();
 
-    inputClient.printStats(importStartTime, importEndTime, validateStartTime, validateEndTime);
+    inputClient.printStats(importStartTime, importEndTime, validateStartTime, validateEndTime,
+        numNoReadings, numNonnumericValues, numBlankValues);
   }
 
 }

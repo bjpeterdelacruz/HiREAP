@@ -37,6 +37,15 @@ public class HneiCsvRowParser extends RowParser {
   /** List of validators to verify that entry is valid. */
   private List<Validator> validators;
 
+  /** Total number of entries with no readings. */
+  private static int numNoReadings = 0;
+
+  /** Total number of entries with non-numeric data. */
+  private static int numNonnumericValues = 0;
+
+  /** Total number of entries with missing data. */
+  private static int numBlankValues = 0;
+
   /**
    * Creates a new HneiCsvRowParser object.
    * 
@@ -50,9 +59,36 @@ public class HneiCsvRowParser extends RowParser {
     this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     this.log = log;
-    validators = new ArrayList<Validator>();
-    validators.add(new NumericValue());
-    validators.add(new NonblankValue());
+    this.validators = new ArrayList<Validator>();
+    this.validators.add(new NonblankValue());
+    this.validators.add(new NumericValue());
+  }
+
+  /**
+   * Returns the total number of entries with no readings.
+   * 
+   * @return The total number of entries with no readings.
+   */
+  public int getNumNoReadings() {
+    return numNoReadings;
+  }
+
+  /**
+   * Returns the total number of entries with non-numeric data.
+   * 
+   * @return The total number of entries with non-numeric data.
+   */
+  public int getNumNonnumericValues() {
+    return numNonnumericValues;
+  }
+
+  /**
+   * Returns the total number of entries with missing data.
+   * 
+   * @return The total number of entries with missing data.
+   */
+  public int getNumBlankValues() {
+    return numBlankValues;
   }
 
   /**
@@ -84,17 +120,27 @@ public class HneiCsvRowParser extends RowParser {
       String msg = "No reading for source: " + col[0] + "\n" + rowToString(col);
       System.err.print(msg);
       this.log.log(Level.INFO, msg);
+      numNoReadings++;
       return null;
     }
 
-    for (int i = 2; i < 9; i++) {
-      // col[7] is a timestamp, so skip it.
+    boolean result;
+    for (int i = 2; i < col.length; i++) {
+      // The eight column is a timestamp, so skip it.
       if (i != 7) {
         for (Validator v : validators) {
-          if (!v.validateEntry(col[i])) {
+          result = v.validateEntry(col[i]);
+          if (!result) {
             String msg = "[" + col[i] + "] " + v.getErrorMessage() + "\n" + rowToString(col);
             System.err.print(msg);
             this.log.log(Level.WARNING, msg);
+          }
+          if (v instanceof NonblankValue && !result) {
+            numBlankValues++;
+            return null;
+          }
+          if (v instanceof NumericValue && !result) {
+            numNonnumericValues++;
             return null;
           }
         }
