@@ -339,8 +339,8 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 1000; i++) {
-        // line = reader.readNext();
+      // for (int i = 0; i < 600; i++) {
+      // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
@@ -394,42 +394,42 @@ public class HneiImporter {
     validateStartTime = Calendar.getInstance().getTimeInMillis();
     try {
       Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
+      Calendar day = null;
+      XMLGregorianCalendar start = null;
+      XMLGregorianCalendar end = null;
+      String isIncreasing = "isMonotonicallyIncreasing";
       for (Entry e : entries) {
         datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
         if (!monoIncrVal.validateEntry(e)) {
-          client.deleteSensorData(e.getSourceName(), e.getTimestamp());
-          datum.getProperties().getProperty()
-              .remove(new Property("isMonotonicallyIncreasing", Boolean.toString(true)));
-          datum.getProperties().getProperty()
-              .add(new Property("isMonotonicallyIncreasing", Boolean.toString(false)));
+          log.log(Level.WARNING, monoIncrVal.getErrorMessage());
+          datum.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
+          datum.getProperties().getProperty().add(new Property(isIncreasing, "false"));
           inputClient.numNonmonoIncrVals++;
-          client.storeSensorData(datum);
         }
 
         // Classify data as either hourly or daily.
-        Calendar day = Calendar.getInstance();
+        day = Calendar.getInstance();
         day.set(e.getTimestamp().getYear(), e.getTimestamp().getMonth() - 1, e.getTimestamp()
             .getDay(), 0, 0, 0);
-        XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
-        XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
+        start = Tstamp.makeTimestamp(day.getTime().getTime());
+        end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
 
         data = client.getSensorDatas(e.getSourceName(), start, end);
 
-        datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
-        client.deleteSensorData(e.getSourceName(), e.getTimestamp());
         if (data.size() == 1) {
-          datum.getProperties().getProperty()
-              .remove(new Property("hourly", Boolean.toString(true)));
-          client.storeSensorData(datum);
+          datum.getProperties().getProperty().remove(new Property("hourly", "true"));
           inputClient.numDaily++;
         }
         else {
           datum.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
-          client.storeSensorData(datum);
           inputClient.numHourly++;
         }
+
+        // Update sensor data.
+        client.deleteSensorData(e.getSourceName(), e.getTimestamp());
+        client.storeSensorData(datum);
 
         if (++counter % 500 == 0) {
           System.out.println("Processing entry " + counter + "...");

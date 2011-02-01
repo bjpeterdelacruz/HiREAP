@@ -13,17 +13,15 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * A Validator that checks to make sure that the value of an entry is monotonically increasing.
+ * A Validator that checks to make sure that the value of an entry is not greater than the maximum
+ * power that is allowed.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class MonotonicallyIncreasingValue implements Validator {
+public class NotGreaterThanEnergy implements Validator {
 
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
-
-  /** Sensor data for a source at a previous timestamp. */
-  private SensorData previousData;
 
   /** Sensor data for a source at the current timestamp. */
   private SensorData currentData;
@@ -31,24 +29,32 @@ public class MonotonicallyIncreasingValue implements Validator {
   /** Used to make a timestamp in the test program. */
   private SimpleDateFormat formatDateTime;
 
+  /** Value of entry cannot be greater than energy (maxValueHourly * time since last entry). */
+  private static final int maxValueHourly = 20000;
+
+  /** Value of entry cannot be greater than energy (maxValueDaily * time since last entry). */
+  private static final int maxValueDaily = 480000;
+
+  /** Value of entry cannot be greater than power (maxValue * time since last entry). */
+  private double maxPower;
+
   /**
-   * Creates a new MonotonicallyIncreasingValue object.
+   * Creates a new NotGreaterThanValue object.
    * 
    * @param client Used to grab sensor data from the WattDepot server to use for validation.
    */
-  public MonotonicallyIncreasingValue(WattDepotClient client) {
+  public NotGreaterThanEnergy(WattDepotClient client) {
     this.client = client;
     this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
   }
 
   /**
-   * Given a timestamp and reading, this validator checks to make sure that the reading at the last
-   * timestamp is not greater than nor equal to the reading at the timestamp that was passed in to
-   * this validator.
+   * Given a timestamp, this validator checks to make sure that the reading at that timestamp
+   * is not greater than the maximum power that is allowed.
    * 
    * @param entry The entry to validate.
-   * @return True if the entry at the current timestamp is less than the entry at the previous
-   * timestamp, false otherwise.
+   * @return True if the entry at the current timestamp is less than or equal to the maximum
+   * power, false otherwise.
    */
   @Override
   public boolean validateEntry(Object entry) {
@@ -56,21 +62,36 @@ public class MonotonicallyIncreasingValue implements Validator {
     String sourceName = ((Entry) entry).getSourceName();
     XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
-    String reading = "reading";
     XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -2);
     try {
       List<SensorData> sensorDatas =
-          this.client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
-      if (sensorDatas.isEmpty() || sensorDatas.size() == 1) {
+          client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
+      if (sensorDatas.size() < 2) {
         // No other data exist but the data at the current timestamp, so return.
         return true;
       }
 
-      this.previousData = sensorDatas.get(sensorDatas.size() - 2);
+      SensorData previousData = sensorDatas.get(sensorDatas.size() - 2);
       this.currentData = client.getSensorData(sourceName, currTimestamp);
-      int currReading = Integer.parseInt(this.currentData.getProperty(reading));
-      int prevReading = Integer.parseInt(this.previousData.getProperty(reading));
-      if (currReading >= prevReading) {
+      boolean isHourly = true;
+      if (this.currentData.getProperty("daily") != null &&
+          this.currentData.getProperty("daily").equals("true")) {
+        isHourly = false;
+      }
+
+      int currentReading = Integer.parseInt(this.currentData.getProperty("reading"));
+      long prevTimeInMillis =
+          previousData.getTimestamp().toGregorianCalendar().getTime().getTime();
+      long currTimeInMillis =
+          this.currentData.getTimestamp().toGregorianCalendar().getTime().getTime();
+      double timeSinceLastEntry = (currTimeInMillis - prevTimeInMillis) / 1000.0 / 60.0 / 60.0;
+      if (isHourly) {
+        maxPower = maxValueHourly * timeSinceLastEntry;
+      }
+      else {
+        maxPower = maxValueDaily * timeSinceLastEntry;
+      }
+      if (currentReading <= maxPower) {
         return true;
       }
     }
@@ -80,6 +101,10 @@ public class MonotonicallyIncreasingValue implements Validator {
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
+    }
+    catch (NumberFormatException e) {
+      System.err.println("Reading at " + this.currentData.getTimestamp()
+          + " is not in the correct number format.");
     }
     return false;
   }
@@ -91,13 +116,17 @@ public class MonotonicallyIncreasingValue implements Validator {
    */
   @Override
   public String getErrorMessage() {
-    String reading = "reading";
-    String errorMessage = "The reading at " + this.previousData.getTimestamp();
-    errorMessage += " (" + this.previousData.getProperty(reading) + ") is greater than or equal ";
-    errorMessage += "to the reading at " + this.currentData.getTimestamp() + " (";
-    errorMessage += this.currentData.getProperty(reading) + ") for ";
-    errorMessage += this.currentData.getSource() + ".";
-    return errorMessage;
+    String msg = "";
+    try {
+      msg = "The data at " + this.currentData.getTimestamp() + " (";
+      msg += Integer.parseInt(this.currentData.getProperty("reading")) + " W) cannot be greater ";
+      msg += "than " + String.format("%.2f", maxPower) + " Wh.";
+    }
+    catch (NumberFormatException e) {
+      System.err.println("Reading at " + this.currentData.getTimestamp()
+          + " is not in the correct number format.");
+    }
+    return msg;
   }
 
   /**
@@ -113,21 +142,22 @@ public class MonotonicallyIncreasingValue implements Validator {
 
     WattDepotClient client = new WattDepotClient(args[0], args[1], args[2]);
     if (client.isHealthy() && client.isAuthenticated()) {
-      MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue(client);
+      NotGreaterThanEnergy validator = new NotGreaterThanEnergy(client);
       XMLGregorianCalendar currTimestamp = null;
       try {
-        Date timestamp = validator.formatDateTime.parse("1/12/2011 5:35:39 AM");
+        Date timestamp = validator.formatDateTime.parse("1/12/2011 12:07:19 PM");
         currTimestamp = Tstamp.makeTimestamp(timestamp.getTime());
       }
       catch (ParseException e) {
         e.printStackTrace();
         System.exit(1);
       }
-      Entry currentData = new Entry("994702074677", "016635", currTimestamp);
+      Entry currentData = new Entry("126580270905", null, currTimestamp);
       System.out.println(validator.validateEntry(currentData));
     }
     else {
       System.err.println("Unable to connect to WattDepot server.");
     }
   }
+
 }

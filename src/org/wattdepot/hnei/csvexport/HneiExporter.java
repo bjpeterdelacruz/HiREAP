@@ -3,9 +3,11 @@ package org.wattdepot.hnei.csvexport;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
 /**
  * A command-line client for displaying information provided by HNEI that is stored on the WattDepot
@@ -15,11 +17,8 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  */
 public class HneiExporter {
 
-  /** Class to handle grabbing daily data. */
-  private DailySensorData dailyData;
-
-  /** Class to handle grabbing hourly data. */
-  private HourlySensorData hourlyData;
+  /** A list of commands that will grab data from the WattDepot server. */
+  private Map<String, Retriever> commands;
 
   /**
    * Creates a new HneiExporter object.
@@ -27,22 +26,25 @@ public class HneiExporter {
    * @param client Used to connect to WattDepot server.
    */
   public HneiExporter(WattDepotClient client) {
-    this.dailyData = new DailySensorData(client);
-    this.hourlyData = new HourlySensorData(client);
+    this.commands = new HashMap<String, Retriever>();
+    this.commands.put("daily", new DailySensorData(client));
+    this.commands.put("hourly", new HourlySensorData(client));
+    this.commands.put("non-mono", new NonmonotonicallyIncreasingData(client));
   }
 
   /**
    * Provides useful information on how to use this client.
-   * 
-   * @return A help message.
    */
-  public String getHelp() {
-    String msg = "\n**********\n";
-    msg += "To use this program, type one of the following commands:\n\n";
-    msg += ">> dailysensordata [source] [day]\nRetrieves data for a source at the given day ";
-    msg += " (hh/DD/yyyy, e.g. 1/20/2011).\n\n";
-    msg += "**********\n";
-    return msg;
+  public void getHelp() {
+    Iterator<Entry<String, Retriever>> i = this.commands.entrySet().iterator();
+    System.out.println("\n**********\n");
+    System.out.println("To use this program, type one of the following commands:\n");
+    System.out.println(">> q | quit\nQuits the program.");
+    System.out.println(">> h | help\nDisplays this help message.");
+    while (i.hasNext()) {
+      System.out.print(i.next().getValue().getHelp());
+    }
+    System.out.println("**********\n");
   }
 
   /**
@@ -90,33 +92,20 @@ public class HneiExporter {
         break;
       }
       else if (command[0].equals("h") || command[0].equals("help")) {
-        System.out.println(hneiExporter.getHelp());
+        hneiExporter.getHelp();
       }
-      else if (command[0].equals("dailysensordata") && command.length == 3) {
-        SensorData datum = hneiExporter.dailyData.getSensorData(command[1], command[2]);
-        if (datum == null) {
-          System.out
-              .println("No data for " + command[2] + " exists for source " + command[1] + ".");
-        }
-        else {
-          System.out.println(datum);
-        }
+      else if (command[0].equals("daily") && command.length == 3) {
+        hneiExporter.commands.get("daily").getSensorData(command[1], command[2]);
       }
-      else if (command[0].equals("hourlysensordata") && command.length == 3) {
-        List<SensorData> data = hneiExporter.hourlyData.getSensorDatas(command[1], command[2]);
-        if (data.isEmpty()) {
-          System.out
-              .println("No data for " + command[2] + " exists for source " + command[1] + ".");
-        }
-        else {
-          for (SensorData d : data) {
-            System.out.println(d);
-          }
-        }
+      else if (command[0].equals("hourly") && command.length == 3) {
+        hneiExporter.commands.get("hourly").getSensorData(command[1], command[2]);
+      }
+      else if (command[0].equals("non-mono") && command.length == 3) {
+        hneiExporter.commands.get("non-mono").getSensorData(command[1], command[2]);
       }
       else {
-        System.out
-            .println("Invalid command. Please try again (type \"h\" for available commands).");
+        String msg = "Invalid command. Please try again (type \"h\" for available commands).";
+        System.out.println(msg);
       }
     }
     System.out.println("Exiting...");
