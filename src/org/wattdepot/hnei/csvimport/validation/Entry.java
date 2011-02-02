@@ -143,9 +143,6 @@ public class Entry implements Comparable<Entry> {
     if (this.timestamp != null) {
       msg += " -- Reading: " + this.reading + " -- Timestamp: " + this.timestamp;
     }
-    if (!this.isMonotonicallyIncreasing && this.timestamp == null) {
-      msg += " -- Data from this source is not monotonically increasing.";
-    }
     return msg;
   }
 
@@ -208,24 +205,25 @@ public class Entry implements Comparable<Entry> {
    */
   @Override
   public int compareTo(Entry e) {
-    int result;
-    if (this.timestamp == null || e.timestamp == null) {
-      result = this.sourceName.compareTo(e.sourceName);
-      if (result == 0) {
-        return this.mtuID.compareTo(e.mtuID);
+    int result = this.sourceName.compareTo(e.sourceName);
+    if (result == 0) {
+      if ((result = this.mtuID.compareTo(e.mtuID)) == 0) {
+        if (this.isMonotonicallyIncreasing && !e.isMonotonicallyIncreasing) {
+          return 1;
+        }
+        else if (!this.isMonotonicallyIncreasing && e.isMonotonicallyIncreasing) {
+          return -1;
+        }
+        else {
+          return 0;
+        }
       }
       else {
         return result;
       }
     }
     else {
-      result = this.timestamp.toString().compareTo(e.timestamp.toString());
-      if (result == 0) {
-        return this.sourceName.compareTo(e.sourceName);
-      }
-      else {
-        return result;
-      }
+      return result;
     }
   }
 

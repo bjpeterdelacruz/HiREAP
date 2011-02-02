@@ -56,7 +56,6 @@ public class MonotonicallyIncreasingValue implements Validator {
     String sourceName = ((Entry) entry).getSourceName();
     XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
-    String reading = "reading";
     XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -2);
     try {
       List<SensorData> sensorDatas =
@@ -68,8 +67,8 @@ public class MonotonicallyIncreasingValue implements Validator {
 
       this.previousData = sensorDatas.get(sensorDatas.size() - 2);
       this.currentData = client.getSensorData(sourceName, currTimestamp);
-      int currReading = Integer.parseInt(this.currentData.getProperty(reading));
-      int prevReading = Integer.parseInt(this.previousData.getProperty(reading));
+      int currReading = (int) client.getPowerConsumed(sourceName, this.currentData.getTimestamp());
+      int prevReading = (int) client.getPowerConsumed(sourceName, this.previousData.getTimestamp());
       if (currReading >= prevReading) {
         return true;
       }

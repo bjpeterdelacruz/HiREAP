@@ -1,5 +1,6 @@
 package org.wattdepot.hnei.csvimport;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -7,12 +8,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
+import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.NonblankValue;
 import org.wattdepot.hnei.csvimport.validation.NumericValue;
 import org.wattdepot.hnei.csvimport.validation.Validator;
-import org.wattdepot.resource.property.jaxb.Properties;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
@@ -104,12 +107,6 @@ public class HneiCsvRowParser extends RowParser {
       return null;
     }
 
-    // If some values are missing or no readings were taken, ignore row.
-
-    // Sample row: (comma-delimited)
-    // 126580270205 , 10/8/2009 9:48:35 PM , 2144948 , 2 , 215 , 13248 , 13248 ,
-    ///////////////// 1/13/2011 8:09:35 AM , -152
-
     if (col.length != 9) {
       String msg = "Row not in specified format:\n" + rowToString(col);
       this.log.log(Level.WARNING, msg);
@@ -147,8 +144,6 @@ public class HneiCsvRowParser extends RowParser {
       }
     }
 
-    Properties properties = new Properties();
-
     Date installDate = null;
     try {
       installDate = formatDateTime.parse(col[1]);
@@ -164,13 +159,6 @@ public class HneiCsvRowParser extends RowParser {
       }
     }
     XMLGregorianCalendar installTimestamp = Tstamp.makeTimestamp(installDate.getTime());
-    properties.getProperty().add(new Property("installDate", installTimestamp.toString()));
-
-    properties.getProperty().add(new Property("mtuID", col[2]));
-    properties.getProperty().add(new Property("port", col[3]));
-    properties.getProperty().add(new Property("meterType", col[4]));
-    properties.getProperty().add(new Property("rawRead", col[5]));
-    properties.getProperty().add(new Property("reading", col[6]));
 
     Date readingDate = null;
     try {
@@ -186,17 +174,24 @@ public class HneiCsvRowParser extends RowParser {
         return null;
       }
     }
-    properties.getProperty().add(new Property("rssi", col[8]));
-
-    // Update the following properties in the HneiImporter class.
-    properties.getProperty().add(new Property("isMonotonicallyIncreasing", "true"));
-    properties.getProperty().add(new Property("hourly", "true"));
-    properties.getProperty().add(new Property("daily", "true"));
 
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
+    Property powerConsumed = new Property(SensorData.POWER_CONSUMED, Integer.parseInt(col[6]));
+    String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
+    SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
 
-    return new SensorData(timestamp, this.toolName, Source.sourceToUri(this.sourceName,
-        this.serverUri), properties);
+    datum.addProperty(new Property("installDate", installTimestamp.toString()));
+    datum.addProperty(new Property("mtuID", col[2]));
+    datum.addProperty(new Property("port", col[3]));
+    datum.addProperty(new Property("meterType", col[4]));
+    datum.addProperty(new Property("rawRead", col[5]));
+    datum.addProperty(new Property("reading", col[6]));
+    datum.addProperty(new Property("rssi", col[8]));
+    datum.addProperty(new Property("isMonotonicallyIncreasing", "true"));
+    datum.addProperty(new Property("hourly", "true"));
+    datum.addProperty(new Property("daily", "true"));
+
+    return datum;
   }
 
   /**
@@ -214,4 +209,81 @@ public class HneiCsvRowParser extends RowParser {
     }
     return buffer.toString() + "\n";
   }
+
+  /**
+   * Test program to see if row parser works.
+   * 
+   * @param args None.
+   */
+  public static void main(String[] args) {
+    if (args.length != 3) {
+      System.err.println("Command-line arguments not in correct format. Exiting...");
+      System.exit(1);
+    }
+
+    String serverUri = args[0];
+    String username = args[1];
+    String password = args[2];
+
+    WattDepotClient client = new WattDepotClient(serverUri, username, password);
+    if (!client.isHealthy() || !client.isAuthenticated()) {
+      System.err.println("Unable to connect to WattDepot server.");
+      System.exit(1);
+    }
+    System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
+
+    String sourceName = "994515990077";
+    HneiCsvRowParser parser =
+        new HneiCsvRowParser("HneiCsvRowParser", serverUri, sourceName, null);
+    String[] col1 =
+        { sourceName, "8/1/2009", "1951005", "1", "491", "35958", "035958",
+            "1/1/2011 9:06:29 AM", "0" };
+    String[] col2 =
+        { sourceName, "8/1/2009", "1951005", "1", "491", "35955", "035955",
+            "1/1/2011 8:04:57 AM", "0" };
+    SensorData datum1 = null;
+    SensorData datum2 = null;
+    try {
+      client.storeSource(new Source(sourceName, username, true), true);
+      datum1 = parser.parseRow(col1);
+      System.out.println(datum1);
+      client.storeSensorData(parser.parseRow(col1));
+      datum2 = parser.parseRow(col2);
+      System.out.println(datum2);
+      client.storeSensorData(datum2);
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+    catch (JAXBException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+
+    Date date = null;
+    try {
+      date = parser.formatDateTime.parse("1/1/2011 8:30:00 AM");
+    }
+    catch (ParseException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+    XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(date.getTime());
+
+    try {
+      System.out.println("\nData:");
+      String power = datum1.getProperty(SensorData.POWER_CONSUMED);
+      System.out.println(datum1.getTimestamp().toString() + ": " + power);
+      double p = client.getPowerConsumed(sourceName, timestamp);
+      System.out.println(timestamp.toString() + ": " + p);
+      power = datum2.getProperty(SensorData.POWER_CONSUMED);
+      System.out.println(datum2.getTimestamp().toString() + ": " + power);
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+  }
+
 }

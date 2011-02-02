@@ -35,10 +35,10 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiImporter {
+public class HneiCsvImporter {
 
   /** Log file for this application. */
-  private static final Logger log = Logger.getLogger(HneiImporter.class.getName());
+  private static final Logger log = Logger.getLogger(HneiCsvImporter.class.getName());
 
   /** Output logging information to a text file. */
   protected FileHandler txtFile;
@@ -121,7 +121,7 @@ public class HneiImporter {
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
    */
-  public HneiImporter(String filename, String uri, String username, String password,
+  public HneiCsvImporter(String filename, String uri, String username, String password,
       boolean skipFirstRow) {
     this.filename = filename;
     this.serverUri = uri;
@@ -300,6 +300,8 @@ public class HneiImporter {
    * Adds all sources that have multiple MTU IDs to a list.
    */
   public void getMultipleMtuIds() {
+    Collections.sort(this.allSources);
+
     this.allMtus = new HashSet<Entry>(this.allSources);
     List<Entry> sourceMtus = new ArrayList<Entry>();
     for (Entry e : this.allMtus) {
@@ -316,15 +318,11 @@ public class HneiImporter {
       }
     }
 
-    sourceMtus.clear();
     for (Entry e : mtus) {
-      sourceMtus.add(e);
-    }
-
-    Collections.sort(sourceMtus);
-    for (Entry e : sourceMtus) {
       this.allDuplicateMtus.add(e);
     }
+
+    Collections.sort(this.allDuplicateMtus);
   }
 
   /**
@@ -377,8 +375,8 @@ public class HneiImporter {
         "Validation Runtime                 : "
             + this.getRuntime(validateStartTime, validateEndTime) + "\n";
     msg +=
-        "Total Runtime                      : "
-            + this.getRuntime(importStartTime, validateEndTime) + "\n\n";
+        "Total Runtime                      : " + this.getRuntime(importStartTime, validateEndTime)
+            + "\n\n";
     try {
       long numSourcesPerSecond = this.numTotalSources / ((importEndTime - importStartTime) / 1000);
       msg += numSourcesPerSecond;
@@ -402,7 +400,7 @@ public class HneiImporter {
     }
     msg += "\n--------------------------------------------------\n";
     if (this.allNonmonoIncrVals.isEmpty()) {
-      msg += "\nNo non-monotonically increasing data were found during import.";
+      msg += "\nNo non-monotonically increasing data were found during import.\n";
     }
     else {
       msg += "\nNumber of entries with non-monotonically increasing data: ";
@@ -424,7 +422,11 @@ public class HneiImporter {
       String str = null;
       StringBuffer buffer = new StringBuffer();
       for (Entry e : this.allDuplicateMtus) {
-        str = e.toString() + "\n";
+        str = e.toString();
+        if (!e.isMonotonicallyIncreasing()) {
+          str += " -- Data from this source and MTU ID is not monotonically increasing.";
+        }
+        str += "\n";
         buffer.append(str);
       }
       msg += buffer.toString();
@@ -462,7 +464,8 @@ public class HneiImporter {
     }
 
     // Grab data from CSV file.
-    HneiImporter inputClient = new HneiImporter(filename, serverUri, username, password, true);
+    HneiCsvImporter inputClient =
+        new HneiCsvImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
     if (client.isHealthy() && client.isAuthenticated()) {
       System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
@@ -491,9 +494,9 @@ public class HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 100; i++) {
-        line = reader.readNext();
-      // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 1000; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
