@@ -121,6 +121,7 @@ public class HneiCsvRowParser extends RowParser {
       return null;
     }
 
+    // Run validations.
     boolean result;
     for (int i = 2; i < col.length; i++) {
       // The eight column is a timestamp, so skip it.
@@ -247,7 +248,7 @@ public class HneiCsvRowParser extends RowParser {
       client.storeSource(new Source(sourceName, username, true), true);
       datum1 = parser.parseRow(col1);
       System.out.println(datum1);
-      client.storeSensorData(parser.parseRow(col1));
+      client.storeSensorData(datum1);
       datum2 = parser.parseRow(col2);
       System.out.println(datum2);
       client.storeSensorData(datum2);

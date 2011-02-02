@@ -21,6 +21,7 @@ import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.Entry;
+import org.wattdepot.hnei.csvimport.validation.EntrySortByTimestamp;
 import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
 import org.wattdepot.hnei.csvimport.validation.Validator;
 import org.wattdepot.resource.property.jaxb.Property;
@@ -338,101 +339,136 @@ public class HneiCsvImporter {
    */
   public void printStats(long importStartTime, long importEndTime, long validateStartTime,
       long validateEndTime, int numNoReadings, int numNonnumericValues, int numBlankValues) {
+    StringBuffer buffer = new StringBuffer();
     String msg = "\n\n==================================================\n";
-    msg += "Statistics\n";
-    msg += "--------------------------------------------------\n";
-    msg += "Filename                           : " + this.filename;
-    msg +=
-        "\n\nFirst Entry Date                   : " + this.entries.get(0).getTimestamp().toString();
-    XMLGregorianCalendar endTimestamp = this.entries.get(this.entries.size() - 1).getTimestamp();
-    msg += "\nLast Entry Date                    : " + endTimestamp.toString();
-    msg += "\n\nEntries Processed                  : " + this.numEntriesProcessed + "\n";
-    msg += "Invalid Entries                    : " + this.numInvalidEntries + "\n";
-    msg += "Percentage of Invalid Entries      : ";
+    buffer.append(msg);
+    msg = "Statistics\n";
+    buffer.append(msg);
+    msg = "--------------------------------------------------\n";
+    buffer.append(msg);
+    msg = "Filename                           : " + this.filename;
+    buffer.append(msg);
+    XMLGregorianCalendar startTimestamp = this.entries.get(this.entries.size() - 1).getTimestamp();
+    msg = "\n\nFirst Entry Date                   : " + startTimestamp.toString();
+    buffer.append(msg);
+    XMLGregorianCalendar endTimestamp = this.entries.get(0).getTimestamp();
+    buffer.append(msg);
+    msg = "\nLast Entry Date                    : " + endTimestamp.toString();
+    buffer.append(msg);
+    msg = "\n\nEntries Processed                  : " + this.numEntriesProcessed + "\n";
+    buffer.append(msg);
+    msg = "Invalid Entries                    : " + this.numInvalidEntries + "\n";
+    buffer.append(msg);
+    msg = "Percentage of Invalid Entries      : ";
+    buffer.append(msg);
     double percentage = ((double) this.numInvalidEntries / (double) this.numTotalEntries) * 100.0;
-    msg += String.format("%.2f", percentage);
-    msg += "%\n";
-    msg += "Total Number of Entries            : " + this.numTotalEntries;
-    msg += "\n\nBlank Values                       : " + numBlankValues + "\n";
-    msg += "Non-numeric Values                 : " + numNonnumericValues + "\n";
-    msg += "No Readings                        : " + numNoReadings + "\n";
-    msg += "Non-monotonically Increasing Data  : " + this.allNonmonoIncrVals.size() + "\n";
+    msg = String.format("%.2f", percentage) + "%\n";
+    buffer.append(msg);
+    msg = "Total Number of Entries            : " + this.numTotalEntries;
+    buffer.append(msg);
+    msg = "\n\nBlank Values                       : " + numBlankValues + "\n";
+    buffer.append(msg);
+    msg = "Non-numeric Values                 : " + numNonnumericValues + "\n";
+    buffer.append(msg);
+    msg = "No Readings                        : " + numNoReadings + "\n";
+    buffer.append(msg);
+    msg = "Non-monotonically Increasing Data  : " + this.allNonmonoIncrVals.size() + "\n";
+    buffer.append(msg);
     int totalViolations = numNonnumericValues + numNoReadings + numBlankValues;
     totalViolations += this.allNonmonoIncrVals.size();
-    msg += "Total Number of Failed Validations : " + totalViolations;
-    msg += "\n\nNew Sources                        : " + this.numNewSources + "\n";
-    msg += "Existing Sources                   : " + this.numExistingSources + "\n";
-    msg += "Total Number of Sources            : " + this.numTotalSources;
-    msg += "\n\nNumber of Hourly Data              : " + this.numHourly + "\n";
-    msg += "Number of Daily Data               : " + this.numDaily;
-    msg += "\n\nNew Data                           : " + this.numNewData + "\n";
-    msg += "Existing Data                      : " + this.numExistingData + "\n";
-    msg += "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
-    msg +=
-        "\n\nImport Runtime                     : "
-            + this.getRuntime(importStartTime, importEndTime) + "\n";
-    msg +=
-        "Validation Runtime                 : "
-            + this.getRuntime(validateStartTime, validateEndTime) + "\n";
-    msg +=
-        "Total Runtime                      : " + this.getRuntime(importStartTime, validateEndTime)
-            + "\n\n";
+    msg = "Total Number of Failed Validations : " + totalViolations;
+    buffer.append(msg);
+    msg = "\n\nNew Sources                        : " + this.numNewSources + "\n";
+    buffer.append(msg);
+    msg = "Existing Sources                   : " + this.numExistingSources + "\n";
+    buffer.append(msg);
+    msg = "Total Number of Sources            : " + this.numTotalSources;
+    buffer.append(msg);
+    msg = "\n\nNumber of Hourly Data              : " + this.numHourly + "\n";
+    buffer.append(msg);
+    msg = "Number of Daily Data               : " + this.numDaily;
+    buffer.append(msg);
+    msg = "\n\nNew Data                           : " + this.numNewData + "\n";
+    buffer.append(msg);
+    msg = "Existing Data                      : " + this.numExistingData + "\n";
+    buffer.append(msg);
+    msg = "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
+    buffer.append(msg);
+    String runtime = this.getRuntime(importStartTime, importEndTime);
+    msg = "\n\nImport Runtime                     : " + runtime + "\n";
+    buffer.append(msg);
+    runtime = this.getRuntime(validateStartTime, validateEndTime);
+    msg = "Validation Runtime                 : " + runtime + "\n";
+    buffer.append(msg);
+    runtime = this.getRuntime(importStartTime, validateEndTime);
+    msg = "Total Runtime                      : " + runtime + "\n\n";
+    buffer.append(msg);
     try {
       long numSourcesPerSecond = this.numTotalSources / ((importEndTime - importStartTime) / 1000);
-      msg += numSourcesPerSecond;
+      msg = Long.toString(numSourcesPerSecond);
       if (numSourcesPerSecond > 1) {
         msg += " entries imported per second.\n";
       }
       else {
         msg += " entry imported per second.\n";
       }
+      buffer.append(msg);
       numSourcesPerSecond = this.numTotalSources / ((validateEndTime - validateStartTime) / 1000);
-      msg += numSourcesPerSecond;
+      msg = Long.toString(numSourcesPerSecond);
       if (numSourcesPerSecond > 1) {
         msg += " entries validated per second.\n";
       }
       else {
         msg += " entry validated per second.\n";
       }
+      buffer.append(msg);
     }
     catch (ArithmeticException e) {
-      msg += "Number of entries processed per second is immeasurable.\n";
+      msg = "Number of entries processed per second is immeasurable.\n";
+      buffer.append(msg);
     }
-    msg += "\n--------------------------------------------------\n";
+    msg = "\n--------------------------------------------------\n";
+    buffer.append(msg);
     if (this.allNonmonoIncrVals.isEmpty()) {
-      msg += "\nNo non-monotonically increasing data were found during import.\n";
+      msg = "\nNo non-monotonically increasing data were found during import.\n";
+      buffer.append(msg);
     }
     else {
-      msg += "\nNumber of entries with non-monotonically increasing data: ";
-      msg += this.allNonmonoIncrVals.size() + "\n\n";
+      msg = "\nNumber of entries with non-monotonically increasing data: ";
+      buffer.append(msg);
+      msg = this.allNonmonoIncrVals.size() + "\n\n";
+      buffer.append(msg);
       String str = null;
-      StringBuffer buffer = new StringBuffer();
+      StringBuffer buff = new StringBuffer();
       for (Entry e : this.allNonmonoIncrVals) {
         str = e.toString() + "\n";
-        buffer.append(str);
+        buff.append(str);
       }
-      msg += buffer.toString();
+      buffer.append(buff.toString());
     }
-    msg += "\n--------------------------------------------------\n";
+    msg = "\n--------------------------------------------------\n";
+    buffer.append(msg);
     if (this.allDuplicateMtus.isEmpty()) {
-      msg += "\nNo sources have multiple MTU IDs.";
+      msg = "\nNo sources have multiple MTU IDs.";
+      buffer.append(msg);
     }
     else {
-      msg += "\nNumber of sources with multiple MTU IDs: " + this.allDuplicateMtus.size() + "\n\n";
+      msg = "\nNumber of sources with multiple MTU IDs: " + this.allDuplicateMtus.size() + "\n\n";
+      buffer.append(msg);
       String str = null;
-      StringBuffer buffer = new StringBuffer();
+      StringBuffer buff = new StringBuffer();
       for (Entry e : this.allDuplicateMtus) {
         str = e.toString();
         if (!e.isMonotonicallyIncreasing()) {
           str += " -- Data from this source and MTU ID is not monotonically increasing.";
         }
         str += "\n";
-        buffer.append(str);
+        buff.append(str);
       }
-      msg += buffer.toString();
+      buffer.append(buff.toString());
     }
-    log.log(Level.INFO, msg);
-    System.out.print(msg);
+    log.log(Level.INFO, buffer.toString());
+    System.out.print(buffer.toString());
   }
 
   /**
@@ -494,7 +530,7 @@ public class HneiCsvImporter {
       System.out.println("Reading in CSV file...\n");
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 1000; i++) {
+      // for (int i = 0; i < 10; i++) {
         // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         source = line[0];
@@ -583,7 +619,7 @@ public class HneiCsvImporter {
     // Get all sources that have multiple MTU IDs.
     inputClient.getMultipleMtuIds();
 
-    Collections.sort(inputClient.entries);
+    Collections.sort(inputClient.entries, new EntrySortByTimestamp());
     int numNoReadings = ((HneiCsvRowParser) inputClient.parser).getNumNoReadings();
     int numNonnumericValues = ((HneiCsvRowParser) inputClient.parser).getNumNonnumericValues();
     int numBlankValues = ((HneiCsvRowParser) inputClient.parser).getNumBlankValues();

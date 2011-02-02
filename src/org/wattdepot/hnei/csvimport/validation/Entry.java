@@ -160,8 +160,8 @@ public class Entry implements Comparable<Entry> {
       return false;
     }
     Entry e = (Entry) o;
-    if (this.reading == null || this.timestamp == null ||
-        e.reading == null || e.timestamp == null) {
+    if ((this.reading == null || this.timestamp == null)
+        || (e.reading == null || e.timestamp == null)) {
       return (this.sourceName.equals(e.sourceName) && this.mtuID.equals(e.mtuID));
     }
     else {
@@ -197,7 +197,8 @@ public class Entry implements Comparable<Entry> {
   }
 
   /**
-   * Used to compare two Entry objects together.
+   * Compares two Entry objects together using names of sources, MTU IDs, and values of
+   * <code>isMonotonicallyIncreasing</code>.
    * 
    * @param e Entry object to compare with.
    * @return 0 if equal, less than 0 if first argument is greater than second argument, greater than
