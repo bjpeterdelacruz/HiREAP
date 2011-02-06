@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvexport;
+package org.wattdepot.hnei.export.cli;
 
 import java.io.BufferedReader;
 import java.io.IOException;

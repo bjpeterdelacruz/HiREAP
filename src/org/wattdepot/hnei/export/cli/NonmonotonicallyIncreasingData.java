@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvexport;
+package org.wattdepot.hnei.export.cli;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -10,11 +10,12 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This class is used by the HneiExporter class to grab hourly data for a particular source.
+ * This class is used by the HneiExporter class to grab non-monotonically increasing data for a
+ * particular source.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HourlySensorData implements Retriever {
+public class NonmonotonicallyIncreasingData implements Retriever {
 
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
@@ -23,17 +24,17 @@ public class HourlySensorData implements Retriever {
   private SimpleDateFormat formatDate;
 
   /**
-   * Creates a new HourlySensorData object.
+   * Creates a new NonmonotonicallyIncreasingData object.
    * 
    * @param client Used to connect to WattDepot server.
    */
-  public HourlySensorData(WattDepotClient client) {
+  public NonmonotonicallyIncreasingData(WattDepotClient client) {
     this.client = client;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
   }
 
   /**
-   * Displays a list of hourly data for a source at the given timestamp.
+   * Displays a list of non-monotonically increasing data for a source at the given timestamp.
    * 
    * @param sourceName Name of a source.
    * @param tstamp Timestamp at which to which to grab data for the source.
@@ -56,7 +57,7 @@ public class HourlySensorData implements Retriever {
         System.out.println("Reading     Timestamp");
         System.out.println("===============================");
         for (SensorData d : results) {
-          if (d.getProperty("hourly") != null && d.getProperty("hourly").equals("true")) {
+          if (d.getProperty("isMonotonicallyIncreasing").equals("false")) {
             System.out.print(String.format("%7d", Integer.parseInt(d.getProperty("reading"))));
             System.out.println("     " + d.getTimestamp());
           }
@@ -69,14 +70,14 @@ public class HourlySensorData implements Retriever {
   }
 
   /**
-   * Gets a help message for the hourly command.
+   * Gets a help message for the non-mono command.
    * 
    * @return A help message.
    */
   @Override
   public String getHelp() {
-    String msg = ">> hourly [source] [day]\nRetrieves all hourly data for a source ";
-    msg += "at the given day (hh/DD/yyyy).\n";
+    String msg = ">> non-mono [source] [day]\nRetrieves all non-monotonically increasing data ";
+    msg += "for a source at the given day (hh/DD/yyyy).\n";
     return msg;
   }
 

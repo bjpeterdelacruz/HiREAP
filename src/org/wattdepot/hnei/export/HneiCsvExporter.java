@@ -1,6 +1,9 @@
-package org.wattdepot.hnei.csvexport;
+package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
@@ -35,7 +38,10 @@ public class HneiCsvExporter {
   protected XMLGregorianCalendar endTimestamp;
 
   /** Formats dates that are in the format MM/DD/YYYY. */
-  private SimpleDateFormat formatDate;
+  protected SimpleDateFormat formatDate;
+
+  /** Sampling interval in minutes for energy consumed. */
+  protected int samplingInterval;
 
   /**
    * Creates a new HneiCsvExporter object.
@@ -46,6 +52,7 @@ public class HneiCsvExporter {
     this.startTimestamp = null;
     this.endTimestamp = null;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    this.samplingInterval = 0;
 
   }
 
@@ -58,6 +65,7 @@ public class HneiCsvExporter {
   public boolean getNumSources(BufferedReader br) {
     System.out.print("Please enter the number of sources for which you want data: ");
     String command = null;
+
     try {
       if ((command = br.readLine()) == null) {
         return false;
@@ -85,6 +93,7 @@ public class HneiCsvExporter {
    */
   public boolean getSourceNames(BufferedReader br) {
     String command = null;
+
     for (int i = 0; i < numSources; i++) {
       System.out.print("Please enter the name of source " + (i + 1) + ": ");
       try {
@@ -110,6 +119,7 @@ public class HneiCsvExporter {
   public boolean getDates(BufferedReader br) {
     System.out.print("Please enter a start date in the format mm/dd/yyyy (e.g. 2/1/2011): ");
     String command = null;
+
     try {
       if ((command = br.readLine()) == null) {
         return false;
@@ -135,6 +145,40 @@ public class HneiCsvExporter {
   }
 
   /**
+   * Gets a sampling interval in minutes from the user via the command-line.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return True if input is successful, false otherwise.
+   */
+  public boolean getSamplingInterval(BufferedReader br) {
+    String command = null;
+    boolean isValidInput = false;
+
+    while (!isValidInput) {
+      try {
+        System.out.print("Please enter a sampling interval in minutes: ");
+        if ((command = br.readLine()) == null) {
+          return false;
+        }
+        this.samplingInterval = Integer.parseInt(command);
+        if (this.samplingInterval < 1) {
+          throw new NumberFormatException();
+        }
+        isValidInput = true;
+      }
+      catch (NumberFormatException e) {
+        System.out.print("Error: Input must be a number and greater than 0. ");
+        System.out.println("Please try again.");
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Gets the energy consumed for each source that the user inputed at the specified sampling
    * interval (in minutes).
    * 
@@ -145,33 +189,38 @@ public class HneiCsvExporter {
     double energy = 0;
     StringBuffer buffer = new StringBuffer();
     String msg = "Timestamp";
+
     for (String s : this.sourceNames) {
       buffer.append(msg);
       msg = "," + s;
     }
     buffer.append(msg);
-    String src = null;
-    XMLGregorianCalendar timestamp = this.startTimestamp;
-    while (Tstamp.lessThan(timestamp, this.endTimestamp)) {
-      msg = "\n" + timestamp + ",";
+
+    XMLGregorianCalendar start = this.startTimestamp;
+    XMLGregorianCalendar end = null;
+    while (Tstamp.lessThan(start, this.endTimestamp)) {
+      msg = "\n" + start + ",";
       buffer.append(msg);
       try {
         for (String s : this.sourceNames) {
-          src = s;
-          energy = client.getEnergyConsumed(s, timestamp, Tstamp.incrementHours(timestamp, 1), 60);
-          msg = String.format("%.2f", energy) + ",";
-          buffer.append(msg);
+          try {
+            end = Tstamp.incrementMinutes(start, this.samplingInterval);
+            energy = client.getEnergyConsumed(s, start, end, this.samplingInterval);
+            msg = String.format("%.2f", energy) + ",";
+            buffer.append(msg);
+          }
+          catch (BadXmlException e) {
+            msg = "N/A,";
+            buffer.append(msg);
+          }
         }
         buffer.deleteCharAt(buffer.length() - 1);
-      }
-      catch (BadXmlException e) {
-        return "For source " + src + ":\n" + e.toString() + "\n\nExiting program...";
       }
       catch (WattDepotClientException e) {
         e.printStackTrace();
         return null;
       }
-      timestamp = Tstamp.incrementHours(timestamp, 1);
+      start = Tstamp.incrementMinutes(start, this.samplingInterval);
     }
     return buffer.toString();
   }
@@ -208,11 +257,35 @@ public class HneiCsvExporter {
       System.exit(1);
     }
 
+    if (!output.getSamplingInterval(br)) {
+      System.exit(1);
+    }
+
     String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+
+    File outputFile = new File(today + ".csv");
+    outputFile.setWritable(true);
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(outputFile));
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
 
     System.out.println("\nGenerating CSV file...\n");
     System.out.println("Output file: " + today + ".csv\n");
-    System.out.println(output.getSensorDatas(client));
+    String result = output.getSensorDatas(client);
+    System.out.println(result);
+    try {
+      writer.write(result);
+      writer.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
 
   }
 

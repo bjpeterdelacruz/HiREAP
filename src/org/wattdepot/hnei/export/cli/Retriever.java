@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvexport;
+package org.wattdepot.hnei.export.cli;
 
 /**
  * Classes that implement this interface will display data for a particular source.
