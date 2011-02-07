@@ -1,21 +1,19 @@
 package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
-import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.resource.sensordata.jaxb.SensorData;
+import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
@@ -25,11 +23,11 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class HneiCsvExporter {
 
-  /** Total number of sources. */
-  protected int numSources;
+  /** Used to grab data from the WattDepot server. */
+  protected WattDepotClient client;
 
-  /** List of source names. */
-  protected List<String> sourceNames;
+  /** List of all sources on the WattDepot server. */
+  protected List<SensorData> sensorDatas;
 
   /** Timestamp used to get first sensor data. */
   protected XMLGregorianCalendar startTimestamp;
@@ -40,74 +38,25 @@ public class HneiCsvExporter {
   /** Formats dates that are in the format MM/DD/YYYY. */
   protected SimpleDateFormat formatDate;
 
-  /** Sampling interval in minutes for energy consumed. */
-  protected int samplingInterval;
+  /** List of all sources that are stored on WattDepot server. */
+  protected List<Source> sources;
+
+  /** List of source names. */
+  protected List<String> sourceNames;
 
   /**
    * Creates a new HneiCsvExporter object.
+   * 
+   * @param client Used to grab data from the WattDepot server.
    */
-  public HneiCsvExporter() {
-    this.numSources = 0;
-    this.sourceNames = new ArrayList<String>();
+  public HneiCsvExporter(WattDepotClient client) {
+    this.client = client;
+    this.sensorDatas = new ArrayList<SensorData>();
     this.startTimestamp = null;
     this.endTimestamp = null;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
-    this.samplingInterval = 0;
-
-  }
-
-  /**
-   * Gets the number of sources user wants information about via the command-line.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getNumSources(BufferedReader br) {
-    System.out.print("Please enter the number of sources for which you want data: ");
-    String command = null;
-
-    try {
-      if ((command = br.readLine()) == null) {
-        return false;
-      }
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-    try {
-      this.numSources = Integer.parseInt(command);
-    }
-    catch (NumberFormatException e) {
-      System.out.println("Invalid input. Exiting...");
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Gets a list of source names from the user via the command-line.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getSourceNames(BufferedReader br) {
-    String command = null;
-
-    for (int i = 0; i < numSources; i++) {
-      System.out.print("Please enter the name of source " + (i + 1) + ": ");
-      try {
-        if ((command = br.readLine()) == null) {
-          return false;
-        }
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-        return false;
-      }
-      this.sourceNames.add(command);
-    }
-    return true;
+    this.sources = null;
+    this.sourceNames = new ArrayList<String>();
   }
 
   /**
@@ -122,11 +71,13 @@ public class HneiCsvExporter {
 
     try {
       if ((command = br.readLine()) == null) {
+        System.out.println("Error encountered while trying to read in start timestamp.");
         return false;
       }
       this.startTimestamp = Tstamp.makeTimestamp(this.formatDate.parse(command).getTime());
       System.out.print("Please enter an end date in the format mm/dd/yyyy (e.g. 2/1/2011): ");
       if ((command = br.readLine()) == null) {
+        System.out.println("Error encountered while trying to read in end timestamp.");
         return false;
       }
       XMLGregorianCalendar timestamp =
@@ -145,89 +96,41 @@ public class HneiCsvExporter {
   }
 
   /**
-   * Gets a sampling interval in minutes from the user via the command-line.
+   * Gets sensor data for all sources for the given time period.
    * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
+   * @return True if successful, false otherwise.
    */
-  public boolean getSamplingInterval(BufferedReader br) {
-    String command = null;
-    boolean isValidInput = false;
+  public boolean getData() {
+    try {
+      this.sources = client.getSources();
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      return false;
+    }
 
-    while (!isValidInput) {
-      try {
-        System.out.print("Please enter a sampling interval in minutes: ");
-        if ((command = br.readLine()) == null) {
-          return false;
+    try {
+      List<SensorData> data = null;
+      for (Source s : this.sources) {
+        data = client.getSensorDatas(s.getName(), this.startTimestamp, this.endTimestamp);
+        if (!data.isEmpty()) {
+          for (SensorData datum : data) {
+            this.sensorDatas.add(datum);
+            this.sourceNames.add(s.getName());
+          }
         }
-        this.samplingInterval = Integer.parseInt(command);
-        if (this.samplingInterval < 1) {
-          throw new NumberFormatException();
-        }
-        isValidInput = true;
       }
-      catch (NumberFormatException e) {
-        System.out.print("Error: Input must be a number and greater than 0. ");
-        System.out.println("Please try again.");
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-        return false;
-      }
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      return false;
     }
     return true;
   }
 
   /**
-   * Gets the energy consumed for each source that the user inputed at the specified sampling
-   * interval (in minutes).
-   * 
-   * @param client Used to get data from the WattDepot server.
-   * @return Data to output to CSV file.
-   */
-  public String getSensorDatas(WattDepotClient client) {
-    double energy = 0;
-    StringBuffer buffer = new StringBuffer();
-    String msg = "Timestamp";
-
-    for (String s : this.sourceNames) {
-      buffer.append(msg);
-      msg = "," + s;
-    }
-    buffer.append(msg);
-
-    XMLGregorianCalendar start = this.startTimestamp;
-    XMLGregorianCalendar end = null;
-    while (Tstamp.lessThan(start, this.endTimestamp)) {
-      msg = "\n" + start + ",";
-      buffer.append(msg);
-      try {
-        for (String s : this.sourceNames) {
-          try {
-            end = Tstamp.incrementMinutes(start, this.samplingInterval);
-            energy = client.getEnergyConsumed(s, start, end, this.samplingInterval);
-            msg = String.format("%.2f", energy) + ",";
-            buffer.append(msg);
-          }
-          catch (BadXmlException e) {
-            msg = "N/A,";
-            buffer.append(msg);
-          }
-        }
-        buffer.deleteCharAt(buffer.length() - 1);
-      }
-      catch (WattDepotClientException e) {
-        e.printStackTrace();
-        return null;
-      }
-      start = Tstamp.incrementMinutes(start, this.samplingInterval);
-    }
-    return buffer.toString();
-  }
-
-  /**
-   * Command-line program to generate CSV file containing information about one or more sources at a
-   * particular timestamp, which is inputed by the user.
+   * Command-line program that will generate a CSV file containing sensor data for all sources for
+   * the given time period.
    * 
    * @param args Server URI, username, and password to connect to the WattDepot server.
    */
@@ -241,7 +144,6 @@ public class HneiCsvExporter {
     String username = args[1];
     String password = args[2];
 
-    HneiCsvExporter output = new HneiCsvExporter();
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
     if (client.isHealthy() && client.isAuthenticated()) {
       System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
@@ -250,41 +152,21 @@ public class HneiCsvExporter {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
+    HneiCsvExporter output = new HneiCsvExporter(client);
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-    if (!output.getNumSources(br) || !output.getSourceNames(br) || !output.getDates(br)) {
+    if (!output.getDates(br) || !output.getData()) {
       System.exit(1);
     }
 
-    if (!output.getSamplingInterval(br)) {
-      System.exit(1);
-    }
+    Collections.sort(output.sensorDatas, new SensorDataSorter("source"));
+    // Collections.sort(output.sensorDatas, new SensorDataSorter("mtuID"));
 
-    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
-
-    File outputFile = new File(today + ".csv");
-    outputFile.setWritable(true);
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    System.out.println("\nGenerating CSV file...\n");
-    System.out.println("Output file: " + today + ".csv\n");
-    String result = output.getSensorDatas(client);
-    System.out.println(result);
-    try {
-      writer.write(result);
-      writer.close();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
+    String source = "";
+    for (SensorData datum : output.sensorDatas) {
+      source = datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1);
+      System.out.println(source + "," + datum.getProperty("mtuID"));
     }
 
   }
