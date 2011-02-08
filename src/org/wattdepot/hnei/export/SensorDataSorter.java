@@ -64,6 +64,33 @@ public class SensorDataSorter implements Comparator<SensorData>, Serializable {
       property2 = datum2.getProperties().getProperty("isMonotonicallyIncreasing");
       result = property1.compareTo(property2);
     }
+    else if (this.field.equals("hourly")) {
+      property1 = datum1.getProperties().getProperty("daily");
+      property2 = datum2.getProperties().getProperty("daily");
+      if (property1 == null) {
+        result = -1;
+      }
+      else if (property2 == null) {
+        result = 1;
+      }
+      else {
+        result = property1.compareTo(property2);
+      }
+    }
+    else if (this.field.equals("daily")) {
+      property1 = datum1.getProperties().getProperty("hourly");
+      property2 = datum2.getProperties().getProperty("hourly");
+      if (property1 == null) {
+        result = -1;
+      }
+      else if (property2 == null) {
+        result = 1;
+      }
+      else {
+        result = property1.compareTo(property2);
+      }
+    }
+
     return result;
   }
 

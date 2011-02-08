@@ -1,3 +1,12 @@
+[X] Determine which accounts have multiple MTUs associated with them.
+[X] See if all non-monotonic data is from multiple MTUs.
+[X] Provide in summary the number of violations of each validation rule occurred.
+[ ] Work on exporter that exports multiple sources at same (computed) timestamp.
+[ ] Import the sample TED and Hobo files when received from Eileen.
+[X] Start on CSV export
+[ ] Importer should take option that specifies file type (FC, TED, Hobo, etc.) 
+   [ ] Auto infer file type from file name or file contents.
+
 [X] Count of number of new sources.
 [X] Count of number of existing sources.
 [X] Count of new data and pre-existing data.
