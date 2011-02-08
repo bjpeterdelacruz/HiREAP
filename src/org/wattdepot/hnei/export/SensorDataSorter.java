@@ -37,14 +37,32 @@ public class SensorDataSorter implements Comparator<SensorData>, Serializable {
    */
   @Override
   public int compare(SensorData datum1, SensorData datum2) {
+    String property1 = null;
+    String property2 = null;
     int result = 0;
-    if (this.field.equals("source")) {
+
+    if (this.field.equals("account")) {
       result = datum1.getSource().compareTo(datum2.getSource());
     }
     else if (this.field.equals("mtuID")) {
-      result =
-          datum1.getProperties().getProperty("mtuID")
-              .compareTo(datum2.getProperties().getProperty("mtuID"));
+      property1 = datum1.getProperties().getProperty("mtuID");
+      property2 = datum2.getProperties().getProperty("mtuID");
+      result = property1.compareTo(property2);
+    }
+    else if (this.field.equals("reading")) {
+      Integer reading1 = new Integer(datum1.getProperties().getProperty("reading"));
+      Integer reading2 = new Integer(datum2.getProperties().getProperty("reading"));
+      result = reading1.compareTo(reading2);
+    }
+    else if (this.field.equals("readingDate")) {
+      property1 = datum1.getTimestamp().toString();
+      property2 = datum2.getTimestamp().toString();
+      result = property1.compareTo(property2);
+    }
+    else if (this.field.equals("isMonotonicallyIncreasing")) {
+      property1 = datum1.getProperties().getProperty("isMonotonicallyIncreasing");
+      property2 = datum2.getProperties().getProperty("isMonotonicallyIncreasing");
+      result = property1.compareTo(property2);
     }
     return result;
   }
