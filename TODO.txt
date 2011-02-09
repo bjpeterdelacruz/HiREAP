@@ -3,6 +3,7 @@
 [X] Provide in summary the number of violations of each validation rule occurred.
 [ ] Work on exporter that exports multiple sources at same (computed) timestamp.
 [ ] Import the sample TED and Hobo files when received from Eileen.
+[ ] Export CSV file containing multiple MTU IDs and data that is non-monotonically increasing in HneiCsvImporter.
 [X] Start on CSV export
 [ ] Importer should take option that specifies file type (FC, TED, Hobo, etc.) 
    [ ] Auto infer file type from file name or file contents.
@@ -36,7 +37,7 @@ Please create a flexible, "smart import" facility that will subject each entry r
 [X] Entry is not lower than last entry value.
 [X] Entry is less than 20kW * time since last entry's value.
 
-[ ] Apply validation to MTU ID, Port, Meter Type, etc. and record errors in log file.
+[X] Apply validation to MTU ID, Port, Meter Type, etc. and record errors in log file.
 
 [X] These validation functions may change, and there may be more of them over time, so define a Java interface called "Validator" that
     has a boolean function called "validate" that accepts an entry and returns true if the entry passes that particular validation function.
@@ -44,7 +45,7 @@ Please create a flexible, "smart import" facility that will subject each entry r
     Then the system can implement as many Validator classes as we want, and we just make an instance of each of them, store them in a List,
     and apply each of them to each entry.
 
-[ ] If any return false, then print out (or log) the problematic entry along with which validator(s) failed. There needs to be a getExplanation()
+[X] If any return false, then print out (or log) the problematic entry along with which validator(s) failed. There needs to be a getExplanation()
     method that returns a String for each Validator class so the system can describe what went wrong in easily understandable terms.
 
 Package structure:

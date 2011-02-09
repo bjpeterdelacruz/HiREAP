@@ -22,32 +22,32 @@ import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * Used to parse CSV files containing sensor data for sources provided by HNEI.
+ * Used to parse CSV files containing data for sources provided by HNEI.
  * 
  * @author BJ Peter DeLaCruz
  */
 public class HneiCsvRowParser extends RowParser {
 
   /** Log file for the HneiTabularFileSensor application. */
-  private Logger log;
+  protected Logger log;
 
   /** Formats dates that are in the format MM/DD/YYYY hh/mm/ss (A.M.|P.M.). */
-  private SimpleDateFormat formatDateTime;
+  protected SimpleDateFormat formatDateTime;
 
   /** Formats dates that are in the format MM/DD/YYYY. */
-  private SimpleDateFormat formatDate;
+  protected SimpleDateFormat formatDate;
 
   /** List of validators to verify that entry is valid. */
-  private List<Validator> validators;
+  protected List<Validator> validators;
 
   /** Total number of entries with no readings. */
-  private static int numNoReadings = 0;
+  protected static int numNoReadings = 0;
 
   /** Total number of entries with non-numeric data. */
-  private static int numNonnumericValues = 0;
+  protected static int numNonnumericValues = 0;
 
   /** Total number of entries with missing data. */
-  private static int numBlankValues = 0;
+  protected static int numBlankValues = 0;
 
   /**
    * Creates a new HneiCsvRowParser object.
@@ -97,7 +97,7 @@ public class HneiCsvRowParser extends RowParser {
   /**
    * Parses a row of data for a source from a CSV file provided by HNEI.
    * 
-   * @param col Row of a CSV file that contains data for one source.
+   * @param col Row from a CSV file that contains data for one source.
    * @return SensorData object if parse is successful, null otherwise.
    */
   @Override
@@ -201,7 +201,7 @@ public class HneiCsvRowParser extends RowParser {
    * @param col Array of entries.
    * @return Row from CSV file that did not pass validation.
    */
-  private String rowToString(String[] col) {
+  public String rowToString(String[] col) {
     String temp = null;
     StringBuffer buffer = new StringBuffer();
     for (String s : col) {

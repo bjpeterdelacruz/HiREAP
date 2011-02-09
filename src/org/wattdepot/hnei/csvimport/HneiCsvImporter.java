@@ -31,8 +31,8 @@ import org.wattdepot.util.tstamp.Tstamp;
 import au.com.bytecode.opencsv.CSVReader;
 
 /**
- * Reads data from CSV files provided by HNEI (delimited by commas), creates a SensorData object for
- * each line, and sends the SensorData objects to a WattDepot server.
+ * This class reads data from CSV files provided by HNEI (delimited by commas), creates a SensorData
+ * object from each line, and stores the SensorData objects to a WattDepot server.
  * 
  * @author BJ Peter DeLaCruz
  */
@@ -63,7 +63,7 @@ public class HneiCsvImporter {
   protected boolean skipFirstRow;
 
   /** Name of the application on the command line. */
-  protected static final String toolName = "HneiTabularFileSensor";
+  private static final String toolName = "HneiCsvImporter";
 
   /** The parser used to turn rows into SensorData objects. */
   protected RowParser parser;
@@ -146,6 +146,15 @@ public class HneiCsvImporter {
     this.allMtus = new HashSet<Entry>();
     this.allDuplicateMtus = new ArrayList<Entry>();
     this.allNonmonoIncrVals = new ArrayList<Entry>();
+  }
+
+  /**
+   * Returns the parser used to get rows from CSV files.
+   * 
+   * @return Parser used to get rows from CSV files.
+   */
+  public RowParser getParser() {
+    return this.parser;
   }
 
   /**
@@ -472,9 +481,8 @@ public class HneiCsvImporter {
   }
 
   /**
-   * Given a CSV file with lots of sources, this program will parse each row, which represents a
-   * source; create a SensorData object from each row, and store the sensor data for the source on a
-   * WattDepot server.
+   * Given a CSV file with data for lots of sources, this program will parse each row, create a
+   * SensorData object from each, and store the sensor data on a WattDepot server.
    * 
    * @param args Contains filename, server URI, username, and password.
    */
@@ -531,13 +539,13 @@ public class HneiCsvImporter {
 
       importStartTime = Calendar.getInstance().getTimeInMillis();
       // for (int i = 0; i < 10; i++) {
-        // line = reader.readNext();
+      // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         source = line[0];
         inputClient.setSourceName(source);
         inputClient.setParser();
         try {
-          if ((datum = inputClient.parser.parseRow(line)) == null) {
+          if ((datum = inputClient.getParser().parseRow(line)) == null) {
             inputClient.numInvalidEntries++;
           }
           else {
@@ -572,9 +580,9 @@ public class HneiCsvImporter {
       System.exit(1);
     }
 
-    // /////////////////////////////////////////////////////
-    // Done importing file. Now do some post-processing. //
-    // /////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////
+    // Done importing file. Now do some post-processing.
+    // /////////////////////////////////////////////////
     System.out.print("Checking if readings are monotonically increasing and ");
     System.out.println("are either hourly or daily... This may take a while.");
 
@@ -620,9 +628,9 @@ public class HneiCsvImporter {
     inputClient.getMultipleMtuIds();
 
     Collections.sort(inputClient.entries, new EntrySortByTimestamp());
-    int numNoReadings = ((HneiCsvRowParser) inputClient.parser).getNumNoReadings();
-    int numNonnumericValues = ((HneiCsvRowParser) inputClient.parser).getNumNonnumericValues();
-    int numBlankValues = ((HneiCsvRowParser) inputClient.parser).getNumBlankValues();
+    int numNoReadings = ((HneiCsvRowParser) inputClient.getParser()).getNumNoReadings();
+    int numNonnumericValues = ((HneiCsvRowParser) inputClient.getParser()).getNumNonnumericValues();
+    int numBlankValues = ((HneiCsvRowParser) inputClient.getParser()).getNumBlankValues();
 
     inputClient.printStats(importStartTime, importEndTime, validateStartTime, validateEndTime,
         numNoReadings, numNonnumericValues, numBlankValues);
