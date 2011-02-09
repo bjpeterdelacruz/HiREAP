@@ -32,7 +32,7 @@ public class HneiCsvEgaugeRowParser extends HneiCsvRowParser {
    */
   public HneiCsvEgaugeRowParser(String toolName, String serverUri, String sourceName, Logger log) {
     super(toolName, serverUri, sourceName, log);
-    this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US);
+    this.formatDateTime = new SimpleDateFormat("MM/dd/yy hh:mm a", Locale.US);
   }
 
   /**

@@ -47,19 +47,17 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
    * Stores sensor data for a source that already exists on WattDepot server.
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
-   * @param source Source that is described by the sensor data.
    * @param datum Sensor data for a source.
    * @return True if successful, false otherwise.
    */
-  public boolean process(WattDepotClient client, Source source, SensorData datum) {
+  public boolean process(WattDepotClient client, SensorData datum) {
     try {
       client.storeSensorData(datum);
       this.numNewData++;
     }
     catch (OverwriteAttemptedException e) {
       this.numExistingData++;
-      String msg = "Data at " + datum.getTimestamp().toString() + " for " + source.getName();
-      msg += " already exists on server.\n";
+      String msg = "Data at " + datum.getTimestamp().toString() + " already exists on server.\n";
       log.log(Level.INFO, msg);
     }
     catch (WattDepotClientException e) {
@@ -155,6 +153,12 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
           }
           else {
             System.out.println(datum);
+            if (inputClient.process(client, datum)) {
+              inputClient.numEntriesProcessed++;
+            }
+            else {
+              inputClient.numInvalidEntries++;
+            }
           }
         }
         catch (RowParseException e) {
@@ -171,6 +175,7 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
       e.printStackTrace();
       System.exit(1);
     }
+
   }
 
 }
