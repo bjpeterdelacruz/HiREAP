@@ -1,7 +1,10 @@
 package org.wattdepot.hnei.csvimport;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -481,6 +484,47 @@ public class HneiCsvImporter {
   }
 
   /**
+   * Creates a CSV file that contains sources with multiple MTU IDs.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  public boolean generateCsvFile() {
+    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+    File outputFile = new File(today + ".csv");
+    outputFile.setWritable(true);
+
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(outputFile));
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    String str = null;
+    StringBuffer buffer = new StringBuffer();
+    str = "Account Number,MTU ID\n";
+    buffer.append(str);
+    for (Entry e : this.allDuplicateMtus) {
+      buffer.append(e.getSourceName());
+      str = "," + e.getMtuId() + "\n";
+      buffer.append(str);
+    }
+
+    try {
+      writer.write(buffer.toString());
+      writer.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Given a CSV file with data for lots of sources, this program will parse each row, create a
    * SensorData object from each, and store the sensor data on a WattDepot server.
    * 
@@ -634,6 +678,11 @@ public class HneiCsvImporter {
 
     inputClient.printStats(importStartTime, importEndTime, validateStartTime, validateEndTime,
         numNoReadings, numNonnumericValues, numBlankValues);
+
+    if (!inputClient.allDuplicateMtus.isEmpty() && !inputClient.generateCsvFile()) {
+      System.exit(1);
+    }
+
   }
 
 }

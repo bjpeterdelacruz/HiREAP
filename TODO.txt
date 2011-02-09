@@ -1,12 +1,15 @@
 [X] Determine which accounts have multiple MTUs associated with them.
 [X] See if all non-monotonic data is from multiple MTUs.
 [X] Provide in summary the number of violations of each validation rule occurred.
-[ ] Work on exporter that exports multiple sources at same (computed) timestamp.
+[X] Work on exporter that exports multiple sources at same (computed) timestamp.
 [ ] Import the sample TED and Hobo files when received from Eileen.
+[X] Import the sample Egauge files.
 [ ] Export CSV file containing multiple MTU IDs and data that is non-monotonically increasing in HneiCsvImporter.
 [X] Start on CSV export
 [ ] Importer should take option that specifies file type (FC, TED, Hobo, etc.) 
    [ ] Auto infer file type from file name or file contents.
+   To accomplish this objective, turn all main methods in the importers into methods that is called by the one main method.
+[ ] May have to start writing to CSV file as soon as sensor data is grabbed from server instead of putting them in lists.
 
 [X] Count of number of new sources.
 [X] Count of number of existing sources.
@@ -79,5 +82,3 @@ Google Project Hosting:
  [ ] Convert to wattdepot-hnei
  [ ] Import into SVN
      - Be careful not to import bin, build, or lib directories into SVN.
-
-Next meeting: Friday, Jan 28, 2:00 P.M.

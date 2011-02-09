@@ -144,15 +144,15 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
     SensorData datum = null;
     try {
       ((HneiCsvEgaugeRowParser) inputClient.getParser()).setSourceName(sourceName);
-      for (int i = 0; i < 10; i++) {
-        line = reader.readNext();
-      // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 10; i++) {
+        // line = reader.readNext();
+      System.out.println("Importing data for source " + sourceName + "...");
+      while ((line = reader.readNext()) != null) {
         try {
           if ((datum = inputClient.getParser().parseRow(line)) == null) {
             inputClient.numInvalidEntries++;
           }
           else {
-            System.out.println(datum);
             if (inputClient.process(client, datum)) {
               inputClient.numEntriesProcessed++;
             }

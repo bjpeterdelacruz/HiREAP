@@ -53,7 +53,7 @@ public class HneiCsvExporter {
    */
   protected boolean printVerbose;
 
-  /** */
+  /** Field to sort data by. */
   private String sortField;
 
   /**
@@ -230,8 +230,7 @@ public class HneiCsvExporter {
       }
       else {
         // Only print source, MTU ID, power consumed, yes/no if data is/is not monotonically
-        // increasing,
-        // and hourly/daily.
+        // increasing, and hourly/daily.
         buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
         str = "," + datum.getProperty("mtuID");
         buffer.append(str);
@@ -358,7 +357,7 @@ public class HneiCsvExporter {
       this.sortField = "reading";
       break;
     case 4:
-      this.sortField = "readingDate";
+      this.sortField = "timestamp";
       break;
     case 5:
       this.sortField = "isMonotonicallyIncreasing";
@@ -373,6 +372,42 @@ public class HneiCsvExporter {
       System.out.println("Option not specified. Exiting...");
       this.sortField = null;
       break;
+    }
+
+    return true;
+  }
+
+  /**
+   * Creates CSV file and prints its contents to the screen.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  public boolean printDatas() {
+    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+    System.out.println("Generating CSV file...\n");
+    System.out.println("Output file: " + today + ".csv\n");
+
+    File outputFile = new File(today + ".csv");
+    outputFile.setWritable(true);
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(outputFile));
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    if (!this.printFields(writer)) {
+      return false;
+    }
+
+    try {
+      writer.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
     }
 
     return true;
@@ -416,32 +451,7 @@ public class HneiCsvExporter {
 
     Collections.sort(output.getSensorDatas(), new SensorDataSorter(output.getSortField()));
 
-    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
-    System.out.println("Generating CSV file...\n");
-    System.out.println("Output file: " + today + ".csv\n");
-
-    File outputFile = new File(today + ".csv");
-    outputFile.setWritable(true);
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    if (!output.printFields(writer)) {
-      System.exit(1);
-    }
-
-    try {
-      writer.close();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
+    output.printDatas();
 
   }
 

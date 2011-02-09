@@ -54,7 +54,7 @@ public class SensorDataSorter implements Comparator<SensorData>, Serializable {
       Integer reading2 = new Integer(datum2.getProperties().getProperty("reading"));
       result = reading1.compareTo(reading2);
     }
-    else if (this.field.equals("readingDate")) {
+    else if (this.field.equals("timestamp")) {
       property1 = datum1.getTimestamp().toString();
       property2 = datum2.getTimestamp().toString();
       result = property1.compareTo(property2);
