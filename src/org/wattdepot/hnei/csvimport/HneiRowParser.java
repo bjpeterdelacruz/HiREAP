@@ -26,7 +26,7 @@ import org.wattdepot.util.tstamp.Tstamp;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvRowParser extends RowParser {
+public class HneiRowParser extends RowParser {
 
   /** Log file for the HneiTabularFileSensor application. */
   protected Logger log;
@@ -50,14 +50,14 @@ public class HneiCsvRowParser extends RowParser {
   protected static int numBlankValues = 0;
 
   /**
-   * Creates a new HneiCsvRowParser object.
+   * Creates a new HneiRowParser object.
    * 
    * @param toolName Name of the program.
    * @param serverUri URI of WattDepot server.
    * @param sourceName Source that is described by the sensor data.
    * @param log Log file, created in the HneiTabularFileSensor class.
    */
-  public HneiCsvRowParser(String toolName, String serverUri, String sourceName, Logger log) {
+  public HneiRowParser(String toolName, String serverUri, String sourceName, Logger log) {
     super(toolName, serverUri, sourceName);
     this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
@@ -243,8 +243,8 @@ public class HneiCsvRowParser extends RowParser {
     System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
 
     String sourceName = "994515990077";
-    HneiCsvRowParser parser =
-        new HneiCsvRowParser("HneiCsvRowParser", serverUri, sourceName, null);
+    HneiRowParser parser =
+        new HneiRowParser("HneiCsvRowParser", serverUri, sourceName, null);
     String[] col1 =
         { sourceName, "8/1/2009", "1951005", "1", "491", "35958", "035958",
             "1/1/2011 9:06:29 AM", "0" };

@@ -20,17 +20,17 @@ import org.wattdepot.util.tstamp.Tstamp;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvEgaugeRowParser extends HneiCsvRowParser {
+public class EgaugeRowParser extends HneiRowParser {
 
   /**
-   * Creates a new HneiCsvEgaugeRowParser object.
+   * Creates a new EgaugeRowParser object.
    * 
    * @param toolName Name of the program.
    * @param serverUri URI of WattDepot server.
    * @param sourceName Source that is described by the sensor data.
    * @param log Log file, created in the HneiTabularFileSensor class.
    */
-  public HneiCsvEgaugeRowParser(String toolName, String serverUri, String sourceName, Logger log) {
+  public EgaugeRowParser(String toolName, String serverUri, String sourceName, Logger log) {
     super(toolName, serverUri, sourceName, log);
     this.formatDateTime = new SimpleDateFormat("MM/dd/yy hh:mm a", Locale.US);
   }

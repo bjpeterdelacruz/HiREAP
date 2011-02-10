@@ -9,18 +9,18 @@ import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
 /**
- * This class will export HNEI Egauge data for a source over a given period of time to a CSV file.
+ * This class will export HNEI Hobo data for a source over a given period of time to a CSV file.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvEgaugeExporter extends HneiCsvExporter {
+public class HoboExporter extends HneiExporter {
 
   /**
-   * Creates a new HneiCsvEgaugeExporter object.
+   * Creates a new HoboExporter object.
    * 
    * @param client Used to grab data from the WattDepot server.
    */
-  public HneiCsvEgaugeExporter(WattDepotClient client) {
+  public HoboExporter(WattDepotClient client) {
     super(client);
   }
 
@@ -30,8 +30,9 @@ public class HneiCsvEgaugeExporter extends HneiCsvExporter {
    * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
    */
+  @Override
   public boolean printFields(BufferedWriter writer) {
-    String str = "Source,Timestamp,Whole House,AC,Water Heater,Dryer\n";
+    String str = "Source,Timestamp,Temperature (deg F),RH %,Lumens / Sq. Ft.\n";
     StringBuffer buffer = new StringBuffer();
     buffer.append(str);
 
@@ -39,11 +40,9 @@ public class HneiCsvEgaugeExporter extends HneiCsvExporter {
       buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
       str = "," + datum.getTimestamp().toString();
       buffer.append(str);
-      str = "," + datum.getProperty(SensorData.POWER_CONSUMED);
+      str = "," + datum.getProperty("tempF") + "," + datum.getProperty("rh%");
       buffer.append(str);
-      str = "," + datum.getProperty("airConditioner") + "," + datum.getProperty("waterHeater");
-      buffer.append(str);
-      str = "," + datum.getProperty("dryer") + "\n";
+      str = "," + datum.getProperty("lumenPerSqFt") + "\n";
       buffer.append(str);
     }
 
@@ -59,7 +58,7 @@ public class HneiCsvEgaugeExporter extends HneiCsvExporter {
   }
 
   /**
-   * Command-line program that will generate a CSV file containing Egauge data for a source
+   * Command-line program that will generate a CSV file containing Hobo data for a source
    * over a period of time.
    * 
    * @param args Server URI, username, and password to connect to the WattDepot server.
@@ -82,7 +81,7 @@ public class HneiCsvEgaugeExporter extends HneiCsvExporter {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
-    HneiCsvEgaugeExporter output = new HneiCsvEgaugeExporter(client);
+    HoboExporter output = new HoboExporter(client);
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
@@ -92,7 +91,9 @@ public class HneiCsvEgaugeExporter extends HneiCsvExporter {
 
     Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
 
-    output.printDatas();
+    if (!output.printDatas()) {
+      System.exit(1);
+    }
 
   }
 

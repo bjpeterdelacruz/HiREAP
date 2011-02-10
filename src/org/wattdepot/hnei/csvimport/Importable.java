@@ -5,7 +5,7 @@ package org.wattdepot.hnei.csvimport;
  * 
  * @author BJ Peter DeLaCruz
  */
-public interface Importer {
+public interface Importable {
 
   /**
    * Prints results of parsing CSV file to standard output and log file.

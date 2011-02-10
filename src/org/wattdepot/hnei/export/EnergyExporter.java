@@ -2,11 +2,8 @@ package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Calendar;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClient;
@@ -19,7 +16,7 @@ import org.wattdepot.util.tstamp.Tstamp;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvEnergyExporter extends HneiCsvExporter {
+public class EnergyExporter extends HneiExporter {
 
   /** Total number of sources. */
   protected int numSources;
@@ -28,11 +25,11 @@ public class HneiCsvEnergyExporter extends HneiCsvExporter {
   protected int samplingInterval;
 
   /**
-   * Creates a new HneiCsvEnergyExporter object.
+   * Creates a new EnergyExporter object.
    * 
    * @param client Used to grab data from the WattDepot server.
    */
-  public HneiCsvEnergyExporter(WattDepotClient client) {
+  public EnergyExporter(WattDepotClient client) {
     super(client);
     this.numSources = 0;
     this.samplingInterval = 0;
@@ -175,6 +172,32 @@ public class HneiCsvEnergyExporter extends HneiCsvExporter {
   }
 
   /**
+   * Prints information in SensorData objects to a CSV file.
+   * 
+   * @param writer CSV file to write data to.
+   * @return True if successful, false otherwise.
+   */
+  @Override
+  public boolean printFields(BufferedWriter writer) {
+    String result = this.getEnergyData();
+    if (result == null) {
+      return false;
+    }
+
+    System.out.println(result);
+    try {
+      writer.write(result);
+      writer.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Command-line program that will generate a CSV file containing energy information for one or
    * more sources over a given time period and at a given sampling interval.
    * 
@@ -198,7 +221,7 @@ public class HneiCsvEnergyExporter extends HneiCsvExporter {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
-    HneiCsvEnergyExporter output = new HneiCsvEnergyExporter(client);
+    EnergyExporter output = new EnergyExporter(client);
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
@@ -206,33 +229,7 @@ public class HneiCsvEnergyExporter extends HneiCsvExporter {
       System.exit(1);
     }
 
-    if (!output.getSamplingInterval(br)) {
-      System.exit(1);
-    }
-
-    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
-
-    File outputFile = new File(today + ".csv");
-    outputFile.setWritable(true);
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    System.out.println("\nGenerating CSV file...\n");
-    System.out.println("Output file: " + today + ".csv\n");
-    String result = output.getEnergyData();
-    System.out.println(result);
-    try {
-      writer.write(result);
-      writer.close();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
+    if (!output.getSamplingInterval(br) || !output.printDatas()) {
       System.exit(1);
     }
 

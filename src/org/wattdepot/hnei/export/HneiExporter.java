@@ -21,11 +21,11 @@ import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This class will export HNEI data to a CSV file.
+ * This class will export HNEI data for one or more sources to a CSV file.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvExporter {
+public class HneiExporter implements Exportable {
 
   /** Used to grab data from the WattDepot server. */
   protected WattDepotClient client;
@@ -57,11 +57,11 @@ public class HneiCsvExporter {
   private String sortField;
 
   /**
-   * Creates a new HneiCsvExporter object.
+   * Creates a new HneiExporter object.
    * 
    * @param client Used to grab data from the WattDepot server.
    */
-  public HneiCsvExporter(WattDepotClient client) {
+  public HneiExporter(WattDepotClient client) {
     this.client = client;
     this.sensorDatas = new ArrayList<SensorData>();
     this.startTimestamp = null;
@@ -185,6 +185,7 @@ public class HneiCsvExporter {
    * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
    */
+  @Override
   public boolean printFields(BufferedWriter writer) {
     String str = "";
     StringBuffer buffer = new StringBuffer();
@@ -437,7 +438,7 @@ public class HneiCsvExporter {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
-    HneiCsvExporter output = new HneiCsvExporter(client);
+    HneiExporter output = new HneiExporter(client);
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 

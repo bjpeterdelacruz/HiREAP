@@ -39,10 +39,10 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvImporter implements Importer {
+public class HneiImporter implements Importable {
 
   /** Log file for this application. */
-  private static final Logger log = Logger.getLogger(HneiCsvImporter.class.getName());
+  private static final Logger log = Logger.getLogger(HneiImporter.class.getName());
 
   /** Output logging information to a text file. */
   protected FileHandler txtFile;
@@ -66,7 +66,7 @@ public class HneiCsvImporter implements Importer {
   protected boolean skipFirstRow;
 
   /** Name of the application on the command line. */
-  private static final String toolName = "HneiCsvImporter";
+  protected String toolName;
 
   /** The parser used to turn rows into SensorData objects. */
   protected RowParser parser;
@@ -129,7 +129,7 @@ public class HneiCsvImporter implements Importer {
   protected long validateEndTime;
 
   /**
-   * Creates a new HneiTabularFileSensor object.
+   * Creates a new HneiImporter object.
    * 
    * @param filename File that contains data for sources.
    * @param uri URI for WattDepot server.
@@ -137,7 +137,7 @@ public class HneiCsvImporter implements Importer {
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
    */
-  public HneiCsvImporter(String filename, String uri, String username, String password,
+  public HneiImporter(String filename, String uri, String username, String password,
       boolean skipFirstRow) {
     this.filename = filename;
     this.serverUri = uri;
@@ -145,7 +145,8 @@ public class HneiCsvImporter implements Importer {
     this.username = username;
     this.password = password;
     this.skipFirstRow = skipFirstRow;
-    this.parser = new HneiCsvRowParser(toolName, this.serverUri, null, log);
+    this.toolName = "HneiImporter";
+    this.parser = new HneiRowParser(this.toolName, this.serverUri, null, log);
     this.numNewSources = 0;
     this.numExistingSources = 0;
     this.numTotalSources = 0;
@@ -189,7 +190,7 @@ public class HneiCsvImporter implements Importer {
    * Sets the parser. Called after setting source name.
    */
   public void setParser() {
-    this.parser = new HneiCsvRowParser(toolName, this.serverUri, this.sourceName, log);
+    this.parser = new HneiRowParser(this.toolName, this.serverUri, this.sourceName, log);
   }
 
   /**
@@ -285,6 +286,36 @@ public class HneiCsvImporter implements Importer {
       this.numExistingData++;
       String msg = "Data at " + datum.getTimestamp().toString() + " for " + source.getName();
       msg += " already exists on server.\n";
+      log.log(Level.INFO, msg);
+    }
+    catch (WattDepotClientException e) {
+      System.err.println(e.toString());
+      log.log(Level.SEVERE, e.toString());
+      return false;
+    }
+    catch (JAXBException e) {
+      System.err.println(e.toString());
+      log.log(Level.SEVERE, e.toString());
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Stores sensor data for a source that already exists on WattDepot server.
+   * 
+   * @param client WattDepotClient used to connect to the WattDepot server.
+   * @param datum Sensor data for a source.
+   * @return True if successful, false otherwise.
+   */
+  public boolean process(WattDepotClient client, SensorData datum) {
+    try {
+      client.storeSensorData(datum);
+      this.numNewData++;
+    }
+    catch (OverwriteAttemptedException e) {
+      this.numExistingData++;
+      String msg = "Data at " + datum.getTimestamp().toString() + " already exists on server.\n";
       log.log(Level.INFO, msg);
     }
     catch (WattDepotClientException e) {
@@ -417,13 +448,13 @@ public class HneiCsvImporter implements Importer {
     buffer.append(msg);
     msg = "Total Number of Entries            : " + this.numTotalEntries;
     buffer.append(msg);
-    int numBlankValues = ((HneiCsvRowParser) this.parser).getNumBlankValues();
+    int numBlankValues = ((HneiRowParser) this.parser).getNumBlankValues();
     msg = "\n\nBlank Values                       : " + numBlankValues + "\n";
     buffer.append(msg);
-    int numNonnumericValues = ((HneiCsvRowParser) this.parser).getNumNonnumericValues();
+    int numNonnumericValues = ((HneiRowParser) this.parser).getNumNonnumericValues();
     msg = "Non-numeric Values                 : " + numNonnumericValues + "\n";
     buffer.append(msg);
-    int numNoReadings = ((HneiCsvRowParser) this.parser).getNumNoReadings();
+    int numNoReadings = ((HneiRowParser) this.parser).getNumNoReadings();
     msg = "No Readings                        : " + numNoReadings + "\n";
     buffer.append(msg);
     msg = "Non-monotonically Increasing Data  : " + this.allNonmonoIncrVals.size() + "\n";
@@ -729,8 +760,8 @@ public class HneiCsvImporter implements Importer {
     String username = args[2];
     String password = args[3];
 
-    HneiCsvImporter inputClient =
-      new HneiCsvImporter(filename, serverUri, username, password, true);
+    HneiImporter inputClient =
+      new HneiImporter(filename, serverUri, username, password, true);
 
     if (!inputClient.processCsvFile()) {
       System.exit(1);

@@ -2,7 +2,7 @@
 [X] See if all non-monotonic data is from multiple MTUs.
 [X] Provide in summary the number of violations of each validation rule occurred.
 [X] Work on exporter that exports multiple sources at same (computed) timestamp.
-[ ] Import the sample TED and Hobo files when received from Eileen.
+[X] Import the sample TED and Hobo files when received from Eileen.
 [X] Import the sample Egauge files.
 [X] Export CSV file containing multiple MTU IDs and data that is non-monotonically increasing in HneiCsvImporter.
 [X] Start on CSV export

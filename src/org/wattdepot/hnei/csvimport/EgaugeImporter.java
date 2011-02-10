@@ -3,73 +3,36 @@ package org.wattdepot.hnei.csvimport;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.bind.JAXBException;
-import org.wattdepot.client.OverwriteAttemptedException;
 import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import au.com.bytecode.opencsv.CSVReader;
 
 /**
- * This class reads TED data from CSV files provided by HNEI (delimited by commas), creates a
+ * This class reads Egauge data from CSV files provided by HNEI (delimited by commas), creates a
  * SensorData object from each line, and stores the SensorData objects to a WattDepot server.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvTedImporter extends HneiCsvImporter implements Importer {
+public class EgaugeImporter extends HneiImporter {
 
   /** Log file for this application. */
-  private static final Logger log = Logger.getLogger(HneiCsvTedImporter.class.getName());
-
-  /** Name of the application on the command line. */
-  private static final String toolName = "HneiCsvTedImporter";
+  private static final Logger log = Logger.getLogger(EgaugeImporter.class.getName());
 
   /**
-   * Creates a new HneiCsvTedImporter object.
+   * Creates a new EgaugeImporter object.
    * 
-   * @param filename Name of the CSV file that contains TED data.
+   * @param filename Name of the CSV file that contains Egauge data.
    * @param uri URI of the WattDepot server.
    * @param username Owner of the WattDepot server.
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
    */
-  public HneiCsvTedImporter(String filename, String uri, String username, String password,
+  public EgaugeImporter(String filename, String uri, String username, String password,
       boolean skipFirstRow) {
     super(filename, uri, username, password, skipFirstRow);
-    this.parser = new HneiCsvTedRowParser(toolName, this.serverUri, null, log);
-  }
-
-  /**
-   * Stores sensor data for a source that already exists on WattDepot server.
-   * 
-   * @param client WattDepotClient used to connect to the WattDepot server.
-   * @param datum Sensor data for a source.
-   * @return True if successful, false otherwise.
-   */
-  public boolean process(WattDepotClient client, SensorData datum) {
-    try {
-      client.storeSensorData(datum);
-      this.numNewData++;
-    }
-    catch (OverwriteAttemptedException e) {
-      this.numExistingData++;
-      String msg = "Data at " + datum.getTimestamp().toString() + " already exists on server.\n";
-      log.log(Level.INFO, msg);
-    }
-    catch (WattDepotClientException e) {
-      System.err.println(e.toString());
-      log.log(Level.SEVERE, e.toString());
-      return false;
-    }
-    catch (JAXBException e) {
-      System.err.println(e.toString());
-      log.log(Level.SEVERE, e.toString());
-      return false;
-    }
-    return true;
+    this.toolName = "EgaugeImporter";
+    this.parser = new EgaugeRowParser(this.toolName, this.serverUri, null, log);
   }
 
   /**
@@ -91,7 +54,8 @@ public class HneiCsvTedImporter extends HneiCsvImporter implements Importer {
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
-      reader = new CSVReader(new FileReader(filename), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 1);
+      FileReader fileReader = new FileReader(this.filename);
+      reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 1);
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
@@ -99,7 +63,7 @@ public class HneiCsvTedImporter extends HneiCsvImporter implements Importer {
     }
 
     // Grab data from CSV file.
-    WattDepotClient client = new WattDepotClient(serverUri, username, password);
+    WattDepotClient client = new WattDepotClient(this.serverUri, this.username, this.password);
     if (client.isHealthy() && client.isAuthenticated()) {
       System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
     }
@@ -112,20 +76,18 @@ public class HneiCsvTedImporter extends HneiCsvImporter implements Importer {
       return false;
     }
 
+    // Store data on WattDepot server.
+    int counter = 0;
+    String[] line = null;
     SensorData datum = null;
 
     try {
-      int counter = 1;
-      String[] line = null;
-
-      System.out.println("Reading in CSV file...\n");
-
-      this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 25; i++) {
-        // line = reader.readNext();
+      ((EgaugeRowParser) this.getParser()).setSourceName(this.sourceName);
+      // for (int i = 0; i < 10; i++) {
+      // line = reader.readNext();
+      System.out.println("Importing data for source " + this.sourceName + "...");
       while ((line = reader.readNext()) != null) {
-        ((HneiCsvTedRowParser) this.getParser()).setSourceName(this.sourceName);
-        if ((datum = ((HneiCsvTedRowParser) this.getParser()).parseRow(line)) == null) {
+        if ((datum = ((EgaugeRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
         }
         else {
@@ -141,17 +103,14 @@ public class HneiCsvTedImporter extends HneiCsvImporter implements Importer {
           System.out.println("Processing line " + counter + " in " + this.filename + "...");
         }
       }
-      this.importEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IOException e) {
-      String msg = "There was a problem reading in the input file:\n" + e.toString();
-      msg += "\n\nExiting...";
-      System.err.println(msg);
-      log.log(Level.SEVERE, msg);
+      e.printStackTrace();
       return false;
     }
 
     return true;
+
   }
 
   /**
@@ -171,8 +130,8 @@ public class HneiCsvTedImporter extends HneiCsvImporter implements Importer {
     String username = args[2];
     String password = args[3];
 
-    HneiCsvTedImporter inputClient =
-        new HneiCsvTedImporter(filename, serverUri, username, password, true);
+    EgaugeImporter inputClient =
+        new EgaugeImporter(filename, serverUri, username, password, true);
 
     if (!inputClient.processCsvFile()) {
       System.exit(1);

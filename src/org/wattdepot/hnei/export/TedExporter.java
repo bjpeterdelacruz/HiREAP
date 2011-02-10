@@ -13,14 +13,14 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvTedExporter extends HneiCsvExporter {
+public class TedExporter extends HneiExporter {
 
   /**
-   * Creates a new HneiCsvTedExporter object.
+   * Creates a new TedExporter object.
    * 
    * @param client Used to grab data from the WattDepot server.
    */
-  public HneiCsvTedExporter(WattDepotClient client) {
+  public TedExporter(WattDepotClient client) {
     super(client);
   }
 
@@ -30,6 +30,7 @@ public class HneiCsvTedExporter extends HneiCsvExporter {
    * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
    */
+  @Override
   public boolean printFields(BufferedWriter writer) {
     String str = "Source,Timestamp,MTU1,MTU2,MTU3,MTU4,Other,AC Off?,Blank,Not Blank\n";
     StringBuffer buffer = new StringBuffer();
@@ -101,7 +102,7 @@ public class HneiCsvTedExporter extends HneiCsvExporter {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
-    HneiCsvTedExporter output = new HneiCsvTedExporter(client);
+    TedExporter output = new TedExporter(client);
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
