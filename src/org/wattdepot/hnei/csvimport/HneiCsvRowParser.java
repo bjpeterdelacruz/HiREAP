@@ -22,7 +22,7 @@ import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * Used to parse CSV files containing data for sources provided by HNEI.
+ * This class is used to parse CSV files containing data for sources provided by HNEI.
  * 
  * @author BJ Peter DeLaCruz
  */
@@ -68,6 +68,15 @@ public class HneiCsvRowParser extends RowParser {
   }
 
   /**
+   * Sets the name of a source.
+   * 
+   * @param sourceName Sets the name of a source.
+   */
+  public void setSourceName(String sourceName) {
+    this.sourceName = sourceName;
+  }
+
+  /**
    * Returns the total number of entries with no readings.
    * 
    * @return The total number of entries with no readings.
@@ -97,7 +106,7 @@ public class HneiCsvRowParser extends RowParser {
   /**
    * Parses a row of data for a source from a CSV file provided by HNEI.
    * 
-   * @param col Row from a CSV file that contains data for one source.
+   * @param col Row from a CSV file that contains data.
    * @return SensorData object if parse is successful, null otherwise.
    */
   @Override

@@ -228,6 +228,37 @@ public class HneiCsvImporter implements Importer {
   }
 
   /**
+   * Stores a source on the WattDepot server if it is not already on there.
+   * 
+   * @param client Used to store a source on the WattDepot server.
+   * @return True if successful, false otherwise.
+   */
+  public boolean storeSource(WattDepotClient client) {
+    this.sourceName = this.filename.substring(0, this.filename.lastIndexOf('.'));
+
+    // Store source on WattDepot server.
+    try {
+      client.storeSource(new Source(sourceName, username, true), false);
+    }
+    catch (OverwriteAttemptedException e) {
+      String msg = "Source " + sourceName + " already exists on server.\n";
+      System.out.print(msg);
+      log.log(Level.INFO, msg);
+    }
+    catch (WattDepotClientException e) {
+      System.err.println(e.toString());
+      log.log(Level.SEVERE, e.toString());
+      return false;
+    }
+    catch (JAXBException e) {
+      System.err.println(e.toString());
+      log.log(Level.SEVERE, e.toString());
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Stores a source on a WattDepot server if it does not exist yet and then stores sensor data for
    * that source.
    * 
@@ -538,31 +569,6 @@ public class HneiCsvImporter implements Importer {
   }
 
   /**
-   * Given a CSV file with data for lots of sources, this program will parse each row, create a
-   * SensorData object from each, and store the sensor data on a WattDepot server.
-   * 
-   * @param args Contains filename, server URI, username, and password.
-   */
-  public static void main(String[] args) {
-    if (args.length != 4) {
-      System.err.println("Command-line arguments not in correct format. Exiting...");
-      System.exit(1);
-    }
-
-    String filename = args[0];
-    String serverUri = args[1];
-    String username = args[2];
-    String password = args[3];
-
-    HneiCsvImporter inputClient =
-      new HneiCsvImporter(filename, serverUri, username, password, true);
-
-    if (!inputClient.processCsvFile()) {
-      System.exit(1);
-    }
-  }
-
-  /**
    * Parses each row, creates a SensorData object from each, and stores the sensor data on a
    * WattDepot server.
    * 
@@ -605,9 +611,9 @@ public class HneiCsvImporter implements Importer {
       System.out.println("Reading in CSV file...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 10; i++) {
-      // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 100; i++) {
+        line = reader.readNext();
+      // while ((line = reader.readNext()) != null) {
         source = line[0];
         this.setSourceName(source);
         this.setParser();
@@ -704,6 +710,31 @@ public class HneiCsvImporter implements Importer {
 
     return true;
 
+  }
+
+  /**
+   * Given a CSV file with data for lots of sources, this program will parse each row, create a
+   * SensorData object from each, and store the sensor data on a WattDepot server.
+   * 
+   * @param args Contains filename, server URI, username, and password.
+   */
+  public static void main(String[] args) {
+    if (args.length != 4) {
+      System.err.println("Command-line arguments not in correct format. Exiting...");
+      System.exit(1);
+    }
+
+    String filename = args[0];
+    String serverUri = args[1];
+    String username = args[2];
+    String password = args[3];
+
+    HneiCsvImporter inputClient =
+      new HneiCsvImporter(filename, serverUri, username, password, true);
+
+    if (!inputClient.processCsvFile()) {
+      System.exit(1);
+    }
   }
 
 }
