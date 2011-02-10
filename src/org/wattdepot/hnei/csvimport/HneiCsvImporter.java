@@ -39,7 +39,7 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvImporter {
+public class HneiCsvImporter implements Importer {
 
   /** Log file for this application. */
   private static final Logger log = Logger.getLogger(HneiCsvImporter.class.getName());
@@ -116,6 +116,18 @@ public class HneiCsvImporter {
   /** List of all entries that have values that not monotonically increasing. */
   protected List<Entry> allNonmonoIncrVals;
 
+  /** Start time in seconds to import data from CSV file. */
+  protected long importStartTime;
+
+  /** End time in seconds to import data from CSV file. */
+  protected long importEndTime;
+
+  /** Start time in seconds to validate data. */
+  protected long validateStartTime;
+
+  /** End time in seconds to validate data. */
+  protected long validateEndTime;
+
   /**
    * Creates a new HneiTabularFileSensor object.
    * 
@@ -149,6 +161,10 @@ public class HneiCsvImporter {
     this.allMtus = new HashSet<Entry>();
     this.allDuplicateMtus = new ArrayList<Entry>();
     this.allNonmonoIncrVals = new ArrayList<Entry>();
+    this.importStartTime = 0;
+    this.importEndTime = 0;
+    this.validateStartTime = 0;
+    this.validateEndTime = 0;
   }
 
   /**
@@ -200,7 +216,7 @@ public class HneiCsvImporter {
     log.setLevel(Level.INFO);
     try {
       long timeInMillis = Calendar.getInstance().getTimeInMillis();
-      txtFile = new FileHandler("HneiTabularFileSensorLog-" + timeInMillis + ".log");
+      txtFile = new FileHandler(toolName + "-" + timeInMillis + ".log");
       txtFile.setFormatter(new SimpleFormatter());
     }
     catch (IOException e) {
@@ -340,17 +356,9 @@ public class HneiCsvImporter {
 
   /**
    * Prints results of parsing CSV file to standard output and log file.
-   * 
-   * @param importStartTime Start time of import.
-   * @param importEndTime End time of import.
-   * @param validateStartTime Start time of validation.
-   * @param validateEndTime End time of validation.
-   * @param numNoReadings Number of entries in CSV file that have no readings.
-   * @param numNonnumericValues Number of entries in CSV file that have non-numeric values.
-   * @param numBlankValues Number of entries in CSV file that have blank values.
    */
-  public void printStats(long importStartTime, long importEndTime, long validateStartTime,
-      long validateEndTime, int numNoReadings, int numNonnumericValues, int numBlankValues) {
+  @Override
+  public void printStats() {
     StringBuffer buffer = new StringBuffer();
     String msg = "\n\n==================================================\n";
     buffer.append(msg);
@@ -378,10 +386,13 @@ public class HneiCsvImporter {
     buffer.append(msg);
     msg = "Total Number of Entries            : " + this.numTotalEntries;
     buffer.append(msg);
+    int numBlankValues = ((HneiCsvRowParser) this.parser).getNumBlankValues();
     msg = "\n\nBlank Values                       : " + numBlankValues + "\n";
     buffer.append(msg);
+    int numNonnumericValues = ((HneiCsvRowParser) this.parser).getNumNonnumericValues();
     msg = "Non-numeric Values                 : " + numNonnumericValues + "\n";
     buffer.append(msg);
+    int numNoReadings = ((HneiCsvRowParser) this.parser).getNumNoReadings();
     msg = "No Readings                        : " + numNoReadings + "\n";
     buffer.append(msg);
     msg = "Non-monotonically Increasing Data  : " + this.allNonmonoIncrVals.size() + "\n";
@@ -406,17 +417,18 @@ public class HneiCsvImporter {
     buffer.append(msg);
     msg = "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
     buffer.append(msg);
-    String runtime = this.getRuntime(importStartTime, importEndTime);
+    String runtime = this.getRuntime(this.importStartTime, this.importEndTime);
     msg = "\n\nImport Runtime                     : " + runtime + "\n";
     buffer.append(msg);
-    runtime = this.getRuntime(validateStartTime, validateEndTime);
+    runtime = this.getRuntime(this.validateStartTime, this.validateEndTime);
     msg = "Validation Runtime                 : " + runtime + "\n";
     buffer.append(msg);
-    runtime = this.getRuntime(importStartTime, validateEndTime);
+    runtime = this.getRuntime(this.importStartTime, this.validateEndTime);
     msg = "Total Runtime                      : " + runtime + "\n\n";
     buffer.append(msg);
     try {
-      long numSourcesPerSecond = this.numTotalSources / ((importEndTime - importStartTime) / 1000);
+      long importRuntime = this.importEndTime - this.importStartTime;
+      long numSourcesPerSecond = this.numTotalSources / (importRuntime / 1000);
       msg = Long.toString(numSourcesPerSecond);
       if (numSourcesPerSecond > 1) {
         msg += " entries imported per second.\n";
@@ -425,7 +437,8 @@ public class HneiCsvImporter {
         msg += " entry imported per second.\n";
       }
       buffer.append(msg);
-      numSourcesPerSecond = this.numTotalSources / ((validateEndTime - validateStartTime) / 1000);
+      long validateRuntime = this.validateEndTime - this.validateStartTime;
+      numSourcesPerSecond = this.numTotalSources / (validateRuntime / 1000);
       msg = Long.toString(numSourcesPerSecond);
       if (numSourcesPerSecond > 1) {
         msg += " entries validated per second.\n";
@@ -541,6 +554,22 @@ public class HneiCsvImporter {
     String username = args[2];
     String password = args[3];
 
+    HneiCsvImporter inputClient =
+      new HneiCsvImporter(filename, serverUri, username, password, true);
+
+    if (!inputClient.processCsvFile()) {
+      System.exit(1);
+    }
+  }
+
+  /**
+   * Parses each row, creates a SensorData object from each, and stores the sensor data on a
+   * WattDepot server.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  @Override
+  public boolean processCsvFile() {
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
@@ -548,29 +577,23 @@ public class HneiCsvImporter {
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
-      System.exit(1);
+      return false;
     }
 
     // Grab data from CSV file.
-    HneiCsvImporter inputClient =
-        new HneiCsvImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
     if (client.isHealthy() && client.isAuthenticated()) {
       System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
     }
     else {
       System.err.println("Unable to connect to WattDepot server.");
-      System.exit(1);
+      return false;
     }
 
-    if (!inputClient.setupLogger()) {
-      System.exit(1);
+    if (!this.setupLogger()) {
+      return false;
     }
 
-    long importStartTime = 0;
-    long importEndTime = 0;
-    long validateStartTime = 0;
-    long validateEndTime = 0;
     SensorData datum = null;
 
     try {
@@ -581,47 +604,47 @@ public class HneiCsvImporter {
 
       System.out.println("Reading in CSV file...\n");
 
-      importStartTime = Calendar.getInstance().getTimeInMillis();
+      this.importStartTime = Calendar.getInstance().getTimeInMillis();
       // for (int i = 0; i < 10; i++) {
       // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         source = line[0];
-        inputClient.setSourceName(source);
-        inputClient.setParser();
+        this.setSourceName(source);
+        this.setParser();
         try {
-          if ((datum = inputClient.getParser().parseRow(line)) == null) {
-            inputClient.numInvalidEntries++;
+          if ((datum = this.getParser().parseRow(line)) == null) {
+            this.numInvalidEntries++;
           }
           else {
             entry = new Entry(source, datum.getProperty("reading"), datum.getTimestamp(), null);
             entry.setMtuId(datum.getProperty("mtuID"));
-            inputClient.entries.add(entry);
+            this.entries.add(entry);
 
-            if (inputClient.process(client, new Source(source, username, true), datum)) {
-              inputClient.numEntriesProcessed++;
+            if (this.process(client, new Source(source, username, true), datum)) {
+              this.numEntriesProcessed++;
             }
             else {
-              inputClient.numInvalidEntries++;
+              this.numInvalidEntries++;
             }
           }
         }
         catch (RowParseException e) {
           log.log(Level.SEVERE, "There was a problem parsing the entry for source " + source);
-          inputClient.numInvalidEntries++;
+          this.numInvalidEntries++;
         }
-        inputClient.numTotalEntries++;
+        this.numTotalEntries++;
         if ((++counter % 500) == 0) {
-          System.out.println("Processing line " + counter + " in " + inputClient.filename + "...");
+          System.out.println("Processing line " + counter + " in " + this.filename + "...");
         }
       }
-      importEndTime = Calendar.getInstance().getTimeInMillis();
+      this.importEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IOException e) {
       String msg = "There was a problem reading in the input file:\n" + e.toString();
       msg += "\n\nExiting...";
       System.err.println(msg);
       log.log(Level.SEVERE, msg);
-      System.exit(1);
+      return false;
     }
 
     // /////////////////////////////////////////////////
@@ -631,23 +654,23 @@ public class HneiCsvImporter {
     System.out.println("are either hourly or daily... This may take a while.");
 
     int counter = 1;
-    validateStartTime = Calendar.getInstance().getTimeInMillis();
+    this.validateStartTime = Calendar.getInstance().getTimeInMillis();
     try {
       Entry temp = null;
-      for (Entry e : inputClient.entries) {
+      for (Entry e : this.entries) {
         datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
-        datum = inputClient.checkValue(client, e, datum);
+        datum = this.checkValue(client, e, datum);
 
         // Classify data as either hourly or daily.
-        datum = inputClient.setSamplingInterval(client, e, datum);
+        datum = this.setSamplingInterval(client, e, datum);
 
         temp = new Entry(e.getSourceName(), null, null, e.getMtuId());
         if (datum.getProperty("isMonotonicallyIncreasing").equals("false")) {
           temp.setMonotonicallyIncreasing(false);
         }
-        inputClient.allSources.add(temp);
+        this.allSources.add(temp);
 
         // Update sensor data on server.
         client.deleteSensorData(e.getSourceName(), e.getTimestamp());
@@ -657,31 +680,29 @@ public class HneiCsvImporter {
           System.out.println("Processing entry " + counter + "...");
         }
       }
-      validateEndTime = Calendar.getInstance().getTimeInMillis();
+      this.validateEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
-      System.exit(1);
+      return false;
     }
     catch (JAXBException e) {
       e.printStackTrace();
-      System.exit(1);
+      return false;
     }
 
     // Get all sources that have multiple MTU IDs.
-    inputClient.getMultipleMtuIds();
+    this.getMultipleMtuIds();
 
-    Collections.sort(inputClient.entries, new EntrySortByTimestamp());
-    int numNoReadings = ((HneiCsvRowParser) inputClient.getParser()).getNumNoReadings();
-    int numNonnumericValues = ((HneiCsvRowParser) inputClient.getParser()).getNumNonnumericValues();
-    int numBlankValues = ((HneiCsvRowParser) inputClient.getParser()).getNumBlankValues();
+    Collections.sort(this.entries, new EntrySortByTimestamp());
 
-    inputClient.printStats(importStartTime, importEndTime, validateStartTime, validateEndTime,
-        numNoReadings, numNonnumericValues, numBlankValues);
+    this.printStats();
 
-    if (!inputClient.allDuplicateMtus.isEmpty() && !inputClient.generateCsvFile()) {
-      System.exit(1);
+    if (!this.allDuplicateMtus.isEmpty() && !this.generateCsvFile()) {
+      return false;
     }
+
+    return true;
 
   }
 

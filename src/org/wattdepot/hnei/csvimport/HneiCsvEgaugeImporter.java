@@ -20,7 +20,7 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiCsvEgaugeImporter extends HneiCsvImporter {
+public class HneiCsvEgaugeImporter extends HneiCsvImporter implements Importer {
 
   /** Log file for this application. */
   private static final Logger log = Logger.getLogger(HneiCsvEgaugeImporter.class.getName());
@@ -90,6 +90,22 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
     String username = args[2];
     String password = args[3];
 
+    HneiCsvEgaugeImporter inputClient =
+      new HneiCsvEgaugeImporter(filename, serverUri, username, password, true);
+
+    if (!inputClient.processCsvFile()) {
+      System.exit(1);
+    }
+  }
+
+  /**
+   * Parses each row, creates a SensorData object from each, and stores the sensor data for that
+   * source on a WattDepot server.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  @Override
+  public boolean processCsvFile() {
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
@@ -97,23 +113,21 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
-      System.exit(1);
+      return false;
     }
 
     // Grab data from CSV file.
-    HneiCsvEgaugeImporter inputClient =
-        new HneiCsvEgaugeImporter(filename, serverUri, username, password, true);
     WattDepotClient client = new WattDepotClient(serverUri, username, password);
     if (client.isHealthy() && client.isAuthenticated()) {
       System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
     }
     else {
       System.err.println("Unable to connect to WattDepot server.");
-      System.exit(1);
+      return false;
     }
 
-    if (!inputClient.setupLogger()) {
-      System.exit(1);
+    if (!this.setupLogger()) {
+      return false;
     }
 
     String sourceName = filename.substring(0, filename.lastIndexOf('.'));
@@ -130,12 +144,12 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
     catch (WattDepotClientException e) {
       System.err.println(e.toString());
       log.log(Level.SEVERE, e.toString());
-      System.exit(1);
+      return false;
     }
     catch (JAXBException e) {
       System.err.println(e.toString());
       log.log(Level.SEVERE, e.toString());
-      System.exit(1);
+      return false;
     }
 
     // Store data on WattDepot server.
@@ -143,38 +157,40 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter {
     String[] line = null;
     SensorData datum = null;
     try {
-      ((HneiCsvEgaugeRowParser) inputClient.getParser()).setSourceName(sourceName);
+      ((HneiCsvEgaugeRowParser) this.getParser()).setSourceName(sourceName);
       // for (int i = 0; i < 10; i++) {
         // line = reader.readNext();
       System.out.println("Importing data for source " + sourceName + "...");
       while ((line = reader.readNext()) != null) {
         try {
-          if ((datum = inputClient.getParser().parseRow(line)) == null) {
-            inputClient.numInvalidEntries++;
+          if ((datum = this.getParser().parseRow(line)) == null) {
+            this.numInvalidEntries++;
           }
           else {
-            if (inputClient.process(client, datum)) {
-              inputClient.numEntriesProcessed++;
+            if (this.process(client, datum)) {
+              this.numEntriesProcessed++;
             }
             else {
-              inputClient.numInvalidEntries++;
+              this.numInvalidEntries++;
             }
           }
         }
         catch (RowParseException e) {
           log.log(Level.SEVERE, "There was a problem parsing the entry for source " + sourceName);
-          inputClient.numInvalidEntries++;
+          this.numInvalidEntries++;
         }
-        inputClient.numTotalEntries++;
+        this.numTotalEntries++;
         if ((++counter % 500) == 0) {
-          System.out.println("Processing line " + counter + " in " + inputClient.filename + "...");
+          System.out.println("Processing line " + counter + " in " + this.filename + "...");
         }
       }
     }
     catch (IOException e) {
       e.printStackTrace();
-      System.exit(1);
+      return false;
     }
+
+    return true;
 
   }
 
