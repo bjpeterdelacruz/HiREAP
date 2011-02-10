@@ -7,3 +7,4 @@ lib/*
 *.lck
 Thumbs.db
 *.~*
+*.gitignore~
