@@ -74,6 +74,14 @@ public class HneiCsvEgaugeImporter extends HneiCsvImporter implements Importer {
   }
 
   /**
+   * .
+   */
+  @Override
+  public void printStats() {
+    // empty
+  }
+
+  /**
    * Given a CSV file with data for only one source, this program will parse each row, create a
    * SensorData object from each, and store the sensor data for that source on a WattDepot server.
    * 
