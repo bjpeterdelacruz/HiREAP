@@ -37,6 +37,7 @@ public class HoboExporter extends HneiExporter {
    * @param datum SensorData object from which to extract information.
    * @return Information stored in the SensorData object.
    */
+  @Override
   public String getInfo(SensorData datum) {
     String str = null;
     StringBuffer buffer = new StringBuffer();
