@@ -86,9 +86,9 @@ public class HoboImporter extends HneiImporter {
       System.out.println("Reading in CSV file...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 25; i++) {
-        line = reader.readNext();
-        // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 100; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         ((HoboRowParser) this.getParser()).setSourceName(this.sourceName);
         if ((datum = ((HoboRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
@@ -115,6 +115,8 @@ public class HoboImporter extends HneiImporter {
       log.log(Level.SEVERE, msg);
       return false;
     }
+
+    System.out.println("\n" + this.numEntriesProcessed + "\n" + this.numInvalidEntries);
 
     return true;
   }

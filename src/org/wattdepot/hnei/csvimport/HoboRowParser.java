@@ -49,7 +49,7 @@ public class HoboRowParser extends HneiRowParser {
       return null;
     }
 
-    if (col.length != 9 || col.length != 7 || col.length != 5) {
+    if (col.length < 5 || col.length == 6 || col.length == 8 || col.length > 9) {
       String msg = "Row not in specified format:\n" + rowToString(col);
       this.log.log(Level.WARNING, msg);
       return null;

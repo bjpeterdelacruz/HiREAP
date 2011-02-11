@@ -53,41 +53,6 @@ public class EgaugeExporter extends HneiExporter {
     return buffer.toString();
   }
 
-/*  *//**
-   * Prints information in SensorData objects to a CSV file.
-   * 
-   * @param writer CSV file to write data to.
-   * @return True if successful, false otherwise.
-   *//*
-  @Override
-  public boolean printFields(BufferedWriter writer) {
-    String str = "Source,Timestamp,Whole House,AC,Water Heater,Dryer\n";
-    StringBuffer buffer = new StringBuffer();
-    buffer.append(str);
-
-    for (SensorData datum : this.getSensorDatas()) {
-      buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
-      str = "," + datum.getTimestamp().toString();
-      buffer.append(str);
-      str = "," + datum.getProperty(SensorData.POWER_CONSUMED);
-      buffer.append(str);
-      str = "," + datum.getProperty("airConditioner") + "," + datum.getProperty("waterHeater");
-      buffer.append(str);
-      str = "," + datum.getProperty("dryer") + "\n";
-      buffer.append(str);
-    }
-
-    try {
-      writer.write(buffer.toString());
-      System.out.println(buffer.toString());
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-    return true;
-  }*/
-
   /**
    * Command-line program that will generate a CSV file containing Egauge data for a source
    * over a period of time.
@@ -119,12 +84,6 @@ public class EgaugeExporter extends HneiExporter {
     if (!output.getDates(br) || !output.printData()) {
       System.exit(1);
     }
-
-    // Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
-
-    // if (!output.printDatas()) {
-      // System.exit(1);
-    // }
 
   }
 

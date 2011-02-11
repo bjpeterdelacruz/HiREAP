@@ -56,45 +56,6 @@ public class TedExporter extends HneiExporter {
     return buffer.toString();
   }
 
-/*  *//**
-   * Prints information in SensorData objects to a CSV file.
-   * 
-   * @param writer CSV file to write data to.
-   * @return True if successful, false otherwise.
-   *//*
-  @Override
-  public boolean printFields(BufferedWriter writer) {
-    String str = "Source,Timestamp,MTU1,MTU2,MTU3,MTU4,Other,AC Off?,Blank,Not Blank\n";
-    StringBuffer buffer = new StringBuffer();
-    buffer.append(str);
-
-    for (SensorData datum : this.getSensorDatas()) {
-      buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
-      str = "," + datum.getTimestamp().toString();
-      buffer.append(str);
-      str = "," + datum.getProperty(SensorData.POWER_CONSUMED);
-      buffer.append(str);
-      str = "," + datum.getProperty("mtu2") + "," + datum.getProperty("mtu3");
-      buffer.append(str);
-      str = "," + datum.getProperty("mtu4") + "," + datum.getProperty("other");
-      buffer.append(str);
-      str = "," + getYesOrNo(datum.getProperty("isAirConditionerOff"));
-      buffer.append(str);
-      str = "," + datum.getProperty("blank") + "," + datum.getProperty("not blank") + "\n";
-      buffer.append(str);
-    }
-
-    try {
-      writer.write(buffer.toString());
-      System.out.println(buffer.toString());
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-    return true;
-  }*/
-
   /**
    * Returns "Yes" if "true" or "No" if "false".
    * 
@@ -141,10 +102,6 @@ public class TedExporter extends HneiExporter {
     if (!output.getDates(br) || !output.printData()) {
       System.exit(1);
     }
-
-    // Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
-
-    // output.printDatas();
 
   }
 

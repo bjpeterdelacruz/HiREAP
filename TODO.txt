@@ -9,7 +9,8 @@
 [ ] Importer should take option that specifies file type (FC, TED, Hobo, etc.) 
    [ ] Auto infer file type from file name or file contents.
    To accomplish this objective, turn all main methods in the importers into methods that is called by the one main method.
-[ ] May have to start writing to CSV file as soon as sensor data is grabbed from server instead of putting them in lists.
+[X] Start writing to CSV file as soon as sensor data is grabbed from server instead of putting them in lists.
+[ ] Finish printStats methods in importers.
 
 [X] Count of number of new sources.
 [X] Count of number of existing sources.
