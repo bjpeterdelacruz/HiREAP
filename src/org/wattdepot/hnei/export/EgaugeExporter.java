@@ -1,10 +1,7 @@
 package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Collections;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
@@ -25,11 +22,43 @@ public class EgaugeExporter extends HneiExporter {
   }
 
   /**
+   * Returns a table header with names of columns.
+   * 
+   * @return A table header with names of columns.
+   */
+  @Override
+  public String getTableHeader() {
+    return "Source,Timestamp,Whole House,AC,Water Heater,Dryer\n";
+  }
+
+  /**
+   * Returns information stored in a SensorData object.
+   * 
+   * @param datum SensorData object from which to extract information.
+   * @return Information stored in the SensorData object.
+   */
+  @Override
+  public String getInfo(SensorData datum) {
+    String str = null;
+    StringBuffer buffer = new StringBuffer();
+    buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
+    str = "," + datum.getTimestamp().toString();
+    buffer.append(str);
+    str = "," + datum.getProperty(SensorData.POWER_CONSUMED);
+    buffer.append(str);
+    str = "," + datum.getProperty("airConditioner") + "," + datum.getProperty("waterHeater");
+    buffer.append(str);
+    str = "," + datum.getProperty("dryer") + "\n";
+    buffer.append(str);
+    return buffer.toString();
+  }
+
+/*  *//**
    * Prints information in SensorData objects to a CSV file.
    * 
    * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
-   */
+   *//*
   @Override
   public boolean printFields(BufferedWriter writer) {
     String str = "Source,Timestamp,Whole House,AC,Water Heater,Dryer\n";
@@ -57,7 +86,7 @@ public class EgaugeExporter extends HneiExporter {
       return false;
     }
     return true;
-  }
+  }*/
 
   /**
    * Command-line program that will generate a CSV file containing Egauge data for a source
@@ -87,15 +116,15 @@ public class EgaugeExporter extends HneiExporter {
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-    if (!output.getDates(br) || !output.getData()) {
+    if (!output.getDates(br) || !output.printData()) {
       System.exit(1);
     }
 
-    Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
+    // Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
 
-    if (!output.printDatas()) {
-      System.exit(1);
-    }
+    // if (!output.printDatas()) {
+      // System.exit(1);
+    // }
 
   }
 

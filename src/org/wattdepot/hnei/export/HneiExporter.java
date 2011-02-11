@@ -10,7 +10,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -53,8 +52,8 @@ public class HneiExporter implements Exportable {
    */
   protected boolean printVerbose;
 
-  /** Field to sort data by. */
-  private String sortField;
+  /** Field to sort data by. *//*
+  private String sortField;*/
 
   /**
    * Creates a new HneiExporter object.
@@ -146,11 +145,98 @@ public class HneiExporter implements Exportable {
   }
 
   /**
+   * Returns a table header with names of columns.
+   * 
+   * @return A table header with names of columns.
+   */
+  @Override
+  public String getTableHeader() {
+    String str = null;
+    if (this.printVerbose) {
+      str = "Account,Install Date,MTU ID,Port,Meter Type,Raw Reading,Reading,Reading Date,RSSI,";
+      str += "Monotonically Increasing?,Hourly or Daily?\n";
+    }
+    else {
+      str = "Account,MTU ID,Reading,Reading Date,Monotonically Increasing?,Hourly or Daily?\n";
+    }
+    return str;
+  }
+
+  /**
+   * Returns information stored in a SensorData object.
+   * 
+   * @param datum SensorData object from which to extract information.
+   * @return Information stored in the SensorData object.
+   */
+  @Override
+  public String getInfo(SensorData datum) {
+    String str = null;
+    StringBuffer buffer = new StringBuffer();
+
+    if (this.printVerbose) {
+      // Print everything stored in SensorData object.
+      buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
+      str = "," + datum.getProperty("installDate") + "," + datum.getProperty("mtuID");
+      buffer.append(str);
+      str = "," + datum.getProperty("port") + "," + datum.getProperty("meterType");
+      buffer.append(str);
+      str = "," + Integer.parseInt(datum.getProperty("rawRead"));
+      buffer.append(str);
+      str = "," + datum.getProperty(SensorData.POWER_CONSUMED) + "," + datum.getTimestamp();
+      buffer.append(str);
+      str = "," + datum.getProperty("rssi");
+      buffer.append(str);
+      if (datum.getProperty("isMonotonicallyIncreasing").equals("true")) {
+        str = ",yes";
+      }
+      else {
+        str = ",no";
+      }
+      buffer.append(str);
+      if (datum.getProperty("daily") == null) {
+        str = ",hourly";
+      }
+      else {
+        str = ",daily";
+      }
+      buffer.append(str);
+    }
+    else {
+      // Only print source, MTU ID, power consumed, yes/no if data is/is not monotonically
+      // increasing, and hourly/daily.
+      buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
+      str = "," + datum.getProperty("mtuID");
+      buffer.append(str);
+      str = "," + datum.getProperty(SensorData.POWER_CONSUMED) + "," + datum.getTimestamp();
+      buffer.append(str);
+      if (datum.getProperty("isMonotonicallyIncreasing").equals("true")) {
+        str = ",yes";
+      }
+      else {
+        str = ",no";
+      }
+      buffer.append(str);
+      if (datum.getProperty("daily") == null) {
+        str = ",hourly";
+      }
+      else {
+        str = ",daily";
+      }
+      buffer.append(str);
+    }
+    str = "\n";
+    buffer.append(str);
+
+    return buffer.toString();
+  }
+
+  /**
    * Gets sensor data for all sources for the given time period.
    * 
    * @return True if successful, false otherwise.
    */
-  public boolean getData() {
+  @Override
+  public boolean printData() {
     try {
       this.sources = client.getSources();
     }
@@ -159,6 +245,23 @@ public class HneiExporter implements Exportable {
       return false;
     }
 
+    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+
+    File outputFile = new File(today + ".csv");
+    outputFile.setWritable(true);
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(outputFile));
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    StringBuffer buffer = new StringBuffer();
+
+    buffer.append(this.getTableHeader());
+
     try {
       System.out.println("Fetching data from server... Please wait.");
       List<SensorData> data = null;
@@ -166,8 +269,9 @@ public class HneiExporter implements Exportable {
         data = client.getSensorDatas(s.getName(), this.startTimestamp, this.endTimestamp);
         if (!data.isEmpty()) {
           for (SensorData datum : data) {
-            this.sensorDatas.add(datum);
-            this.sourceNames.add(s.getName());
+            // this.sensorDatas.add(datum);
+            // this.sourceNames.add(s.getName());
+            buffer.append(this.getInfo(datum));
           }
         }
       }
@@ -176,15 +280,33 @@ public class HneiExporter implements Exportable {
       e.printStackTrace();
       return false;
     }
+
+    try {
+      writer.write(buffer.toString());
+      System.out.println(buffer.toString());
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    try {
+      writer.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
     return true;
   }
 
-  /**
+/*  *//**
    * Prints information in SensorData objects to a CSV file.
    * 
    * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
-   */
+   *//*
   @Override
   public boolean printFields(BufferedWriter writer) {
     String str = "";
@@ -265,63 +387,23 @@ public class HneiExporter implements Exportable {
       return false;
     }
     return true;
-  }
+  }*/
 
-  /**
-   * Gets the option (1-9) to sort data by from the user via the command-line.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return String representing option if successful, null otherwise.
-   */
-  protected String getUserInput(BufferedReader br) {
-    String msg = "Enter number for field to sort data by (enter \"F\" to view list of options): ";
-    String command = null;
-    String error = "Error encountered while trying to read in option for verbose output.";
-
-    System.out.print(msg);
-    try {
-      if ((command = br.readLine()) == null) {
-        System.out.println(error);
-        return null;
-      }
-      while (command.equalsIgnoreCase("F")) {
-        System.out.println("1 -- Account");
-        System.out.println("2 -- MTU ID");
-        System.out.println("3 -- Reading");
-        System.out.println("4 -- Reading Date");
-        System.out.println("5 -- Monotonically Increasing");
-        System.out.println("6 -- Hourly");
-        System.out.println("7 -- Daily");
-        System.out.print(msg);
-        if ((command = br.readLine()) == null) {
-          System.out.println(error);
-          return null;
-        }
-      }
-    }
-    catch (IOException e) {
-      System.out.println(error);
-      return null;
-    }
-
-    return command;
-  }
-
-  /**
+/*  *//**
    * Returns the field to sort data by.
    * 
    * @return Field to sort data by.
-   */
+   *//*
   public String getSortField() {
     return this.sortField;
   }
 
-  /**
+  *//**
    * Gets the field to sort data by from the user via the command-line.
    * 
    * @param br Used to get information from the command-line.
    * @return True if input is successful, false otherwise.
-   */
+   *//*
   public boolean getSortOption(BufferedReader br) {
     String command = null;
     if ((command = this.getUserInput(br)) == null) {
@@ -376,13 +458,53 @@ public class HneiExporter implements Exportable {
     }
 
     return true;
-  }
+  }*/
 
-  /**
+/*  *//**
+   * Gets the option (1-9) to sort data by from the user via the command-line.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return String representing option if successful, null otherwise.
+   *//*
+  protected String getUserInput(BufferedReader br) {
+    String msg = "Enter number for field to sort data by (enter \"F\" to view list of options): ";
+    String command = null;
+    String error = "Error encountered while trying to read in option for verbose output.";
+
+    System.out.print(msg);
+    try {
+      if ((command = br.readLine()) == null) {
+        System.out.println(error);
+        return null;
+      }
+      while (command.equalsIgnoreCase("F")) {
+        System.out.println("1 -- Account");
+        System.out.println("2 -- MTU ID");
+        System.out.println("3 -- Reading");
+        System.out.println("4 -- Reading Date");
+        System.out.println("5 -- Monotonically Increasing");
+        System.out.println("6 -- Hourly");
+        System.out.println("7 -- Daily");
+        System.out.print(msg);
+        if ((command = br.readLine()) == null) {
+          System.out.println(error);
+          return null;
+        }
+      }
+    }
+    catch (IOException e) {
+      System.out.println(error);
+      return null;
+    }
+
+    return command;
+  }*/
+
+/*  *//**
    * Creates CSV file and prints its contents to the screen.
    * 
    * @return True if successful, false otherwise.
-   */
+   *//*
   public boolean printDatas() {
     String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
     System.out.println("Generating CSV file...\n");
@@ -412,7 +534,7 @@ public class HneiExporter implements Exportable {
     }
 
     return true;
-  }
+  }*/
 
   /**
    * Command-line program that will generate a CSV file containing sensor data for all sources for
@@ -442,17 +564,17 @@ public class HneiExporter implements Exportable {
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-    if (!output.getDates(br) || !output.getData() || !output.getVerboseOption(br)) {
+    if (!output.getDates(br)) { // || !output.getSortOption(br) || output.getSortField() == null) {
       System.exit(1);
     }
 
-    if (!output.getSortOption(br) || output.getSortField() == null) {
+    if (!output.getVerboseOption(br) || !output.printData()) {
       System.exit(1);
     }
 
-    Collections.sort(output.getSensorDatas(), new SensorDataSorter(output.getSortField()));
+    // Collections.sort(output.getSensorDatas(), new SensorDataSorter(output.getSortField()));
 
-    output.printDatas();
+    // output.printDatas();
 
   }
 

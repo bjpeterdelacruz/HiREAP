@@ -2,8 +2,11 @@ package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Calendar;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClient;
@@ -74,7 +77,7 @@ public class EnergyExporter extends HneiExporter {
   public boolean getSourceNames(BufferedReader br) {
     String command = null;
 
-    for (int i = 0; i < numSources; i++) {
+    for (int i = 0; i < this.numSources; i++) {
       System.out.print("Please enter the name of source " + (i + 1) + ": ");
       try {
         if ((command = br.readLine()) == null) {
@@ -174,27 +177,44 @@ public class EnergyExporter extends HneiExporter {
   /**
    * Prints information in SensorData objects to a CSV file.
    * 
-   * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
    */
   @Override
-  public boolean printFields(BufferedWriter writer) {
-    String result = this.getEnergyData();
-    if (result == null) {
-      return false;
-    }
+  public boolean printData() {
+    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+    System.out.println("Generating CSV file...\n");
+    System.out.println("Output file: " + today + ".csv\n");
 
-    System.out.println(result);
+    File outputFile = new File(today + ".csv");
+    outputFile.setWritable(true);
+    BufferedWriter writer = null;
+    boolean success = true;
     try {
+      writer = new BufferedWriter(new FileWriter(outputFile));
+
+      String result = this.getEnergyData();
+      if (result == null) {
+        throw new IOException();
+      }
+
       writer.write(result);
-      writer.close();
+      System.out.println(result);
     }
     catch (IOException e) {
       e.printStackTrace();
-      return false;
+      success = false;
+    }
+    finally {
+      try {
+        writer.close();
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+        success = false;
+      }
     }
 
-    return true;
+    return success;
   }
 
   /**
@@ -229,7 +249,7 @@ public class EnergyExporter extends HneiExporter {
       System.exit(1);
     }
 
-    if (!output.getSamplingInterval(br) || !output.printDatas()) {
+    if (!output.getSamplingInterval(br) || !output.printData()) {
       System.exit(1);
     }
 

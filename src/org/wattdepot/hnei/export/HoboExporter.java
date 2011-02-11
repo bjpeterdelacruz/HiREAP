@@ -1,10 +1,7 @@
 package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Collections;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
@@ -25,11 +22,40 @@ public class HoboExporter extends HneiExporter {
   }
 
   /**
+   * Returns a table header with names of columns.
+   * 
+   * @return A table header with names of columns.
+   */
+  @Override
+  public String getTableHeader() {
+    return "Source,Timestamp,Temperature (deg F),RH %,Lumens / Sq. Ft.\n";
+  }
+
+  /**
+   * Returns information stored in a SensorData object.
+   * 
+   * @param datum SensorData object from which to extract information.
+   * @return Information stored in the SensorData object.
+   */
+  public String getInfo(SensorData datum) {
+    String str = null;
+    StringBuffer buffer = new StringBuffer();
+    buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
+    str = "," + datum.getTimestamp().toString();
+    buffer.append(str);
+    str = "," + datum.getProperty("tempF") + "," + datum.getProperty("rh%");
+    buffer.append(str);
+    str = "," + datum.getProperty("lumenPerSqFt") + "\n";
+    buffer.append(str);
+    return buffer.toString();
+  }
+
+/*  *//**
    * Prints information in SensorData objects to a CSV file.
    * 
    * @param writer CSV file to write data to.
    * @return True if successful, false otherwise.
-   */
+   *//*
   @Override
   public boolean printFields(BufferedWriter writer) {
     String str = "Source,Timestamp,Temperature (deg F),RH %,Lumens / Sq. Ft.\n";
@@ -55,7 +81,7 @@ public class HoboExporter extends HneiExporter {
       return false;
     }
     return true;
-  }
+  }*/
 
   /**
    * Command-line program that will generate a CSV file containing Hobo data for a source
@@ -85,15 +111,15 @@ public class HoboExporter extends HneiExporter {
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-    if (!output.getDates(br) || !output.getData()) {
+    if (!output.getDates(br) || !output.printData()) {
       System.exit(1);
     }
 
-    Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
+    // Collections.sort(output.getSensorDatas(), new SensorDataSorter("timestamp"));
 
-    if (!output.printDatas()) {
-      System.exit(1);
-    }
+    // if (!output.printDatas()) {
+      // System.exit(1);
+    // }
 
   }
 
