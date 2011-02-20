@@ -7,10 +7,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Calendar;
+import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
+import org.wattdepot.client.MiscClientException;
+import org.wattdepot.client.NotAuthorizedException;
+import org.wattdepot.client.ResourceNotFoundException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
@@ -147,6 +152,30 @@ public class EnergyExporter extends HneiExporter {
     buffer.append(msg);
 
     XMLGregorianCalendar start = this.startTimestamp;
+    try {
+      List<SensorData> sensorDatas = this.client.getSensorDatas(this.sourceNames.get(0),
+        this.startTimestamp, this.endTimestamp);
+      for (SensorData d : sensorDatas) {
+        System.out.println(d);
+      }
+    }
+    catch (NotAuthorizedException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    catch (ResourceNotFoundException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    catch (BadXmlException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    catch (MiscClientException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    System.out.println("*****************************************");
     XMLGregorianCalendar end = null;
     while (Tstamp.lessThan(start, this.endTimestamp)) {
       msg = "\n" + start + ",";
@@ -169,6 +198,7 @@ public class EnergyExporter extends HneiExporter {
         e.printStackTrace();
         return null;
       }
+      System.err.println(start);
       start = Tstamp.incrementMinutes(start, this.samplingInterval);
     }
     return buffer.toString();

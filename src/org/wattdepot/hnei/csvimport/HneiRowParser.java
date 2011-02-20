@@ -186,7 +186,8 @@ public class HneiRowParser extends RowParser {
     }
 
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
-    Property powerConsumed = new Property(SensorData.POWER_CONSUMED, Integer.parseInt(col[6]));
+    int energy = Integer.parseInt(col[6]) * 1000;
+    Property powerConsumed = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
     String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
     SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
 
