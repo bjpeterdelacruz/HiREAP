@@ -54,11 +54,17 @@ public class HoboImporter extends Importer {
    */
   @Override
   public boolean processCsvFile() {
+    System.out.println("Running HoboImporter...");
+
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
+      int lineno = 1;
+      if (!this.skipFirstRow) {
+        lineno = 0;
+      }
       FileReader fileReader = new FileReader(this.filename);
-      reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 1);
+      reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, lineno);
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
@@ -88,9 +94,9 @@ public class HoboImporter extends Importer {
       System.out.println("Reading in CSV file...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 100; i++) {
-        // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 100; i++) {
+        line = reader.readNext();
+      // while ((line = reader.readNext()) != null) {
         ((HoboRowParser) this.getParser()).setSourceName(this.sourceName);
         if ((datum = ((HoboRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
@@ -117,8 +123,6 @@ public class HoboImporter extends Importer {
       log.log(Level.SEVERE, msg);
       return false;
     }
-
-    System.out.println("\n" + this.numEntriesProcessed + "\n" + this.numInvalidEntries);
 
     return true;
   }

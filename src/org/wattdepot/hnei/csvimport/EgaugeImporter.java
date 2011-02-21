@@ -117,11 +117,17 @@ public class EgaugeImporter extends Importer {
    */
   @Override
   public boolean processCsvFile() {
+    System.out.println("Running EgaugeImporter...");
+
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
+      int lineno = 1;
+      if (!this.skipFirstRow) {
+        lineno = 0;
+      }
       FileReader fileReader = new FileReader(this.filename);
-      reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 1);
+      reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, lineno);
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
@@ -197,8 +203,6 @@ public class EgaugeImporter extends Importer {
       e.printStackTrace();
       return false;
     }
-
-    System.out.println("Import successful!");
 
     return true;
 

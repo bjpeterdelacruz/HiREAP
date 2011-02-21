@@ -1,4 +1,4 @@
-[ ] Finish tasks from previous meeting (import command-line switches).
+[X] Finish tasks from previous meeting (import command-line switches).
 [X] Fix bug in energy export.
 [ ] Verify bug is fixed.
 [X] Use end time, not start time. 
@@ -15,8 +15,8 @@ Egauge: [X] Store raw data for energy for appliances, not 1 or 0.
 [X] Import the sample Egauge files.
 [X] Export CSV file containing multiple MTU IDs and data that is non-monotonically increasing in HneiCsvImporter.
 [X] Start on CSV export
-[ ] Importer should take option that specifies file type (FC, TED, Hobo, etc.) 
-   [ ] Auto infer file type from file name or file contents.
+[-] Importer should take option that specifies file type (FC, TED, Hobo, etc.) 
+   [X] Auto infer file type from file name or file contents.
    To accomplish this objective, turn all main methods in the importers into methods that is called by the one main method.
 [X] Start writing to CSV file as soon as sensor data is grabbed from server instead of putting them in lists.
 [ ] Finish printStats methods in importers.

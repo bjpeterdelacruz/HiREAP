@@ -58,6 +58,7 @@ public class EnergyExporter extends HneiExporter {
       e.printStackTrace();
       return false;
     }
+
     try {
       this.numSources = Integer.parseInt(command);
     }
@@ -65,6 +66,7 @@ public class EnergyExporter extends HneiExporter {
       System.out.println("Invalid input. Exiting...");
       return false;
     }
+
     return true;
   }
 

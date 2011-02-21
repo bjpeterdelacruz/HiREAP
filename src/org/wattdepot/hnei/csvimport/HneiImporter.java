@@ -378,7 +378,7 @@ public class HneiImporter extends Importer {
     msg = "\n--------------------------------------------------\n";
     buffer.append(msg);
     if (this.allDuplicateMtus.isEmpty()) {
-      msg = "\nNo sources have multiple MTU IDs.";
+      msg = "\nNo sources have multiple MTU IDs.\n\n";
       buffer.append(msg);
     }
     else {
@@ -408,10 +408,17 @@ public class HneiImporter extends Importer {
    */
   @Override
   public boolean processCsvFile() {
+    System.out.println("Running HneiImporter...");
+
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
-      reader = new CSVReader(new FileReader(filename), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 1);
+      int lineno = 1;
+      if (!this.skipFirstRow) {
+        lineno = 0;
+      }
+      reader =
+          new CSVReader(new FileReader(filename), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, lineno);
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
@@ -443,9 +450,9 @@ public class HneiImporter extends Importer {
       System.out.println("Reading in CSV file...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 100; i++) {
-      // line = reader.readNext();
-      while ((line = reader.readNext()) != null) {
+      for (int i = 0; i < 100; i++) {
+        line = reader.readNext();
+        // while ((line = reader.readNext()) != null) {
         source = line[0];
         this.setSourceName(source);
         this.setParser();
