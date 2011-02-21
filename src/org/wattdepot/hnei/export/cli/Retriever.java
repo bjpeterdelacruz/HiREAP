@@ -12,8 +12,10 @@ public interface Retriever {
    * 
    * @param sourceName Name of a source.
    * @param tstamp Timestamp at which to grab data for the source.
+   * @param option Option to display type of data (energy or power).
+   * @return True if successful, false otherwise.
    */
-  public void getSensorData(String sourceName, String tstamp);
+  public boolean getSensorData(String sourceName, String tstamp, String option);
 
   /**
    * Displays a help message for a particular command.

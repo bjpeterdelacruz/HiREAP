@@ -1,11 +1,13 @@
 package org.wattdepot.hnei.export.cli;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
@@ -38,35 +40,56 @@ public class NonmonotonicallyIncreasingData implements Retriever {
    * 
    * @param sourceName Name of a source.
    * @param tstamp Timestamp at which to which to grab data for the source.
+   * @param option Option to display type of data (energy or power).
+   * @return True if successful, false otherwise.
    */
   @Override
-  public void getSensorData(String sourceName, String tstamp) {
+  public boolean getSensorData(String sourceName, String tstamp, String option) {
     XMLGregorianCalendar startTimestamp = null;
     XMLGregorianCalendar endTimestamp = null;
     List<SensorData> results = null;
+    Date date;
     try {
-      Date date = this.formatDate.parse(tstamp);
-      startTimestamp = Tstamp.makeTimestamp(date.getTime());
-      endTimestamp = Tstamp.incrementSeconds(Tstamp.incrementDays(startTimestamp, 1), -1);
+      date = this.formatDate.parse(tstamp);
+    }
+    catch (ParseException e) {
+      e.printStackTrace();
+      return false;
+    }
+    startTimestamp = Tstamp.makeTimestamp(date.getTime());
+    endTimestamp = Tstamp.incrementSeconds(Tstamp.incrementDays(startTimestamp, 1), -1);
+    try {
       results = this.client.getSensorDatas(sourceName, startTimestamp, endTimestamp);
-      if (results.isEmpty()) {
-        System.out.println("No data exists for source " + sourceName + " on " + startTimestamp
-            + ".");
-      }
-      else {
-        System.out.println("Reading     Timestamp");
-        System.out.println("===============================");
-        for (SensorData d : results) {
-          if (d.getProperty("isMonotonicallyIncreasing").equals("false")) {
-            System.out.print(String.format("%7d", Integer.parseInt(d.getProperty("reading"))));
-            System.out.println("     " + d.getTimestamp());
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      return false;
+    }
+    if (results.isEmpty()) {
+      System.out.println("No data exists for source " + sourceName + " on " + startTimestamp + ".");
+    }
+    else {
+      System.out.println("Reading      Timestamp");
+      System.out.println("===============================");
+      for (SensorData d : results) {
+        if (d.getProperty("isMonotonicallyIncreasing").equals("false")) {
+          if ("total_energy".equals(option)) {
+            System.out.print(String.format("%7.0f",
+                d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
           }
+          else if ("energy".equals(option)) {
+            System.out.print(String.format("%7.0f",
+                d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED)));
+          }
+          else if ("power".equals(option)) {
+            System.out.print(String.format("%7.0f",
+                d.getPropertyAsDouble(SensorData.POWER_CONSUMED)));
+          }
+          System.out.println("     " + d.getTimestamp());
         }
       }
     }
-    catch (Exception e) {
-      e.printStackTrace();
-    }
+    return true;
   }
 
   /**
@@ -76,7 +99,8 @@ public class NonmonotonicallyIncreasingData implements Retriever {
    */
   @Override
   public String getHelp() {
-    String msg = ">> non-mono [source] [day]\nRetrieves all non-monotonically increasing data ";
+    String msg = ">> non-mono [source] [day] [total_energy|energy|power]\n";
+    msg += "Retrieves all non-monotonically increasing energy/power data ";
     msg += "for a source at the given day (hh/DD/yyyy).\n";
     return msg;
   }

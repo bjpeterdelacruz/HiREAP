@@ -15,10 +15,7 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HoboImporter extends HneiImporter {
-
-  /** Log file for this application. */
-  private static final Logger log = Logger.getLogger(HoboImporter.class.getName());
+public class HoboImporter extends Importer {
 
   /**
    * Creates a new HoboImporter object.
@@ -31,7 +28,12 @@ public class HoboImporter extends HneiImporter {
    */
   public HoboImporter(String filename, String uri, String username, String password,
       boolean skipFirstRow) {
-    super(filename, uri, username, password, skipFirstRow);
+    this.filename = filename;
+    this.serverUri = uri;
+    this.username = username;
+    this.password = password;
+    this.skipFirstRow = skipFirstRow;
+    this.log = Logger.getLogger(HoboImporter.class.getName());
     this.toolName = "HoboImporter";
     this.parser = new HoboRowParser(this.toolName, this.serverUri, null, log);
   }

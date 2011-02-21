@@ -7,15 +7,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Calendar;
-import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
-import org.wattdepot.client.MiscClientException;
-import org.wattdepot.client.NotAuthorizedException;
-import org.wattdepot.client.ResourceNotFoundException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
-import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
@@ -141,7 +136,7 @@ public class EnergyExporter extends HneiExporter {
    * @return Data to output to CSV file.
    */
   public String getEnergyData() {
-    double energy = 0;
+    double energy = 0.0;
     StringBuffer buffer = new StringBuffer();
     String msg = "Timestamp";
 
@@ -152,40 +147,16 @@ public class EnergyExporter extends HneiExporter {
     buffer.append(msg);
 
     XMLGregorianCalendar start = this.startTimestamp;
-    try {
-      List<SensorData> sensorDatas = this.client.getSensorDatas(this.sourceNames.get(0),
-        this.startTimestamp, this.endTimestamp);
-      for (SensorData d : sensorDatas) {
-        System.out.println(d);
-      }
-    }
-    catch (NotAuthorizedException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    }
-    catch (ResourceNotFoundException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    }
-    catch (BadXmlException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    }
-    catch (MiscClientException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    }
-    System.out.println("*****************************************");
-    XMLGregorianCalendar end = null;
+    XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
     while (Tstamp.lessThan(start, this.endTimestamp)) {
-      msg = "\n" + start + ",";
+      msg = "\n" + end + ",";
       buffer.append(msg);
       try {
         for (String s : this.sourceNames) {
           try {
             end = Tstamp.incrementMinutes(start, this.samplingInterval);
             energy = this.client.getEnergyConsumed(s, start, end, this.samplingInterval);
-            msg = String.format("%.2f", energy) + ",";
+            msg = String.format("%.0f", energy) + ",";
           }
           catch (BadXmlException e) {
             msg = "N/A,";
@@ -198,8 +169,8 @@ public class EnergyExporter extends HneiExporter {
         e.printStackTrace();
         return null;
       }
-      System.err.println(start);
       start = Tstamp.incrementMinutes(start, this.samplingInterval);
+      end = Tstamp.incrementMinutes(end, this.samplingInterval);
     }
     return buffer.toString();
   }

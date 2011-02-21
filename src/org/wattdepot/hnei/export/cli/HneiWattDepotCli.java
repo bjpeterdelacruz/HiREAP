@@ -94,14 +94,23 @@ public class HneiWattDepotCli {
       else if (command[0].equals("h") || command[0].equals("help")) {
         hneiExporter.getHelp();
       }
-      else if (command[0].equals("daily") && command.length == 3) {
-        hneiExporter.commands.get("daily").getSensorData(command[1], command[2]);
+      else if (command[0].equals("daily") && command.length == 4) {
+        String d = "daily";
+        if (!hneiExporter.commands.get(d).getSensorData(command[1], command[2], command[3])) {
+          System.exit(1);
+        }
       }
-      else if (command[0].equals("hourly") && command.length == 3) {
-        hneiExporter.commands.get("hourly").getSensorData(command[1], command[2]);
+      else if (command[0].equals("hourly") && command.length == 4) {
+        String h = "hourly";
+        if (!hneiExporter.commands.get(h).getSensorData(command[1], command[2], command[3])) {
+          System.exit(1);
+        }
       }
-      else if (command[0].equals("non-mono") && command.length == 3) {
-        hneiExporter.commands.get("non-mono").getSensorData(command[1], command[2]);
+      else if (command[0].equals("non-mono") && command.length == 4) {
+        String n = "non-mono";
+        if (!hneiExporter.commands.get(n).getSensorData(command[1], command[2], command[3])) {
+          System.exit(1);
+        }
       }
       else {
         String msg = "Invalid command. Please try again (type \"h\" for available commands).";

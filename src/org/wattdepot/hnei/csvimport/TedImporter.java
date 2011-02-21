@@ -16,10 +16,7 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class TedImporter extends HneiImporter {
-
-  /** Log file for this application. */
-  private static final Logger log = Logger.getLogger(TedImporter.class.getName());
+public class TedImporter extends Importer {
 
   /**
    * Creates a new TedImporter object.
@@ -32,7 +29,12 @@ public class TedImporter extends HneiImporter {
    */
   public TedImporter(String filename, String uri, String username, String password,
       boolean skipFirstRow) {
-    super(filename, uri, username, password, skipFirstRow);
+    this.filename = filename;
+    this.serverUri = uri;
+    this.username = username;
+    this.password = password;
+    this.skipFirstRow = skipFirstRow;
+    this.log = Logger.getLogger(TedImporter.class.getName());
     this.toolName = "TedImporter";
     this.parser = new TedRowParser(this.toolName, this.serverUri, null, log);
   }

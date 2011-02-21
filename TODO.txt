@@ -1,3 +1,12 @@
+[ ] Finish tasks from previous meeting (import command-line switches).
+[X] Fix bug in energy export.
+[ ] Verify bug is fixed.
+[X] Use end time, not start time. 
+Egauge: [X] Store raw data for energy for appliances, not 1 or 0.
+        [X] Create separate sources for each appliance and whole house.
+        [X] Reading is average power during interval, not meter reading.
+            [X] Store average power in powerConsumed, also create "odometer" reading.
+
 [X] Determine which accounts have multiple MTUs associated with them.
 [X] See if all non-monotonic data is from multiple MTUs.
 [X] Provide in summary the number of violations of each validation rule occurred.

@@ -187,9 +187,9 @@ public class HneiRowParser extends RowParser {
 
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
     int energy = Integer.parseInt(col[6]) * 1000;
-    Property powerConsumed = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
+    Property energyConsumedToDate = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
     String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
-    SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
+    SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
 
     datum.addProperty(new Property("installDate", installTimestamp.toString()));
     datum.addProperty(new Property("mtuID", col[2]));
@@ -248,10 +248,11 @@ public class HneiRowParser extends RowParser {
         new HneiRowParser("HneiCsvRowParser", serverUri, sourceName, null);
     String[] col1 =
         { sourceName, "8/1/2009", "1951005", "1", "491", "35958", "035958",
-            "1/1/2011 9:06:29 AM", "0" };
+            "1/1/2011 9:00:00 AM", "0" };
     String[] col2 =
         { sourceName, "8/1/2009", "1951005", "1", "491", "35955", "035955",
-            "1/1/2011 8:04:57 AM", "0" };
+            "1/1/2011 8:00:00 AM", "0" };
+
     SensorData datum1 = null;
     SensorData datum2 = null;
     try {
@@ -264,32 +265,30 @@ public class HneiRowParser extends RowParser {
       client.storeSensorData(datum2);
     }
     catch (WattDepotClientException e) {
-      e.printStackTrace();
-      System.exit(1);
+      System.err.println(e);
     }
     catch (JAXBException e) {
       e.printStackTrace();
       System.exit(1);
     }
 
-    Date date = null;
+    Date date1 = null;
+    Date date2 = null;
     try {
-      date = parser.formatDateTime.parse("1/1/2011 8:30:00 AM");
+      date1 = parser.formatDateTime.parse("1/1/2011 8:00:00 AM");
+      date2 = parser.formatDateTime.parse("1/1/2011 9:00:00 AM");
     }
     catch (ParseException e) {
       e.printStackTrace();
       System.exit(1);
     }
-    XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(date.getTime());
+    XMLGregorianCalendar timestamp1 = Tstamp.makeTimestamp(date1.getTime());
+    XMLGregorianCalendar timestamp2 = Tstamp.makeTimestamp(date2.getTime());
 
+    System.out.println("\nData:");
     try {
-      System.out.println("\nData:");
-      String power = datum1.getProperty(SensorData.POWER_CONSUMED);
-      System.out.println(datum1.getTimestamp().toString() + ": " + power);
-      double p = client.getPowerConsumed(sourceName, timestamp);
-      System.out.println(timestamp.toString() + ": " + p);
-      power = datum2.getProperty(SensorData.POWER_CONSUMED);
-      System.out.println(datum2.getTimestamp().toString() + ": " + power);
+      System.out.println(client.getSensorData(sourceName, timestamp1));
+      System.out.println(client.getSensorData(sourceName, timestamp2));
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
