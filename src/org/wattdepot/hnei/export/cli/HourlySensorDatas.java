@@ -12,12 +12,11 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This class is used by the HneiExporter class to grab non-monotonically increasing data for a
- * particular source.
+ * This class is used by the HneiExporter class to grab hourly data for a particular source.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class NonmonotonicallyIncreasingData implements Retriever {
+public class HourlySensorDatas implements Retriever {
 
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
@@ -26,17 +25,17 @@ public class NonmonotonicallyIncreasingData implements Retriever {
   private SimpleDateFormat formatDate;
 
   /**
-   * Creates a new NonmonotonicallyIncreasingData object.
+   * Creates a new HourlySensorDatas object.
    * 
    * @param client Used to connect to WattDepot server.
    */
-  public NonmonotonicallyIncreasingData(WattDepotClient client) {
+  public HourlySensorDatas(WattDepotClient client) {
     this.client = client;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
   }
 
   /**
-   * Displays a list of non-monotonically increasing data for a source at the given timestamp.
+   * Displays a list of hourly data for a source at the given timestamp.
    * 
    * @param sourceName Name of a source.
    * @param start Timestamp at which to grab data for a source.
@@ -73,7 +72,7 @@ public class NonmonotonicallyIncreasingData implements Retriever {
       System.out.println("Timestamp");
       System.out.println("=============================");
       for (SensorData d : results) {
-        if (d.getProperty("isMonotonicallyIncreasing").equals("false")) {
+        if (d.getProperty("hourly") != null && d.getProperty("hourly").equals("true")) {
           System.out.print(d.getTimestamp() + "     ");
           if ("total_energy".equals(option)) {
             System.out.println(String.format("%7.0f Wh",
@@ -94,15 +93,15 @@ public class NonmonotonicallyIncreasingData implements Retriever {
   }
 
   /**
-   * Gets a help message for the non-mono command.
+   * Gets a help message for the hourly command.
    * 
    * @return A help message.
    */
   @Override
   public String getHelp() {
-    String msg = ">> non-mono [source] [day] [total_energy|energy|power]\n";
-    msg += "Retrieves all non-monotonically increasing energy/power data ";
-    msg += "for a source at the given day (hh/DD/yyyy).\n";
+    String msg = ">> hourly [source] [day] [total_energy|energy|power]";
+    msg += "\nRetrieves all hourly energy/power data for a source ";
+    msg += "at the given day (hh/DD/yyyy).\n";
     return msg;
   }
 

@@ -10,7 +10,7 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class TedExporter extends HneiExporter {
+public class TedExporter extends Exporter {
 
   /**
    * Creates a new TedExporter object.
@@ -18,7 +18,7 @@ public class TedExporter extends HneiExporter {
    * @param client Used to grab data from the WattDepot server.
    */
   public TedExporter(WattDepotClient client) {
-    super(client);
+    this.client = client;
   }
 
   /**
@@ -50,26 +50,16 @@ public class TedExporter extends HneiExporter {
     buffer.append(str);
     str = "," + datum.getProperty("mtu4") + "," + datum.getProperty("other");
     buffer.append(str);
-    str = "," + getYesOrNo(datum.getProperty("isAirConditionerOff"));
+    if ("true".equals(datum.getProperty("isAirConditionerOff"))) {
+      str = ",Yes";
+    }
+    else {
+      str = ",No";
+    }
     buffer.append(str);
     str = "," + datum.getProperty("blank") + "," + datum.getProperty("not blank") + "\n";
     buffer.append(str);
     return buffer.toString();
-  }
-
-  /**
-   * Returns "Yes" if "true" or "No" if "false".
-   * 
-   * @param str "true" or "false".
-   * @return "Yes" or "No".
-   */
-  private String getYesOrNo(String str) {
-    if ("true".equals(str)) {
-      return "Yes";
-    }
-    else {
-      return "No";
-    }
   }
 
   /**

@@ -10,7 +10,7 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HoboExporter extends HneiExporter {
+public class HoboExporter extends Exporter {
 
   /**
    * Creates a new HoboExporter object.
@@ -18,7 +18,7 @@ public class HoboExporter extends HneiExporter {
    * @param client Used to grab data from the WattDepot server.
    */
   public HoboExporter(WattDepotClient client) {
-    super(client);
+    this.client = client;
   }
 
   /**

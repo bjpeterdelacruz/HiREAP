@@ -10,7 +10,7 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class EgaugeExporter extends HneiExporter {
+public class EgaugeExporter extends Exporter {
 
   /**
    * Creates a new EgaugeExporter object.
@@ -18,7 +18,7 @@ public class EgaugeExporter extends HneiExporter {
    * @param client Used to grab data from the WattDepot server.
    */
   public EgaugeExporter(WattDepotClient client) {
-    super(client);
+    this.client = client;
   }
 
   /**

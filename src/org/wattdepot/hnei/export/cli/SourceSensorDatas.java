@@ -12,11 +12,12 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This class is used by the HneiExporter class to grab hourly data for a particular source.
+ * This class is used by the HneiExporter class to grab all energy/power data for a particular
+ * source at a given interval.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HourlySensorData implements Retriever {
+public class SourceSensorDatas implements Retriever {
 
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
@@ -25,38 +26,42 @@ public class HourlySensorData implements Retriever {
   private SimpleDateFormat formatDate;
 
   /**
-   * Creates a new HourlySensorData object.
+   * Creates a new SourceSensorDatas object.
    * 
    * @param client Used to connect to WattDepot server.
    */
-  public HourlySensorData(WattDepotClient client) {
+  public SourceSensorDatas(WattDepotClient client) {
     this.client = client;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
   }
 
   /**
-   * Displays a list of hourly data for a source at the given timestamp.
+   * Displays a list of energy/power data for a source at the given interval.
    * 
    * @param sourceName Name of a source.
-   * @param tstamp Timestamp at which to which to grab data for the source.
+   * @param start Start timestamp.
+   * @param end End timestamp.
    * @param option Option to display type of data (energy or power).
    * @return True if successful, false otherwise.
    */
   @Override
-  public boolean getSensorData(String sourceName, String tstamp, String option) {
+  public boolean getSensorData(String sourceName, String start, String end, String option) {
     XMLGregorianCalendar startTimestamp = null;
     XMLGregorianCalendar endTimestamp = null;
     List<SensorData> results = null;
-    Date date = null;
+    Date date1 = null;
+    Date date2 = null;
     try {
-      date = this.formatDate.parse(tstamp);
+      date1 = this.formatDate.parse(start);
+      date2 = this.formatDate.parse(end);
     }
     catch (ParseException e) {
       e.printStackTrace();
       return false;
     }
-    startTimestamp = Tstamp.makeTimestamp(date.getTime());
-    endTimestamp = Tstamp.incrementSeconds(Tstamp.incrementDays(startTimestamp, 1), -1);
+    startTimestamp = Tstamp.makeTimestamp(date1.getTime());
+    endTimestamp = Tstamp.makeTimestamp(date2.getTime());
+    endTimestamp = Tstamp.incrementDays(Tstamp.incrementSeconds(endTimestamp, -1), 1);
     try {
       results = this.client.getSensorDatas(sourceName, startTimestamp, endTimestamp);
     }
@@ -68,23 +73,21 @@ public class HourlySensorData implements Retriever {
       System.out.println("No data exists for source " + sourceName + " on " + startTimestamp + ".");
     }
     else {
-      System.out.println("Reading      Timestamp");
-      System.out.println("===============================");
+      System.out.println("Timestamp");
+      System.out.println("=============================");
       for (SensorData d : results) {
-        if (d.getProperty("hourly") != null && d.getProperty("hourly").equals("true")) {
-          if ("total_energy".equals(option)) {
-            System.out.print(String.format("%7.0f",
-                d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
-          }
-          else if ("energy".equals(option)) {
-            System.out.print(String.format("%7.0f",
-                d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED)));
-          }
-          else if ("power".equals(option)) {
-            System.out.print(String.format("%7.0f",
-                d.getPropertyAsDouble(SensorData.POWER_CONSUMED)));
-          }
-          System.out.println("     " + d.getTimestamp());
+        System.out.print(d.getTimestamp() + "     ");
+        if ("total_energy".equals(option)) {
+          System.out.println(String.format("%7.0f Wh",
+              d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
+        }
+        else if ("energy".equals(option)) {
+          System.out.println(String.format("%8.0f Wh",
+              d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED)));
+        }
+        else if ("power".equals(option)) {
+          System.out.println(String.format("%8.0f W",
+              d.getPropertyAsDouble(SensorData.POWER_CONSUMED)));
         }
       }
     }
@@ -92,15 +95,15 @@ public class HourlySensorData implements Retriever {
   }
 
   /**
-   * Gets a help message for the hourly command.
+   * Gets a help message for the all_data command.
    * 
    * @return A help message.
    */
   @Override
   public String getHelp() {
-    String msg = ">> hourly [source] [day] [total_energy|energy|power]";
-    msg += "\nRetrieves all hourly energy/power data for a source ";
-    msg += "at the given day (hh/DD/yyyy).\n";
+    String msg = ">> all_data [source] [start] [end] [total_energy|energy|power]\n";
+    msg += "Retrieves all energy/power data ";
+    msg += "for a source at the given interval (hh/DD/yyyy).\n\n";
     return msg;
   }
 

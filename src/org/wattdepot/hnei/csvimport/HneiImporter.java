@@ -169,7 +169,7 @@ public class HneiImporter extends Importer {
       return null;
     }
 
-    if (datas.size() > 2) {
+    if (datas.size() > 1) {
       double prevEnergy =
           datas.get(datas.size() - 2).getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
       double currEnergy = datum.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);

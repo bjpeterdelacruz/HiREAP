@@ -38,18 +38,19 @@ public class DailySensorData implements Retriever {
    * Displays daily data for a source at the given timestamp.
    * 
    * @param sourceName Name of a source.
-   * @param tstamp Timestamp at which to grab data for the source.
+   * @param start Timestamp at which to grab data for a source.
+   * @param end <span style="font-weight: bold">Not used.</span>
    * @param option Option to display type of data (energy or power).
    * @return True if successful, false otherwise.
    */
   @Override
-  public boolean getSensorData(String sourceName, String tstamp, String option) {
+  public boolean getSensorData(String sourceName, String start, String end, String option) {
     XMLGregorianCalendar startTimestamp = null;
     XMLGregorianCalendar endTimestamp = null;
     List<SensorData> results = null;
     Date date = null;
     try {
-      date = this.formatDate.parse(tstamp);
+      date = this.formatDate.parse(start);
     }
     catch (ParseException e) {
       e.printStackTrace();
@@ -68,24 +69,23 @@ public class DailySensorData implements Retriever {
       System.out.println("No data exists for source " + sourceName + " on " + startTimestamp + ".");
     }
     else {
-      String result = null;
-      System.out.println("Reading      Timestamp");
-      System.out.println("===============================");
+      System.out.println("Timestamp");
+      System.out.println("=============================");
       for (SensorData d : results) {
         if (d.getProperty("daily") != null && d.getProperty("daily").equals("true")) {
+          System.out.print(d.getTimestamp() + "     ");
           if ("total_energy".equals(option)) {
-            System.out.print(String.format("%7.0f",
+            System.out.println(String.format("%7.0f Wh",
                 d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
           }
           else if ("energy".equals(option)) {
-            System.out.print(String.format("%7.0f",
+            System.out.println(String.format("%8.0f Wh",
                 d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED)));
           }
           else if ("power".equals(option)) {
-            System.out.print(String.format("%7.0f",
+            System.out.println(String.format("%8.0f W",
                 d.getPropertyAsDouble(SensorData.POWER_CONSUMED)));
           }
-          System.out.println(result + "     " + d.getTimestamp());
         }
       }
     }
@@ -101,7 +101,7 @@ public class DailySensorData implements Retriever {
   public String getHelp() {
     String msg = ">> daily [source] [day] [total_energy|energy|power]";
     msg += "\nRetrieves daily energy/power data for a source ";
-    msg += "at the given day (hh/DD/yyyy, e.g. 1/20/2011).\n\n";
+    msg += "at the given day (hh/DD/yyyy, e.g. 1/20/2011).\n";
     return msg;
   }
 

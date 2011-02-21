@@ -155,7 +155,7 @@ public class EnergyExporter extends HneiExporter {
         for (String s : this.sourceNames) {
           try {
             end = Tstamp.incrementMinutes(start, this.samplingInterval);
-            energy = this.client.getEnergyConsumed(s, start, end, this.samplingInterval);
+            energy += this.client.getEnergyConsumed(s, start, end, this.samplingInterval);
             msg = String.format("%.0f", energy) + ",";
           }
           catch (BadXmlException e) {
