@@ -42,56 +42,43 @@ public class EgaugeImporter extends Importer {
   /**
    * Returns an array of SensorData objects containing energy and power data.
    * 
-   * @param datum SensorData object containing information for the entire house, including
+   * @param data SensorData object containing information for the entire house, including
    * appliances.
    * @param energyConsumedToDate Energy data for entire house and all appliances.
    * @return An array of SensorData objects containing energy and power data.
    */
-  public SensorData[] getSensorDatas(SensorData datum, double[] energyConsumedToDate) {
+  public SensorData[] getSensorDatas(SensorData data, double[] energyConsumedToDate) {
     SensorData[] sensorDatas = new SensorData[4];
 
     // Whole House
-    int power = (int) Double.parseDouble(datum.getProperty(SensorData.POWER_CONSUMED));
+    double power = Double.parseDouble(data.getProperty(SensorData.POWER_CONSUMED));
     Property powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
     String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
     SensorData wholeHouse =
-        new SensorData(datum.getTimestamp(), this.toolName, sourceUri, powerConsumed);
-    Property energy = new Property(SensorData.ENERGY_CONSUMED, (double) power / 60.0);
-    wholeHouse.addProperty(energy);
-    wholeHouse
-        .addProperty(new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energyConsumedToDate[0]));
+        new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
     // Air Conditioner
-    power = Integer.parseInt(datum.getProperty("airConditioner"));
+    String acPower = data.getProperty("airConditioner").replace(",", "");
+    power = Double.parseDouble(acPower);
     powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
     sourceUri = Source.sourceToUri(this.sourceName + "-airConditioner", this.serverUri);
     SensorData airConditioner =
-        new SensorData(datum.getTimestamp(), this.toolName, sourceUri, powerConsumed);
-    energy = new Property(SensorData.ENERGY_CONSUMED, (double) power / 60.0);
-    airConditioner.addProperty(energy);
-    airConditioner.addProperty(new Property(SensorData.ENERGY_CONSUMED_TO_DATE,
-        energyConsumedToDate[1]));
+        new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
     // Water Heater
-    power = Integer.parseInt(datum.getProperty("waterHeater"));
+    String whPower = data.getProperty("waterHeater").replace(",", "");
+    power = Integer.parseInt(whPower);
     powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
     sourceUri = Source.sourceToUri(this.sourceName + "-waterHeater", this.serverUri);
     SensorData waterHeater =
-        new SensorData(datum.getTimestamp(), this.toolName, sourceUri, powerConsumed);
-    energy = new Property(SensorData.ENERGY_CONSUMED, (double) power / 60.0);
-    waterHeater.addProperty(energy);
-    waterHeater.addProperty(new Property(SensorData.ENERGY_CONSUMED_TO_DATE,
-        energyConsumedToDate[2]));
+        new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
     // Dryer
-    power = Integer.parseInt(datum.getProperty("dryer"));
+    String dryerPower = data.getProperty("dryer").replace(",", "");
+    power = Integer.parseInt(dryerPower);
     powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
     sourceUri = Source.sourceToUri(this.sourceName + "-dryer", this.serverUri);
-    SensorData dryer =
-        new SensorData(datum.getTimestamp(), this.toolName, sourceUri, powerConsumed);
-    energy = new Property(SensorData.ENERGY_CONSUMED, (double) power / 60.0);
-    dryer.addProperty(energy);
-    dryer.addProperty(new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energyConsumedToDate[3]));
+    SensorData dryer = new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
     sensorDatas[0] = wholeHouse;
     sensorDatas[1] = airConditioner;
@@ -163,7 +150,7 @@ public class EgaugeImporter extends Importer {
     // Store data on WattDepot server.
     int counter = 0;
     String[] line = null;
-    SensorData datum = null;
+    SensorData data = null;
 
     try {
       ((EgaugeRowParser) this.getParser()).setSourceName(this.sourceName);
@@ -173,14 +160,18 @@ public class EgaugeImporter extends Importer {
       }
 
       System.out.println("Importing data for source " + this.sourceName + "...");
-      for (int i = 0; i < 2000; i++) {
+      for (int i = 0; i < 100; i++) {
         line = reader.readNext();
-      // while ((line = reader.readNext()) != null) {
-        if ((datum = ((EgaugeRowParser) this.getParser()).parseRow(line)) == null) {
+        // while ((line = reader.readNext()) != null) {
+        if ((data = ((EgaugeRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
         }
         else {
-          SensorData[] datas = getSensorDatas(datum, energyConsumedToDate);
+          SensorData[] datas = getSensorDatas(data, energyConsumedToDate);
+          if (datas == null) {
+            System.err.println("Problem encountered while getting sensor data.");
+            return false;
+          }
           for (int j = 0; j < datas.length; j++) {
             energyConsumedToDate[j] += datas[j].getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
           }

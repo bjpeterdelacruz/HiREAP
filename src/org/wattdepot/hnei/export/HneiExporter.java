@@ -51,35 +51,35 @@ public class HneiExporter extends Exporter {
   /**
    * Returns information stored in a SensorData object.
    * 
-   * @param datum SensorData object from which to extract information.
+   * @param data SensorData object from which to extract information.
    * @return Information stored in the SensorData object.
    */
   @Override
-  public String getInfo(SensorData datum) {
+  public String getInfo(SensorData data) {
     String str = null;
     StringBuffer buffer = new StringBuffer();
 
     if (this.printVerbose) {
       // Print everything stored in SensorData object.
-      buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
-      str = "," + datum.getProperty("installDate") + "," + datum.getProperty("mtuID");
+      buffer.append(data.getSource().substring(data.getSource().lastIndexOf("/") + 1));
+      str = "," + data.getProperty("installDate") + "," + data.getProperty("mtuID");
       buffer.append(str);
-      str = "," + datum.getProperty("port") + "," + datum.getProperty("meterType");
+      str = "," + data.getProperty("port") + "," + data.getProperty("meterType");
       buffer.append(str);
-      str = "," + Integer.parseInt(datum.getProperty("rawRead"));
+      str = "," + Integer.parseInt(data.getProperty("rawRead"));
       buffer.append(str);
-      str = "," + datum.getProperty(SensorData.POWER_CONSUMED) + "," + datum.getTimestamp();
+      str = "," + data.getProperty(SensorData.POWER_CONSUMED) + "," + data.getTimestamp();
       buffer.append(str);
-      str = "," + datum.getProperty("rssi");
+      str = "," + data.getProperty("rssi");
       buffer.append(str);
-      if (datum.getProperty("isMonotonicallyIncreasing").equals("true")) {
+      if (data.getProperty("isMonotonicallyIncreasing").equals("true")) {
         str = ",yes";
       }
       else {
         str = ",no";
       }
       buffer.append(str);
-      if (datum.getProperty("daily") == null) {
+      if (data.getProperty("daily") == null) {
         str = ",hourly";
       }
       else {
@@ -90,19 +90,19 @@ public class HneiExporter extends Exporter {
     else {
       // Only print source, MTU ID, power consumed, yes/no if data is/is not monotonically
       // increasing, and hourly/daily.
-      buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
-      str = "," + datum.getProperty("mtuID");
+      buffer.append(data.getSource().substring(data.getSource().lastIndexOf("/") + 1));
+      str = "," + data.getProperty("mtuID");
       buffer.append(str);
-      str = "," + datum.getProperty(SensorData.POWER_CONSUMED) + "," + datum.getTimestamp();
+      str = "," + data.getProperty(SensorData.POWER_CONSUMED) + "," + data.getTimestamp();
       buffer.append(str);
-      if (datum.getProperty("isMonotonicallyIncreasing").equals("true")) {
+      if (data.getProperty("isMonotonicallyIncreasing").equals("true")) {
         str = ",yes";
       }
       else {
         str = ",no";
       }
       buffer.append(str);
-      if (datum.getProperty("daily") == null) {
+      if (data.getProperty("daily") == null) {
         str = ",hourly";
       }
       else {

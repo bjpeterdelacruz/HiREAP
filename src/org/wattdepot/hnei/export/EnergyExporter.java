@@ -138,9 +138,10 @@ public class EnergyExporter extends HneiExporter {
    * @return Data to output to CSV file.
    */
   public String getEnergyData() {
-    double energy = 0.0;
     StringBuffer buffer = new StringBuffer();
     String msg = "Timestamp";
+    double[] energyDatas = new double[this.sourceNames.size()];
+    int index = 0;
 
     for (String s : this.sourceNames) {
       buffer.append(msg);
@@ -154,16 +155,19 @@ public class EnergyExporter extends HneiExporter {
       msg = "\n" + end + ",";
       buffer.append(msg);
       try {
+        index = 0;
         for (String s : this.sourceNames) {
           try {
             end = Tstamp.incrementMinutes(start, this.samplingInterval);
-            energy += this.client.getEnergyConsumed(s, start, end, this.samplingInterval);
-            msg = String.format("%.0f", energy) + ",";
+            energyDatas[index] +=
+                this.client.getEnergyConsumed(s, start, end, this.samplingInterval);
+            msg = String.format("%.0f", energyDatas[index]) + ",";
           }
           catch (BadXmlException e) {
             msg = "N/A,";
           }
           buffer.append(msg);
+          index++;
         }
         buffer.deleteCharAt(buffer.length() - 1);
       }

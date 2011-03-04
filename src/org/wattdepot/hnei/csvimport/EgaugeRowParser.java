@@ -91,6 +91,7 @@ public class EgaugeRowParser extends HneiRowParser {
     }
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(date.getTime());
 
+    col[1] = col[1].replace(",", "");
     Property powerConsumed = new Property(SensorData.POWER_CONSUMED, Integer.parseInt(col[1]));
     String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
     SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);

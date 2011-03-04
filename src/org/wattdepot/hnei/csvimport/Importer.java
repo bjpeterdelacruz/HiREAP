@@ -177,11 +177,11 @@ public abstract class Importer {
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param source Source that is described by the sensor data.
-   * @param datum Sensor data for a source.
+   * @param data Sensor data for a source.
    * @return True if source and/or sensor data were stored successfully on WattDepot server, false
    * otherwise.
    */
-  public boolean process(WattDepotClient client, Source source, SensorData datum) {
+  public boolean process(WattDepotClient client, Source source, SensorData data) {
     try {
       try {
         client.storeSource(source, false);
@@ -192,12 +192,12 @@ public abstract class Importer {
         // log.log(Level.INFO, "Source " + source.getName() + " already exists on server.\n");
       }
       this.numTotalSources++;
-      client.storeSensorData(datum);
+      client.storeSensorData(data);
       this.numNewData++;
     }
     catch (OverwriteAttemptedException e) {
       this.numExistingData++;
-      String msg = "Data at " + datum.getTimestamp().toString() + " for " + source.getName();
+      String msg = "Data at " + data.getTimestamp().toString() + " for " + source.getName();
       msg += " already exists on server.\n";
       log.log(Level.INFO, msg);
     }

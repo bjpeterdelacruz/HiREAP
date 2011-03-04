@@ -19,6 +19,7 @@ public class NumericValue implements Validator {
   @Override
   public boolean validateEntry(Object entry) {
     String str = (String) entry;
+    str = str.replace(",", "");
     try {
       Double.parseDouble(str);
     }

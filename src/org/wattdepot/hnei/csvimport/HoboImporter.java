@@ -85,7 +85,7 @@ public class HoboImporter extends Importer {
       return false;
     }
 
-    SensorData datum = null;
+    SensorData data = null;
 
     try {
       int counter = 1;
@@ -98,11 +98,11 @@ public class HoboImporter extends Importer {
         line = reader.readNext();
       // while ((line = reader.readNext()) != null) {
         ((HoboRowParser) this.getParser()).setSourceName(this.sourceName);
-        if ((datum = ((HoboRowParser) this.getParser()).parseRow(line)) == null) {
+        if ((data = ((HoboRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
         }
         else {
-          if (this.process(client, datum)) {
+          if (this.process(client, data)) {
             this.numEntriesProcessed++;
           }
           else {

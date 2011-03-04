@@ -4,7 +4,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/wattdepot/wattdepot-lib-client.jar">
 		<attributes>
-			<attribute name="javadoc_location" value="file:/Users/bjpeterdelacruz/Documents/workspace/javadoc/"/>
+			<attribute name="javadoc_location" value="file:/E:/My Documents/Coursework/ICS 691 HNEI WattDepot/WattDepot API/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/opencsv/opencsv.jar"/>

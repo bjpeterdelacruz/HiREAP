@@ -78,7 +78,7 @@ public class SourceSensorDatas implements Retriever {
       for (SensorData d : results) {
         System.out.print(d.getTimestamp() + "     ");
         if ("total_energy".equals(option)) {
-          System.out.println(String.format("%7.0f Wh",
+          System.out.println(String.format("%8.0f Wh",
               d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
         }
         else if ("energy".equals(option)) {

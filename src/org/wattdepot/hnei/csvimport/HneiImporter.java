@@ -99,20 +99,20 @@ public class HneiImporter extends Importer {
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param entry Current entry in CSV file.
-   * @param datum SensorData for a source.
+   * @param data SensorData for a source.
    * @return Updated SensorData for a source.
    */
-  public SensorData checkValue(WattDepotClient client, Entry entry, SensorData datum) {
+  public SensorData checkValue(WattDepotClient client, Entry entry, SensorData data) {
     String isIncreasing = "isMonotonicallyIncreasing";
     Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
     if (!monoIncrVal.validateEntry(entry)) {
       log.log(Level.WARNING, monoIncrVal.getErrorMessage());
-      datum.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
-      datum.getProperties().getProperty().add(new Property(isIncreasing, "false"));
+      data.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
+      data.getProperties().getProperty().add(new Property(isIncreasing, "false"));
       entry.setMonotonicallyIncreasing(false);
       this.allNonmonoIncrVals.add(entry);
     }
-    return datum;
+    return data;
   }
 
   /**
@@ -120,34 +120,34 @@ public class HneiImporter extends Importer {
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param entry Current entry in CSV file.
-   * @param datum SensorData for a source.
+   * @param data SensorData for a source.
    * @return Updated SensorData object for a source.
    */
-  public SensorData setSamplingInterval(WattDepotClient client, Entry entry, SensorData datum) {
+  public SensorData setSamplingInterval(WattDepotClient client, Entry entry, SensorData data) {
     Calendar day = Calendar.getInstance();
     int d = entry.getTimestamp().getDay();
     day.set(entry.getTimestamp().getYear(), entry.getTimestamp().getMonth() - 1, d, 0, 0, 0);
     XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
     XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
 
-    List<SensorData> data;
+    List<SensorData> datas;
     try {
-      data = client.getSensorDatas(entry.getSourceName(), start, end);
+      datas = client.getSensorDatas(entry.getSourceName(), start, end);
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
       return null;
     }
 
-    if (data.size() == 1) {
-      datum.getProperties().getProperty().remove(new Property("hourly", "true"));
+    if (datas.size() == 1) {
+      data.getProperties().getProperty().remove(new Property("hourly", "true"));
       this.numDaily++;
     }
     else {
-      datum.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
+      data.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
       this.numHourly++;
     }
-    return datum;
+    return data;
   }
 
   /**
@@ -155,14 +155,14 @@ public class HneiImporter extends Importer {
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param entry Current entry in CSV file.
-   * @param datum SensorData for a source.
+   * @param data SensorData for a source.
    * @return Updated SensorData object for a source.
    */
-  public SensorData addProperties(WattDepotClient client, Entry entry, SensorData datum) {
+  public SensorData addProperties(WattDepotClient client, Entry entry, SensorData data) {
     List<SensorData> datas = null;
     try {
-      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(datum.getTimestamp(), -1);
-      datas = client.getSensorDatas(entry.getSourceName(), prevTimestamp, datum.getTimestamp());
+      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(data.getTimestamp(), -1);
+      datas = client.getSensorDatas(entry.getSourceName(), prevTimestamp, data.getTimestamp());
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
@@ -170,22 +170,22 @@ public class HneiImporter extends Importer {
     }
 
     if (datas.size() > 1) {
-      double prevEnergy =
-          datas.get(datas.size() - 2).getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
-      double currEnergy = datum.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
+      SensorData prevData = datas.get(datas.size() - 2);
+      double prevEnergy = prevData.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
+      double currEnergy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
       double energy = Math.abs(prevEnergy - currEnergy);
-      datum.addProperty(new Property(SensorData.ENERGY_CONSUMED, energy));
+      data.addProperty(new Property(SensorData.ENERGY_CONSUMED, energy));
 
-      long prevTimestamp = datas.get(0).getTimestamp().toGregorianCalendar().getTimeInMillis();
-      long currTimestamp = datum.getTimestamp().toGregorianCalendar().getTimeInMillis();
+      long prevTimestamp = prevData.getTimestamp().toGregorianCalendar().getTimeInMillis();
+      long currTimestamp = data.getTimestamp().toGregorianCalendar().getTimeInMillis();
       double hours = Math.abs(prevTimestamp - currTimestamp) / 1000.0 / 60.0 / 60.0;
       if (hours > 0) {
         double power = energy / hours;
-        datum.addProperty(new Property(SensorData.POWER_CONSUMED, power));
+        data.addProperty(new Property(SensorData.POWER_CONSUMED, power));
       }
     }
 
-    return datum;
+    return data;
   }
 
   /**
@@ -439,7 +439,7 @@ public class HneiImporter extends Importer {
       return false;
     }
 
-    SensorData datum = null;
+    SensorData data = null;
 
     try {
       Entry entry = null;
@@ -450,22 +450,22 @@ public class HneiImporter extends Importer {
       System.out.println("Reading in CSV file...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      for (int i = 0; i < 100; i++) {
-        line = reader.readNext();
-        // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 1000; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         source = line[0];
         this.setSourceName(source);
         this.setParser();
         try {
-          if ((datum = this.getParser().parseRow(line)) == null) {
+          if ((data = this.getParser().parseRow(line)) == null) {
             this.numInvalidEntries++;
           }
           else {
-            entry = new Entry(source, datum.getProperty("reading"), datum.getTimestamp(), null);
-            entry.setMtuId(datum.getProperty("mtuID"));
+            entry = new Entry(source, data.getProperty("reading"), data.getTimestamp(), null);
+            entry.setMtuId(data.getProperty("mtuID"));
             this.entries.add(entry);
 
-            if (this.process(client, new Source(source, this.username, true), datum)) {
+            if (this.process(client, new Source(source, this.username, true), data)) {
               this.numEntriesProcessed++;
             }
             else {
@@ -503,32 +503,32 @@ public class HneiImporter extends Importer {
     try {
       Entry temp = null;
       for (Entry e : this.entries) {
-        datum = client.getSensorData(e.getSourceName(), e.getTimestamp());
+        data = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
-        datum = this.checkValue(client, e, datum);
+        data = this.checkValue(client, e, data);
 
         // Classify data as either hourly or daily.
-        datum = this.setSamplingInterval(client, e, datum);
-        if (datum == null) {
+        data = this.setSamplingInterval(client, e, data);
+        if (data == null) {
           return false;
         }
 
         temp = new Entry(e.getSourceName(), null, null, e.getMtuId());
-        if (datum.getProperty("isMonotonicallyIncreasing").equals("false")) {
+        if (data.getProperty("isMonotonicallyIncreasing").equals("false")) {
           temp.setMonotonicallyIncreasing(false);
         }
         this.allSources.add(temp);
 
         // Add energyConsumed.
-        datum = this.addProperties(client, e, datum);
-        if (datum == null) {
+        data = this.addProperties(client, e, data);
+        if (data == null) {
           return false;
         }
 
         // Update sensor data on server.
         client.deleteSensorData(e.getSourceName(), e.getTimestamp());
-        client.storeSensorData(datum);
+        client.storeSensorData(data);
 
         if (++counter % 500 == 0) {
           System.out.println("Processing entry " + counter + "...");

@@ -34,21 +34,21 @@ public class EgaugeExporter extends Exporter {
   /**
    * Returns information stored in a SensorData object.
    * 
-   * @param datum SensorData object from which to extract information.
+   * @param data SensorData object from which to extract information.
    * @return Information stored in the SensorData object.
    */
   @Override
-  public String getInfo(SensorData datum) {
+  public String getInfo(SensorData data) {
     String str = null;
     StringBuffer buffer = new StringBuffer();
-    buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
-    str = "," + datum.getTimestamp().toString();
+    buffer.append(data.getSource().substring(data.getSource().lastIndexOf("/") + 1));
+    str = "," + data.getTimestamp().toString();
     buffer.append(str);
-    str = "," + datum.getProperty(SensorData.POWER_CONSUMED);
+    str = "," + data.getProperty(SensorData.POWER_CONSUMED);
     buffer.append(str);
-    str = "," + datum.getProperty("airConditioner") + "," + datum.getProperty("waterHeater");
+    str = "," + data.getProperty("airConditioner") + "," + data.getProperty("waterHeater");
     buffer.append(str);
-    str = "," + datum.getProperty("dryer") + "\n";
+    str = "," + data.getProperty("dryer") + "\n";
     buffer.append(str);
     return buffer.toString();
   }

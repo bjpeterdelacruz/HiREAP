@@ -8,3 +8,5 @@ lib/*
 Thumbs.db
 *.~*
 *.gitignore~
+.classpath
+.project
