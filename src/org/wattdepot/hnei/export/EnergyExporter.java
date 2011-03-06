@@ -152,7 +152,9 @@ public class EnergyExporter extends HneiExporter {
     XMLGregorianCalendar start = this.startTimestamp;
     XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
     while (Tstamp.lessThan(start, this.endTimestamp)) {
-      msg = "\n" + end + ",";
+      msg = "\n" + end.getMonth() + "/" + end.getDay() + "/" + end.getYear() + " ";
+      buffer.append(msg);
+      msg = end.getHour() + ":" + end.getMinute() + ":" + end.getSecond() + ",";
       buffer.append(msg);
       try {
         index = 0;

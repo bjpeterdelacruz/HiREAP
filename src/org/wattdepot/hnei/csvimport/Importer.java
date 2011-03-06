@@ -1,6 +1,10 @@
 package org.wattdepot.hnei.csvimport;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
@@ -136,8 +140,26 @@ public abstract class Importer {
       System.err.println("Unable to create file handler for logger.");
       return false;
     }
+    catch (SecurityException e) {
+      return false;
+    }
     log.addHandler(txtFile);
     return true;
+  }
+
+  /**
+   * Closes the log file.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  public boolean closeLogger() {
+    try {
+      txtFile.close();
+      return true;
+    }
+    catch (SecurityException e) {
+      return false;
+    }
   }
 
   /**
@@ -290,6 +312,65 @@ public abstract class Importer {
     long minutes = (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
     long seconds = ((milliseconds % (1000 * 60 * 60)) % (1000 * 60)) / 1000;
     return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+  }
+
+  /**
+   * Returns a list of CSV files to process.
+   * 
+   * @return List of CSV files in current working directory.
+   */
+  public static String[] getAllCsvFiles() {
+    File dir = new File(System.getProperties().getProperty("user.dir"));
+
+    FilenameFilter filter = new FilenameFilter() {
+      public boolean accept(File dir, String name) {
+        return name.startsWith("012658") && name.endsWith("csv");
+      }
+    };
+    return dir.list(filter);
+  }
+
+  /**
+   * Asks the user if he or she wants to process or skip next file, or quit program.
+   * 
+   * @param fname Name of next file to process.
+   * @return "yes" if user wants to process next file, "no" if user wants to skip next file, or
+   * "quit" to exit program.
+   */
+  public static String processNextFile(String fname) {
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    String command = "";
+    String msg = "Do you want to process the next file [" + fname + "]";
+    msg += "or quit the program [ yes | no | quit ]? ";
+
+    System.out.print(msg);
+
+    try {
+      if ((command = br.readLine()) == null) {
+        throw new IOException();
+      }
+      while (!"yes".equalsIgnoreCase(command) && !"no".equalsIgnoreCase(command)
+          && !"quit".equalsIgnoreCase(command)) {
+        System.out.println("Please enter \"yes\" or \"no\", or \"quit\" to quit the program.");
+        System.out.print(msg);
+        if ((command = br.readLine()) == null) {
+          throw new IOException();
+        }
+      }
+      if ("yes".equalsIgnoreCase(command)) {
+        return "yes";
+      }
+      else if ("no".equalsIgnoreCase(command)) {
+        return "no";
+      }
+      else {
+        return "quit";
+      }
+    }
+    catch (IOException e) {
+      System.err.println("There was a problem reading in a command from the keyboard.");
+      return "quit";
+    }
   }
 
   /**

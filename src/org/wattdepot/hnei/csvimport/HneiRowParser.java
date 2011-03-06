@@ -188,9 +188,11 @@ public class HneiRowParser extends RowParser {
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
     int energy = Integer.parseInt(col[6]) * 1000;
     Property energyConsumedToDate = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
-    String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
+    String mtuPort = col[2] + "-" + col[3];
+    String sourceUri = Source.sourceToUri(mtuPort, this.serverUri);
     SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
 
+    datum.addProperty(new Property("accountNumber", col[0]));
     datum.addProperty(new Property("installDate", installTimestamp.toString()));
     datum.addProperty(new Property("mtuID", col[2]));
     datum.addProperty(new Property("port", col[3]));
@@ -198,7 +200,6 @@ public class HneiRowParser extends RowParser {
     datum.addProperty(new Property("rawRead", col[5]));
     datum.addProperty(new Property("reading", col[6]));
     datum.addProperty(new Property("rssi", col[8]));
-    datum.addProperty(new Property("isMonotonicallyIncreasing", "true"));
     datum.addProperty(new Property("hourly", "true"));
     datum.addProperty(new Property("daily", "true"));
 
@@ -243,14 +244,14 @@ public class HneiRowParser extends RowParser {
     }
     System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
 
-    String sourceName = "994515990077";
+    String sourceName = "1951005-1";
     HneiRowParser parser =
         new HneiRowParser("HneiCsvRowParser", serverUri, sourceName, null);
     String[] col1 =
-        { sourceName, "8/1/2009", "1951005", "1", "491", "35958", "035958",
+        { "994515990077", "8/1/2009", "1951005", "1", "491", "35958", "035958",
             "1/1/2011 9:00:00 AM", "0" };
     String[] col2 =
-        { sourceName, "8/1/2009", "1951005", "1", "491", "35955", "035955",
+        { "994515990077", "8/1/2009", "1951005", "1", "491", "35955", "035955",
             "1/1/2011 8:00:00 AM", "0" };
 
     SensorData datum1 = null;

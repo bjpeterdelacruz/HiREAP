@@ -105,9 +105,11 @@ public class HneiImporter extends Importer {
   public SensorData checkValue(WattDepotClient client, Entry entry, SensorData data) {
     String isIncreasing = "isMonotonicallyIncreasing";
     Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
-    if (!monoIncrVal.validateEntry(entry)) {
+    if (monoIncrVal.validateEntry(entry)) {
+      data.getProperties().getProperty().add(new Property(isIncreasing, "true"));
+    }
+    else {
       log.log(Level.WARNING, monoIncrVal.getErrorMessage());
-      data.getProperties().getProperty().remove(new Property(isIncreasing, "true"));
       data.getProperties().getProperty().add(new Property(isIncreasing, "false"));
       entry.setMonotonicallyIncreasing(false);
       this.allNonmonoIncrVals.add(entry);
@@ -272,13 +274,16 @@ public class HneiImporter extends Importer {
     buffer.append(msg);
     msg = "Filename                           : " + this.filename;
     buffer.append(msg);
-    XMLGregorianCalendar startTimestamp = this.entries.get(this.entries.size() - 1).getTimestamp();
-    msg = "\n\nFirst Entry Date                   : " + startTimestamp.toString();
-    buffer.append(msg);
-    XMLGregorianCalendar endTimestamp = this.entries.get(0).getTimestamp();
-    buffer.append(msg);
-    msg = "\nLast Entry Date                    : " + endTimestamp.toString();
-    buffer.append(msg);
+    if (!this.entries.isEmpty()) {
+      Entry entry = this.entries.get(this.entries.size() - 1);
+      XMLGregorianCalendar startTimestamp = entry.getTimestamp();
+      msg = "\n\nFirst Entry Date                   : " + startTimestamp.toString();
+      buffer.append(msg);
+      XMLGregorianCalendar endTimestamp = this.entries.get(0).getTimestamp();
+      buffer.append(msg);
+      msg = "\nLast Entry Date                    : " + endTimestamp.toString();
+      buffer.append(msg);
+    }
     msg = "\n\nEntries Processed                  : " + this.numEntriesProcessed + "\n";
     buffer.append(msg);
     msg = "Invalid Entries                    : " + this.numInvalidEntries + "\n";
@@ -327,8 +332,13 @@ public class HneiImporter extends Importer {
     runtime = this.getRuntime(this.validateStartTime, this.validateEndTime);
     msg = "Validation Runtime                 : " + runtime + "\n";
     buffer.append(msg);
-    runtime = this.getRuntime(this.importStartTime, this.validateEndTime);
-    msg = "Total Runtime                      : " + runtime + "\n\n";
+    if (this.numEntriesProcessed > 0) {
+      runtime = this.getRuntime(this.importStartTime, this.validateEndTime);
+      msg = "Total Runtime                      : " + runtime + "\n\n";
+    }
+    else {
+      msg = "Total Runtime                      : 00:00:00\n\n";
+    }
     buffer.append(msg);
     try {
       long importRuntime = this.importEndTime - this.importStartTime;
@@ -451,16 +461,16 @@ public class HneiImporter extends Importer {
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
       // for (int i = 0; i < 1000; i++) {
-        // line = reader.readNext();
+      // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
-        source = line[0];
-        this.setSourceName(source);
-        this.setParser();
         try {
           if ((data = this.getParser().parseRow(line)) == null) {
             this.numInvalidEntries++;
           }
           else {
+            source = line[2] + "-" + line[3];
+            this.setSourceName(source);
+            this.setParser();
             entry = new Entry(source, data.getProperty("reading"), data.getTimestamp(), null);
             entry.setMtuId(data.getProperty("mtuID"));
             this.entries.add(entry);
@@ -492,6 +502,14 @@ public class HneiImporter extends Importer {
       return false;
     }
 
+    if (this.numEntriesProcessed == 0) {
+      String msg = "No entries were processed.";
+      log.log(Level.SEVERE, msg);
+      System.err.println(msg);
+      this.printStats();
+      return true;
+    }
+
     // /////////////////////////////////////////////////
     // Done importing file. Now do some post-processing.
     // /////////////////////////////////////////////////
@@ -506,7 +524,12 @@ public class HneiImporter extends Importer {
         data = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
-        data = this.checkValue(client, e, data);
+        if (data.getProperty("isMonotonicallyIncreasing") == null) {
+          data = this.checkValue(client, e, data);
+        }
+        else {
+          continue;
+        }
 
         // Classify data as either hourly or daily.
         data = this.setSamplingInterval(client, e, data);
@@ -567,20 +590,56 @@ public class HneiImporter extends Importer {
    * @param args Contains filename, server URI, username, and password.
    */
   public static void main(String[] args) {
-    if (args.length != 4) {
+    if (args.length < 3 || args.length > 4) {
       System.err.println("Command-line arguments not in correct format. Exiting...");
       System.exit(1);
     }
 
-    String filename = args[0];
-    String serverUri = args[1];
-    String username = args[2];
-    String password = args[3];
+    String serverUri = args[0];
+    String username = args[1];
+    String password = args[2];
 
-    HneiImporter inputClient = new HneiImporter(filename, serverUri, username, password, true);
-
-    if (!inputClient.processCsvFile()) {
+    boolean processAllFiles = false;
+    if (args.length == 4 && "-all".equalsIgnoreCase(args[3])) {
+      processAllFiles = true;
+    }
+    else if (args.length == 4 && !"-all".equalsIgnoreCase(args[3])) {
+      System.err.println("Illegal flag for fourth parameter. Expected [-all], got [" + args[3]
+          + "].");
       System.exit(1);
+    }
+
+    boolean processNextFile = true;
+    String response = "";
+    String[] children = Importer.getAllCsvFiles();
+
+    for (int index = 0; index < children.length; index++) {
+      if (processNextFile) {
+        HneiImporter inputClient =
+            new HneiImporter(children[index], serverUri, username, password, true);
+
+        System.out.println("Processing " + children[index] + "...");
+        if (!inputClient.processCsvFile() && !inputClient.closeLogger()) {
+          System.exit(1);
+        }
+      }
+
+      if (!processAllFiles) {
+        if (index == children.length - 1) {
+          break;
+        }
+
+        response = Importer.processNextFile(children[index + 1]);
+        if ("no".equalsIgnoreCase(response)) {
+          processNextFile = false;
+        }
+        else if ("quit".equalsIgnoreCase(response)) {
+          break;
+        }
+        else {
+          processNextFile = true;
+        }
+      }
     }
   }
 

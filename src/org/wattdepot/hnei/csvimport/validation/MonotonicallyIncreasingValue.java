@@ -67,8 +67,9 @@ public class MonotonicallyIncreasingValue implements Validator {
 
       this.previousData = sensorDatas.get(sensorDatas.size() - 2);
       this.currentData = client.getSensorData(sourceName, currTimestamp);
-      int currReading = (int) client.getPowerConsumed(sourceName, this.currentData.getTimestamp());
-      int prevReading = (int) client.getPowerConsumed(sourceName, this.previousData.getTimestamp());
+      double currReading = this.currentData.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
+      double prevReading =
+          this.previousData.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
       if (currReading >= prevReading) {
         return true;
       }
@@ -78,7 +79,7 @@ public class MonotonicallyIncreasingValue implements Validator {
       return true;
     }
     catch (WattDepotClientException e) {
-      e.printStackTrace();
+      return true;
     }
     return false;
   }
@@ -115,14 +116,14 @@ public class MonotonicallyIncreasingValue implements Validator {
       MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue(client);
       XMLGregorianCalendar currTimestamp = null;
       try {
-        Date timestamp = validator.formatDateTime.parse("1/12/2011 5:35:39 AM");
+        Date timestamp = validator.formatDateTime.parse("2/4/2011 5:33:44 PM");
         currTimestamp = Tstamp.makeTimestamp(timestamp.getTime());
       }
       catch (ParseException e) {
         e.printStackTrace();
         System.exit(1);
       }
-      Entry currentData = new Entry("994702074677", "016635", currTimestamp, null);
+      Entry currentData = new Entry("1770606-1", "27381000", currTimestamp, null); // 027385
       System.out.println(validator.validateEntry(currentData));
     }
     else {

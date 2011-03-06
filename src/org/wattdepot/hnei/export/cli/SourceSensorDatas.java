@@ -73,20 +73,29 @@ public class SourceSensorDatas implements Retriever {
       System.out.println("No data exists for source " + sourceName + " on " + startTimestamp + ".");
     }
     else {
-      System.out.println("Timestamp");
-      System.out.println("=============================");
+      String msg = "";
+      System.out.print("Timestamp,");
+      if ("power".equals(option)) {
+        System.out.println("Power (W)");
+      }
+      else {
+        System.out.println("Energy (Wh)");
+      }
       for (SensorData d : results) {
-        System.out.print(d.getTimestamp() + "     ");
+        msg = d.getTimestamp().getMonth() + "/" + d.getTimestamp().getDay();
+        msg += "/" + d.getTimestamp().getYear() + " " + d.getTimestamp().getHour();
+        msg += ":" + d.getTimestamp().getMinute() + ":" + d.getTimestamp().getSecond() + ",";
+        System.out.print(msg);
         if ("total_energy".equals(option)) {
-          System.out.println(String.format("%8.0f Wh",
+          System.out.println(String.format("%.0f",
               d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
         }
         else if ("energy".equals(option)) {
-          System.out.println(String.format("%8.0f Wh",
+          System.out.println(String.format("%.0f",
               d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED)));
         }
         else if ("power".equals(option)) {
-          System.out.println(String.format("%8.0f W",
+          System.out.println(String.format("%.0f",
               d.getPropertyAsDouble(SensorData.POWER_CONSUMED)));
         }
       }
