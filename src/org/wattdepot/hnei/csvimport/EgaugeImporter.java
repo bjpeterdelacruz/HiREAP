@@ -160,9 +160,9 @@ public class EgaugeImporter extends Importer {
       }
 
       System.out.println("Importing data for source " + this.sourceName + "...");
-      for (int i = 0; i < 100; i++) {
-        line = reader.readNext();
-        // while ((line = reader.readNext()) != null) {
+      // for (int i = 0; i < 100; i++) {
+        // line = reader.readNext();
+      while ((line = reader.readNext()) != null) {
         if ((data = ((EgaugeRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
         }

@@ -163,7 +163,7 @@ public class HneiImporter extends Importer {
   public SensorData addProperties(WattDepotClient client, Entry entry, SensorData data) {
     List<SensorData> datas = null;
     try {
-      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(data.getTimestamp(), -1);
+      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(data.getTimestamp(), -2);
       datas = client.getSensorDatas(entry.getSourceName(), prevTimestamp, data.getTimestamp());
     }
     catch (WattDepotClientException e) {
