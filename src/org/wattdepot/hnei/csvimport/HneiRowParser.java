@@ -225,7 +225,7 @@ public class HneiRowParser extends RowParser {
   /**
    * Test program to see if row parser works.
    * 
-   * @param args None.
+   * @param args URI, username, and password to connect to WattDepot server.
    */
   public static void main(String[] args) {
     if (args.length != 3) {

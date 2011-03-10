@@ -91,12 +91,16 @@ public class CsvImporter {
         || "-hnei".equalsIgnoreCase(option)) {
       className = "HneiImporter";
     }
-    else if ("Whole House".equalsIgnoreCase(header[1]) && "AC".equalsIgnoreCase(header[2])
-        || "-e".equalsIgnoreCase(option)) {
-      className = "EgaugeImporter";
-    }
+    // else if ("Whole House".equalsIgnoreCase(header[1]) && "AC".equalsIgnoreCase(header[2])
+       // || "-e".equalsIgnoreCase(option)) {
+       // className = "EgaugeImporter";
+    // }
     else if ("RH, %".equalsIgnoreCase(firstRow[3]) || "-hobo".equalsIgnoreCase(option)) {
       className = "HoboImporter";
+    }
+    else {
+      System.err.println("Illegal argument specified [" + option + "].");
+      System.exit(1);
     }
 
     // Call processCsvFile method in appropriate class.

@@ -16,7 +16,10 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
+@Egauge(name = "Egauge", value = "Egauge")
 public class EgaugeImporter extends Importer {
+
+  // TODO: Use annotations for reflection.
 
   /**
    * Creates a new EgaugeImporter object.
@@ -26,9 +29,10 @@ public class EgaugeImporter extends Importer {
    * @param username Owner of the WattDepot server.
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
+   * @param parser Name of parser to use (either EgaugeRowParser or EgaugeRowParserVer2).
    */
   public EgaugeImporter(String filename, String uri, String username, String password,
-      boolean skipFirstRow) {
+      boolean skipFirstRow, String parser) {
     this.filename = filename;
     this.serverUri = uri;
     this.username = username;
@@ -36,7 +40,12 @@ public class EgaugeImporter extends Importer {
     this.skipFirstRow = skipFirstRow;
     this.log = Logger.getLogger(EgaugeImporter.class.getName());
     this.toolName = "EgaugeImporter";
-    this.parser = new EgaugeRowParser(this.toolName, this.serverUri, null, log);
+    if ("EgaugeRowParser".equalsIgnoreCase(parser)) {
+      this.parser = new EgaugeRowParser(this.toolName, this.serverUri, null, log);
+    }
+    else if ("EgaugeRowParserVer2".equalsIgnoreCase(parser)) {
+      this.parser = new EgaugeRowParserVer2(this.toolName, this.serverUri, null, log);
+    }
   }
 
   /**
@@ -94,6 +103,8 @@ public class EgaugeImporter extends Importer {
   @Override
   public void printStats() {
     // TODO: Finish method.
+    System.out.println("Number of entries processed: " + this.numEntriesProcessed);
+    System.out.println("Number of invalid entries: " + this.numInvalidEntries);
   }
 
   /**
@@ -153,7 +164,13 @@ public class EgaugeImporter extends Importer {
     SensorData data = null;
 
     try {
-      ((EgaugeRowParser) this.getParser()).setSourceName(this.sourceName);
+      if (this.getParser() instanceof EgaugeRowParser) {
+        ((EgaugeRowParser) this.getParser()).setSourceName(this.sourceName);
+      }
+      else {
+        ((EgaugeRowParserVer2) this.getParser()).setSourceName(this.sourceName);
+      }
+
       double[] energyConsumedToDate = new double[4];
       for (int i = 0; i < energyConsumedToDate.length; i++) {
         energyConsumedToDate[i] = 0.0;
@@ -161,27 +178,44 @@ public class EgaugeImporter extends Importer {
 
       System.out.println("Importing data for source " + this.sourceName + "...");
       // for (int i = 0; i < 100; i++) {
-        // line = reader.readNext();
+      // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
-        if ((data = ((EgaugeRowParser) this.getParser()).parseRow(line)) == null) {
+        if (this.getParser() instanceof EgaugeRowParser) {
+          data = ((EgaugeRowParser) this.getParser()).parseRow(line);
+        }
+        else {
+          data = ((EgaugeRowParserVer2) this.getParser()).parseRow(line);
+        }
+
+        if (data == null) {
           this.numInvalidEntries++;
         }
         else {
-          SensorData[] datas = getSensorDatas(data, energyConsumedToDate);
-          if (datas == null) {
-            System.err.println("Problem encountered while getting sensor data.");
-            return false;
-          }
-          for (int j = 0; j < datas.length; j++) {
-            energyConsumedToDate[j] += datas[j].getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
-          }
+          if (this.getParser() instanceof EgaugeRowParser) {
+            SensorData[] datas = getSensorDatas(data, energyConsumedToDate);
+            if (datas == null) {
+              System.err.println("Problem encountered while getting sensor data.");
+              return false;
+            }
+            for (int j = 0; j < datas.length; j++) {
+              energyConsumedToDate[j] += datas[j].getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
+            }
 
-          if (this.process(client, datas[0]) && this.process(client, datas[1])
-              && this.process(client, datas[2]) && this.process(client, datas[3])) {
-            this.numEntriesProcessed++;
+            if (this.process(client, datas[0]) && this.process(client, datas[1])
+                && this.process(client, datas[2]) && this.process(client, datas[3])) {
+              this.numEntriesProcessed++;
+            }
+            else {
+              this.numInvalidEntries++;
+            }
           }
           else {
-            this.numInvalidEntries++;
+            if (this.process(client, data)) {
+              this.numEntriesProcessed++;
+            }
+            else {
+              this.numInvalidEntries++;
+            }
           }
         }
         this.numTotalEntries++;
@@ -216,11 +250,14 @@ public class EgaugeImporter extends Importer {
     String username = args[2];
     String password = args[3];
 
-    EgaugeImporter inputClient = new EgaugeImporter(filename, serverUri, username, password, true);
+    EgaugeImporter inputClient =
+        new EgaugeImporter(filename, serverUri, username, password, true, "EgaugeRowParserVer2");
 
     if (!inputClient.processCsvFile()) {
       System.exit(1);
     }
+
+    inputClient.printStats();
   }
 
 }
