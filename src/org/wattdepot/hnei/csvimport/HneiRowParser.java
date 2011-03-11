@@ -49,6 +49,9 @@ public class HneiRowParser extends RowParser {
   /** Total number of entries with missing data. */
   protected static int numBlankValues = 0;
 
+  /** Type of data found in CSV file, either energy or power. */
+  protected String dataType;
+
   /**
    * Creates a new HneiRowParser object.
    * 
@@ -74,6 +77,24 @@ public class HneiRowParser extends RowParser {
    */
   public void setSourceName(String sourceName) {
     this.sourceName = sourceName;
+  }
+
+  /**
+   * Sets the type of data (energy or power).
+   * 
+   * @param dataType Type of data.
+   */
+  public void setDataType(String dataType) {
+    this.dataType = dataType;
+  }
+
+  /**
+   * Returns the type of data (energy or power).
+   * 
+   * @return Returns either "energy" or "power".
+   */
+  public String getDataType() {
+    return this.dataType;
   }
 
   /**

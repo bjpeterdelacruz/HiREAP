@@ -2,6 +2,8 @@ package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
@@ -19,6 +21,7 @@ public class HoboExporter extends Exporter {
    */
   public HoboExporter(WattDepotClient client) {
     this.client = client;
+    this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
   }
 
   /**

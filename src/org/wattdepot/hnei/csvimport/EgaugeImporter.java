@@ -29,10 +29,9 @@ public class EgaugeImporter extends Importer {
    * @param username Owner of the WattDepot server.
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
-   * @param parser Name of parser to use (either EgaugeRowParser or EgaugeRowParserVer2).
    */
   public EgaugeImporter(String filename, String uri, String username, String password,
-      boolean skipFirstRow, String parser) {
+      boolean skipFirstRow) {
     this.filename = filename;
     this.serverUri = uri;
     this.username = username;
@@ -40,10 +39,19 @@ public class EgaugeImporter extends Importer {
     this.skipFirstRow = skipFirstRow;
     this.log = Logger.getLogger(EgaugeImporter.class.getName());
     this.toolName = "EgaugeImporter";
-    if ("EgaugeRowParser".equalsIgnoreCase(parser)) {
+    this.parser = null;
+  }
+
+  /**
+   * Sets the parser used to parse CSV files.
+   * 
+   * @param parserName Name of parser.
+   */
+  public void setParser(String parserName) {
+    if ("EgaugeRowParser".equalsIgnoreCase(parserName)) {
       this.parser = new EgaugeRowParser(this.toolName, this.serverUri, null, log);
     }
-    else if ("EgaugeRowParserVer2".equalsIgnoreCase(parser)) {
+    else if ("EgaugeRowParserVer2".equalsIgnoreCase(parserName)) {
       this.parser = new EgaugeRowParserVer2(this.toolName, this.serverUri, null, log);
     }
   }
@@ -183,7 +191,7 @@ public class EgaugeImporter extends Importer {
         if (this.getParser() instanceof EgaugeRowParser) {
           data = ((EgaugeRowParser) this.getParser()).parseRow(line);
         }
-        else {
+        else if (this.getParser() instanceof EgaugeRowParserVer2) {
           data = ((EgaugeRowParserVer2) this.getParser()).parseRow(line);
         }
 
@@ -209,7 +217,7 @@ public class EgaugeImporter extends Importer {
               this.numInvalidEntries++;
             }
           }
-          else {
+          else if (this.getParser() instanceof EgaugeRowParserVer2) {
             if (this.process(client, data)) {
               this.numEntriesProcessed++;
             }
@@ -250,14 +258,53 @@ public class EgaugeImporter extends Importer {
     String username = args[2];
     String password = args[3];
 
-    EgaugeImporter inputClient =
-        new EgaugeImporter(filename, serverUri, username, password, true, "EgaugeRowParserVer2");
-
-    if (!inputClient.processCsvFile()) {
+    // Open CSV file for reading.
+    CSVReader reader = null;
+    try {
+      reader = new CSVReader(new FileReader(args[0]), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 0);
+    }
+    catch (FileNotFoundException e) {
+      System.err.println("File not found! Exiting...");
       System.exit(1);
     }
 
-    inputClient.printStats();
+    // Get first row in CSV file.
+    String[] header = null;
+    try {
+      header = reader.readNext();
+      reader.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+
+    EgaugeImporter client = new EgaugeImporter(filename, serverUri, username, password, true);
+    if (header.length == 11 && header[1].contains("[kWh]")) {
+      client.setParser("EgaugeRowParserVer2");
+      ((EgaugeRowParserVer2) client.getParser()).setDataType("energy");
+    }
+    else if (header.length == 11 && header[1].contains("[kW]")) {
+      client.setParser("EgaugeRowParserVer2");
+      ((EgaugeRowParserVer2) client.getParser()).setDataType("power");
+    }
+    else if (header.length == 5 && header[2].contains("AC")) {
+      client.setParser("EgaugeRowParser");
+    }
+    else {
+      if (header.length != 5 && header.length != 11) {
+        System.err.println("Row not correct length: expected 5 or 11, got " + header.length + ".");
+        System.exit(1);
+      }
+      System.err.println("Row does not contain column names.");
+      System.exit(1);
+    }
+
+    if (!client.processCsvFile()) {
+      System.exit(1);
+    }
+
+    client.printStats();
   }
 
 }

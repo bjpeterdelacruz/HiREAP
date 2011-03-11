@@ -100,21 +100,43 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
     }
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(date.getTime());
 
-    Property powerConsumed = new Property(SensorData.POWER_CONSUMED, values[0]);
-    String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
-    SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
+    SensorData data = null;
+    if ("power".equalsIgnoreCase(this.dataType)) {
+      Property powerConsumed = new Property(SensorData.POWER_CONSUMED, values[0]);
+      String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
+      data = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
 
-    datum.addProperty(new Property("powerGenerated", values[1]));
-    datum.addProperty(new Property("grid1", values[2]));
-    datum.addProperty(new Property("grid2", values[3]));
-    datum.addProperty(new Property("airConditioner1", values[4]));
-    datum.addProperty(new Property("airConditioner2", values[5]));
-    datum.addProperty(new Property("dhw1", values[6]));
-    datum.addProperty(new Property("dhw2", values[7]));
-    datum.addProperty(new Property("dryer1", values[8]));
-    datum.addProperty(new Property("dryer2", values[9]));
+      data.addProperty(new Property("powerGenerated", values[1]));
+      data.addProperty(new Property("grid1-power", values[2]));
+      data.addProperty(new Property("grid2-power", values[3]));
+      data.addProperty(new Property("airConditioner1-power", values[4]));
+      data.addProperty(new Property("airConditioner2-power", values[5]));
+      data.addProperty(new Property("dhw1-power", values[6]));
+      data.addProperty(new Property("dhw2-power", values[7]));
+      data.addProperty(new Property("dryer1-power", values[8]));
+      data.addProperty(new Property("dryer2-power", values[9]));
+    }
+    else if ("energy".equalsIgnoreCase(this.dataType)) {
+      Property energyConsumed = new Property(SensorData.ENERGY_CONSUMED, values[0]);
+      String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
+      data = new SensorData(timestamp, this.toolName, sourceUri, energyConsumed);
 
-    return datum;
+      data.addProperty(new Property("energyGenerated", values[1]));
+      data.addProperty(new Property("grid1-energy", values[2]));
+      data.addProperty(new Property("grid2-energy", values[3]));
+      data.addProperty(new Property("airConditioner1-energy", values[4]));
+      data.addProperty(new Property("airConditioner2-energy", values[5]));
+      data.addProperty(new Property("dhw1-energy", values[6]));
+      data.addProperty(new Property("dhw2-energy", values[7]));
+      data.addProperty(new Property("dryer1-energy", values[8]));
+      data.addProperty(new Property("dryer2-energy", values[9]));
+    }
+    else {
+      System.err.println("Invalid option for data type.");
+      return null;
+    }
+
+    return data;
   }
 
   /**
