@@ -1,13 +1,17 @@
 package org.wattdepot.hnei.csvimport;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import au.com.bytecode.opencsv.CSVReader;
 
 /**
@@ -17,6 +21,37 @@ import au.com.bytecode.opencsv.CSVReader;
  * @author BJ Peter DeLaCruz
  */
 public class CsvImporter {
+
+  /**
+   * Recursive method used to find all classes in a given directory and sub-directories.
+   * 
+   * @param directory The base directory to search in.
+   * @param packageName The package to which the classes to search for belong.
+   * @return List of classes in given directory and sub-directories.
+   */
+  private List<Class<?>> findClasses(String directory, String packageName) {
+    List<Class<?>> classes = new ArrayList<Class<?>>();
+    File f = new File(directory);
+    if (!f.isDirectory()) {
+      return null;
+    }
+    File[] files = f.listFiles();
+    for (File file : files) {
+      if (file.isDirectory()) {
+        classes.addAll(findClasses(directory + "/" + file.getName(), packageName));
+      }
+      else if (file.getName().endsWith(".class")) {
+        String className = packageName + "." + file.getName().replace(".class", "");
+        try {
+          classes.add(Class.forName(className));
+        }
+        catch (ClassNotFoundException e) {
+          continue;
+        }
+      }
+    }
+    return classes;
+  }
 
   /**
    * Command-line program that reads in the first two rows of a CSV file to determine which method
@@ -81,31 +116,65 @@ public class CsvImporter {
     }
 
     // Determine which class to use given first or second row.
-    String packageName = "org.wattdepot.hnei.csvimport.";
+    String packageName = "org.wattdepot.hnei.csvimport";
     String className = null;
     String option = "";
     if (args.length == 5) {
       option = args[4];
     }
+
+    boolean isValidFile = false;
     if ("Account".equalsIgnoreCase(header[0]) && "Install Date".equalsIgnoreCase(header[1])
         || "-hnei".equalsIgnoreCase(option)) {
-      className = "HneiImporter";
+      className = "Hnei";
+      isValidFile = true;
     }
-    // else if ("Whole House".equalsIgnoreCase(header[1]) && "AC".equalsIgnoreCase(header[2])
-       // || "-e".equalsIgnoreCase(option)) {
-       // className = "EgaugeImporter";
-    // }
+    else if ("Whole House".equalsIgnoreCase(header[1]) && "AC".equalsIgnoreCase(header[2])
+        || "-e".equalsIgnoreCase(option)) {
+      className = "Egauge";
+      isValidFile = true;
+    }
     else if ("RH, %".equalsIgnoreCase(firstRow[3]) || "-hobo".equalsIgnoreCase(option)) {
-      className = "HoboImporter";
+      className = "Hobo";
+      isValidFile = true;
     }
-    else {
+
+    if (!"-hnei".equalsIgnoreCase(option) && !"-e".equalsIgnoreCase(option)
+        && !"-hobo".equalsIgnoreCase(option)) {
       System.err.println("Illegal argument specified [" + option + "].");
+      System.exit(1);
+    }
+
+    if (!isValidFile) {
+      System.err.println("Header row not in correct format.");
+      System.exit(1);
+    }
+
+    // Use reflection to find the class that has the appropriate processCsvFile method to call.
+    Annotation[] annotations = null;
+    Class<?> cls = null;
+    CsvImporter importer = new CsvImporter();
+    List<Class<?>> classes = importer.findClasses(System.getProperty("user.dir"), packageName);
+    if (classes == null) {
+      System.err.println("Directory not specified.");
+      System.exit(1);
+    }
+
+    for (Class<?> c : classes) {
+      annotations = c.getAnnotations();
+      for (Annotation a : annotations) {
+        if (a.toString().contains(className)) {
+          cls = c;
+        }
+      }
+    }
+    if (cls == null) {
+      System.err.println("Unable to find Java class to process CSV file.");
       System.exit(1);
     }
 
     // Call processCsvFile method in appropriate class.
     try {
-      Class<?> cls = Class.forName(packageName + className);
       Constructor<?> constructor =
           cls.getConstructor(String.class, String.class, String.class, String.class, Boolean.TYPE);
       Object obj = constructor.newInstance(args[0], args[1], args[2], args[3], skipFirstRow);
@@ -115,10 +184,6 @@ public class CsvImporter {
         System.err.println("The method failed to terminate successfully.");
         System.exit(1);
       }
-    }
-    catch (ClassNotFoundException e) {
-      e.printStackTrace();
-      System.exit(1);
     }
     catch (IllegalAccessException e) {
       e.printStackTrace();

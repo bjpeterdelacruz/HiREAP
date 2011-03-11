@@ -35,6 +35,7 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
+@Hnei(name = "Hnei", value = "Hnei")
 public class HneiImporter extends Importer {
 
   /**
