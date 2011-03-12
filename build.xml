@@ -29,6 +29,22 @@
       </fileset>
     </path>
 
+    <ivy:retrieve organisation="org.apache.commons"
+                  module="commons-cli"
+                  revision="1.2"
+                  pattern="${lib.dir}/cli/[artifact].[ext]"
+                  sync="false"
+                  inline="true"
+                  conf="default"
+                  log="download-only"
+                  transitive="false"
+                  type="jar, javadoc, source" />
+    <path id="cli.path">
+      <fileset dir="${lib.dir}/cli">
+        <include name="*.jar" />
+      </fileset>
+    </path>
+
     <ivy:retrieve organisation="org.wattdepot" module="wattdepot" revision="${wattdepot.version}" pattern="${lib.dir}/wattdepot/[artifact].[ext]" sync="true" inline="true" conf="default" log="download-only" transitive="true" type="jar,javadoc" />
     <path id="wattdepot.path">
       <fileset dir="${lib.dir}/wattdepot">
@@ -53,6 +69,7 @@
     <path refid="junit.path" />
     <path refid="wattdepot.path" />
   	<path refid="opencsv.path" />
+    <path refid="cli.path" />
   </path>
 
 

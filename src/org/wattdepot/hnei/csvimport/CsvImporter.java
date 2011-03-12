@@ -1,18 +1,15 @@
 package org.wattdepot.hnei.csvimport;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import au.com.bytecode.opencsv.CSVReader;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 
 /**
  * This class uses reflection to call the appropriate processCsvFile method to process a CSV file
@@ -60,97 +57,70 @@ public class CsvImporter {
    * @param args Contains filename, server URI, username, and password.
    */
   public static void main(String[] args) {
-    if (args.length < 4 || args.length > 5) {
-      System.err.print("Expected at least 4 command-line arguments: [filename] [server_uri] ");
-      System.err.println("[username] [password] optional: [-e|-hnei|-hobo]");
+    if (args.length < 3) {
+      System.err.print("Expected at least 4 command-line arguments: [-s server_uri] [-u username]");
+      System.err.println("[-p password] [-d (egauge | hnei | hobo)] [-x] [-m]");
       System.err.println("Please try again.");
       System.exit(1);
     }
 
-    // Open CSV file for reading.
-    CSVReader reader = null;
+    Options options = new Options();
+    options.addOption("s", true, "Server URI.");
+    options.addOption("u", true, "Username.");
+    options.addOption("p", true, "Password.");
+    options.addOption("d", true, "Type of data file(s) to import.");
+    options.addOption("x", false, "If specified, skip first line in all data files.");
+    String msg = "If specified, ask user if next file in current directory should be imported;";
+    msg += " otherwise, import all files automatically.";
+    options.addOption("m", false, msg);
+
+    BasicParser parser = new BasicParser();
+    CommandLine cl = null;
+    boolean autoMode = true;
+    boolean skipFirstRow = false;
     try {
-      reader = new CSVReader(new FileReader(args[0]), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 0);
+      cl = parser.parse(options, args);
+      if (!cl.hasOption("s") || !cl.hasOption("u") || !cl.hasOption("p") || !cl.hasOption("d")) {
+        msg = "At least one of the required options was not specified.";
+        System.err.println(msg);
+        System.exit(1);
+      }
+      if (cl.hasOption("x")) {
+        skipFirstRow = true;
+      }
+      if (cl.hasOption("m")) {
+        autoMode = false;
+      }
     }
-    catch (FileNotFoundException e) {
-      System.err.println("File not found! Exiting...");
+    catch (org.apache.commons.cli.UnrecognizedOptionException e) {
+      System.err.println(e.getMessage() + ". Please try again.");
       System.exit(1);
     }
-
-    // Get first two rows in CSV file.
-    String[] header = null;
-    String[] firstRow = null;
-    try {
-      header = reader.readNext();
-      firstRow = reader.readNext();
-      reader.close();
-    }
-    catch (IOException e) {
+    catch (org.apache.commons.cli.ParseException e) {
       e.printStackTrace();
       System.exit(1);
     }
 
-    // Ask user if first row should be skipped when processing CSV file.
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-    String command = "";
-    boolean skipFirstRow = true;
-
-    try {
-      while (!"y".equalsIgnoreCase(command) && !"n".equalsIgnoreCase(command)) {
-        System.out.print("Skip first row in " + args[0] + " [y|n]? ");
-        if ((command = br.readLine()) == null) {
-          System.out.println("Error encountered while trying to read in number of sources.");
-          System.exit(1);
-        }
-        if (!"y".equalsIgnoreCase(command) && !"n".equalsIgnoreCase(command)) {
-          System.out.println("Please enter \"y\" to skip the first row or \"n\" to process it.");
-        }
-      }
-      if ("n".equalsIgnoreCase(command)) {
-        skipFirstRow = false;
-      }
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    // Determine which class to use given first or second row.
+    // Determine which class to use given argument after -d flag.
+    String csvFileType = null;
     String packageName = "org.wattdepot.hnei.csvimport";
-    String className = null;
-    String option = "";
-    if (args.length == 5) {
-      option = args[4];
+
+    if (cl.getOptionValue("d").equals("hnei")) {
+      csvFileType = "Hnei";
+    }
+    else if (cl.getOptionValue("d").equals("egauge")) {
+      csvFileType = "Egauge";
+    }
+    else if (cl.getOptionValue("d").equals("hobo")) {
+      csvFileType = "Hobo";
     }
 
-    boolean isValidFile = false;
-    if ("Account".equalsIgnoreCase(header[0]) && "Install Date".equalsIgnoreCase(header[1])
-        || "-hnei".equalsIgnoreCase(option)) {
-      className = "Hnei";
-      isValidFile = true;
-    }
-    else if ("Whole House".equalsIgnoreCase(header[1]) && "AC".equalsIgnoreCase(header[2])
-        || "-e".equalsIgnoreCase(option)) {
-      className = "Egauge";
-      isValidFile = true;
-    }
-    else if ("RH, %".equalsIgnoreCase(firstRow[3]) || "-hobo".equalsIgnoreCase(option)) {
-      className = "Hobo";
-      isValidFile = true;
-    }
-
-    if (!"-hnei".equalsIgnoreCase(option) && !"-e".equalsIgnoreCase(option)
-        && !"-hobo".equalsIgnoreCase(option)) {
-      System.err.println("Illegal argument specified [" + option + "].");
-      System.exit(1);
-    }
-
-    if (!isValidFile) {
+    if (csvFileType == null) {
       System.err.println("Header row not in correct format.");
       System.exit(1);
     }
 
-    // Use reflection to find the class that has the appropriate processCsvFile method to call.
+    // Use reflection to find class that has appropriate processCsvFile method to call.
     Annotation[] annotations = null;
     Class<?> cls = null;
     CsvImporter importer = new CsvImporter();
@@ -163,7 +133,7 @@ public class CsvImporter {
     for (Class<?> c : classes) {
       annotations = c.getAnnotations();
       for (Annotation a : annotations) {
-        if (a.toString().contains(className)) {
+        if (a.toString().contains(csvFileType)) {
           cls = c;
         }
       }
@@ -175,14 +145,55 @@ public class CsvImporter {
 
     // Call processCsvFile method in appropriate class.
     try {
+      String response = null;
+      String[] children = Importer.getAllCsvFiles();
+      boolean processNextFile = true;
+
       Constructor<?> constructor =
           cls.getConstructor(String.class, String.class, String.class, String.class, Boolean.TYPE);
-      Object obj = constructor.newInstance(args[0], args[1], args[2], args[3], skipFirstRow);
-      Method method = cls.getDeclaredMethod("processCsvFile", (Class<?>[]) null);
-      Boolean isSuccessful = (Boolean) method.invoke(obj, (Object[]) null);
-      if (!isSuccessful.booleanValue()) {
-        System.err.println("The method failed to terminate successfully.");
-        System.exit(1);
+
+      Object obj = null;
+      Method processCsvFile = null;
+      Method closeLogger = null;
+      Boolean isSuccessful = null;
+
+      String file = null;
+      for (int index = 0; index < children.length; index++) {
+        if (processNextFile) {
+          file = children[index];
+          obj =
+              constructor.newInstance(file, cl.getOptionValue("s"), cl.getOptionValue("u"),
+                  cl.getOptionValue("p"), skipFirstRow);
+          processCsvFile = cls.getDeclaredMethod("processCsvFile", (Class<?>[]) null);
+          isSuccessful = (Boolean) processCsvFile.invoke(obj, (Object[]) null);
+          if (!isSuccessful.booleanValue()) {
+            System.err.println("The method failed to terminate successfully.");
+            System.exit(1);
+          }
+          closeLogger = cls.getMethod("closeLogger", (Class<?>[]) null);
+          isSuccessful = (Boolean) closeLogger.invoke(obj, (Object[]) null);
+          if (!isSuccessful.booleanValue()) {
+            System.err.println("The method failed to terminate successfully.");
+            System.exit(1);
+          }
+        }
+
+        if (!autoMode) {
+          if (index == children.length - 1) {
+            break;
+          }
+
+          response = Importer.processNextFile(children[index + 1]);
+          if ("no".equalsIgnoreCase(response)) {
+            processNextFile = false;
+          }
+          else if ("quit".equalsIgnoreCase(response)) {
+            break;
+          }
+          else {
+            processNextFile = true;
+          }
+        }
       }
     }
     catch (IllegalAccessException e) {

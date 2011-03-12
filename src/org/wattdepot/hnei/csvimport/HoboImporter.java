@@ -15,6 +15,7 @@ import au.com.bytecode.opencsv.CSVReader;
  * 
  * @author BJ Peter DeLaCruz
  */
+@Hobo(name = "Hobo", value = "Hobo")
 public class HoboImporter extends Importer {
 
   /**

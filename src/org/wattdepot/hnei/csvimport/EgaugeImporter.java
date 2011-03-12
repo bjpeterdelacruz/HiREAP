@@ -19,8 +19,6 @@ import au.com.bytecode.opencsv.CSVReader;
 @Egauge(name = "Egauge", value = "Egauge")
 public class EgaugeImporter extends Importer {
 
-  // TODO: Use annotations for reflection.
-
   /**
    * Creates a new EgaugeImporter object.
    * 

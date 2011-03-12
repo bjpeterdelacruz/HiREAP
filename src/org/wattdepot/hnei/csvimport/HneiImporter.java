@@ -424,12 +424,12 @@ public class HneiImporter extends Importer {
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
-      int lineno = 1;
+      int line = 1;
       if (!this.skipFirstRow) {
-        lineno = 0;
+        line = 0;
       }
-      reader =
-          new CSVReader(new FileReader(filename), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, lineno);
+      char defaultChar = CSVReader.DEFAULT_QUOTE_CHARACTER;
+      reader = new CSVReader(new FileReader(this.filename), ',', defaultChar, line);
     }
     catch (FileNotFoundException e) {
       System.err.println("File not found! Exiting...");
