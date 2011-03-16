@@ -282,7 +282,7 @@ public class EgaugeImporter extends Importer {
       client.setParser("EgaugeRowParserVer2");
       ((EgaugeRowParserVer2) client.getParser()).setDataType("energy");
     }
-    else if (header.length == 11 && header[1].contains("[kW]")) {
+    else if ((header.length == 11 || header.length == 10) && header[1].contains("[kW]")) {
       client.setParser("EgaugeRowParserVer2");
       ((EgaugeRowParserVer2) client.getParser()).setDataType("power");
     }

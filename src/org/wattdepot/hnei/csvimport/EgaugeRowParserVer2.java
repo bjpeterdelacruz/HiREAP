@@ -51,7 +51,7 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
       return null;
     }
 
-    if (col.length != 11) {
+    if (col.length != 11 && col.length != 10) {
       String msg = "Row not in specified format:\n" + rowToString(col);
       this.log.log(Level.WARNING, msg);
       return null;
@@ -79,7 +79,7 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
     }
 
     // Convert kW --> W
-    double[] values = new double[10];
+    double[] values = new double[col.length - 1];
     for (int index = 0, n = 1; index < values.length; index++, n++) {
       values[index] = Double.parseDouble(col[n]) * 1000;
     }
@@ -107,14 +107,22 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
       data = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
 
       data.addProperty(new Property("powerGenerated", values[1]));
-      data.addProperty(new Property("grid1-power", values[2]));
-      data.addProperty(new Property("grid2-power", values[3]));
-      data.addProperty(new Property("airConditioner1-power", values[4]));
-      data.addProperty(new Property("airConditioner2-power", values[5]));
-      data.addProperty(new Property("dhw1-power", values[6]));
-      data.addProperty(new Property("dhw2-power", values[7]));
-      data.addProperty(new Property("dryer1-power", values[8]));
-      data.addProperty(new Property("dryer2-power", values[9]));
+      int index = 0;
+      if (col.length == 11) {
+        data.addProperty(new Property("grid1-power", values[2]));
+        data.addProperty(new Property("grid2-power", values[3]));
+        index = 3;
+      }
+      else {
+        data.addProperty(new Property("grid-power", values[2]));
+        index = 2;
+      }
+      data.addProperty(new Property("airConditioner1-power", values[index + 1]));
+      data.addProperty(new Property("airConditioner2-power", values[index + 2]));
+      data.addProperty(new Property("dhw1-power", values[index + 3]));
+      data.addProperty(new Property("dhw2-power", values[index + 4]));
+      data.addProperty(new Property("dryer1-power", values[index + 5]));
+      data.addProperty(new Property("dryer2-power", values[index + 6]));
     }
     else if ("energy".equalsIgnoreCase(this.dataType)) {
       Property energyConsumed = new Property(SensorData.ENERGY_CONSUMED, values[0]);
@@ -122,14 +130,22 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
       data = new SensorData(timestamp, this.toolName, sourceUri, energyConsumed);
 
       data.addProperty(new Property("energyGenerated", values[1]));
-      data.addProperty(new Property("grid1-energy", values[2]));
-      data.addProperty(new Property("grid2-energy", values[3]));
-      data.addProperty(new Property("airConditioner1-energy", values[4]));
-      data.addProperty(new Property("airConditioner2-energy", values[5]));
-      data.addProperty(new Property("dhw1-energy", values[6]));
-      data.addProperty(new Property("dhw2-energy", values[7]));
-      data.addProperty(new Property("dryer1-energy", values[8]));
-      data.addProperty(new Property("dryer2-energy", values[9]));
+      int index = 0;
+      if (col.length == 11) {
+        data.addProperty(new Property("grid1-energy", values[2]));
+        data.addProperty(new Property("grid2-energy", values[3]));
+        index = 3;
+      }
+      else {
+        data.addProperty(new Property("grid-energy", values[2]));
+        index = 2;
+      }
+      data.addProperty(new Property("airConditioner1-energy", values[index + 1]));
+      data.addProperty(new Property("airConditioner2-energy", values[index + 2]));
+      data.addProperty(new Property("dhw1-energy", values[index + 3]));
+      data.addProperty(new Property("dhw2-energy", values[index + 4]));
+      data.addProperty(new Property("dryer1-energy", values[index + 5]));
+      data.addProperty(new Property("dryer2-energy", values[index + 6]));
     }
     else {
       System.err.println("Invalid option for data type.");
@@ -165,9 +181,9 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
     EgaugeRowParserVer2 parser =
         new EgaugeRowParserVer2("EgaugeRowParserVer2", serverUri, sourceName, null);
     String[] col =
-        { "2011-02-08 09:20","1.056200000","-0.000000000","0.539066667","0.517133333",
-          "-0.199466667","-0.296466667","0.037350000","0.043000000","0.000666667",
-          "0.000250000" };
+        { "2011-02-08 09:20", "1.056200000", "-0.000000000", "0.539066667", "0.517133333",
+            "-0.199466667", "-0.296466667", "0.037350000", "0.043000000", "0.000666667",
+            "0.000250000" };
 
     SensorData data = null;
     try {
