@@ -19,14 +19,15 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This class will export HNEI energy data for one or more sources at a given sampling interval over
- * a period of time to a CSV file.
+ * This class will export energy consumed data for one or more sources to a CSV file. The output
+ * file is a matrix in which the rows represent sources, the columns represent timestamps, and the
+ * cells represent the amount of energy consumed in kWh for a specific time period.
  * 
  * @author BJ Peter DeLaCruz
  */
 public class EnergyMatrixExporter extends Exporter {
 
-  /** Header row for CSV output file. */
+  /** Header row for matrix. */
   protected List<String> header;
 
   /**

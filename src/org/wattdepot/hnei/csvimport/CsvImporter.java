@@ -147,7 +147,13 @@ public class CsvImporter {
     // Call processCsvFile method in appropriate class.
     try {
       String response = null;
-      String[] children = Importer.getAllCsvFiles();
+      String dirName = System.getProperties().getProperty("user.dir");
+      String path = "";
+      if (cl.getOptionValue("d").equals("hnei")) {
+        path = File.separator + "Forest City Data Files";
+        dirName += path;
+      }
+      String[] children = Importer.getAllCsvFiles(dirName);
       boolean processNextFile = true;
 
       Constructor<?> constructor =
@@ -160,8 +166,10 @@ public class CsvImporter {
 
       String file = null;
       for (int index = 0; index < children.length; index++) {
+        System.out.println("Processing file " + (index + 1) + " out of " + children.length + "...");
+
         if (processNextFile) {
-          file = children[index];
+          file = dirName + File.separator + children[index];
           obj =
               constructor.newInstance(file, cl.getOptionValue("s"), cl.getOptionValue("u"),
                   cl.getOptionValue("p"), skipFirstRow);

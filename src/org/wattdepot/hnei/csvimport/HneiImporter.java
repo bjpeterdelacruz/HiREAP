@@ -458,7 +458,7 @@ public class HneiImporter extends Importer {
       String source = null;
       String[] line = null;
 
-      System.out.println("Reading in CSV file...\n");
+      System.out.println("Reading in CSV file [" + this.filename + "]...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
       // for (int i = 0; i < 1000; i++) {
@@ -612,7 +612,8 @@ public class HneiImporter extends Importer {
 
     boolean processNextFile = true;
     String response = "";
-    String[] children = Importer.getAllCsvFiles();
+    String dirName = System.getProperties().getProperty("user.dir");
+    String[] children = Importer.getAllCsvFiles(dirName);
 
     for (int index = 0; index < children.length; index++) {
       if (processNextFile) {

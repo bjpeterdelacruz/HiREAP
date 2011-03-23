@@ -317,10 +317,11 @@ public abstract class Importer {
   /**
    * Returns a list of CSV files to process.
    * 
+   * @param dirName Name of the directory where the CSV files are located.
    * @return List of CSV files in current working directory.
    */
-  public static String[] getAllCsvFiles() {
-    File dir = new File(System.getProperties().getProperty("user.dir"));
+  public static String[] getAllCsvFiles(String dirName) {
+    File dir = new File(dirName);
 
     FilenameFilter filter = new FilenameFilter() {
       public boolean accept(File dir, String name) {
