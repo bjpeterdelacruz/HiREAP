@@ -77,7 +77,6 @@ public class CsvFileMerger {
       System.exit(1);
     }
 
-    boolean isEOF = false;
     int lineCount = 0;
     String line = "";
     String[] line1 = null;
@@ -99,14 +98,10 @@ public class CsvFileMerger {
 
         // Do not add lines whose timestamps do not match to the output file.
         // Input files are assumed to be sorted in descending order by timestamp.
-        while (!line1[0].equals(line2[0])) {
+        while (line1 != null && !line1[0].equals(line2[0])) {
           line1 = file1.readNext();
-          if (line1 == null) {
-            isEOF = true;
-            break;
-          }
         }
-        if (isEOF) {
+        if (line1 == null) {
           break;
         }
 

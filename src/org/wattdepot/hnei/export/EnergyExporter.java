@@ -6,11 +6,15 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
@@ -19,13 +23,7 @@ import org.wattdepot.util.tstamp.Tstamp;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class EnergyExporter extends HneiExporter {
-
-  /** Total number of sources. */
-  protected int numSources;
-
-  /** Sampling interval in minutes for energy consumed. */
-  protected int samplingInterval;
+public class EnergyExporter extends Exporter {
 
   /**
    * Creates a new EnergyExporter object.
@@ -33,137 +31,41 @@ public class EnergyExporter extends HneiExporter {
    * @param client Used to grab data from the WattDepot server.
    */
   public EnergyExporter(WattDepotClient client) {
-    super(client);
+    this.client = client;
+    this.startTimestamp = null;
+    this.endTimestamp = null;
+    this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    this.sources = null;
+    this.sourceNames = new ArrayList<String>();
     this.numSources = 0;
     this.samplingInterval = 0;
+    this.formatDateTime = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
   }
 
   /**
-   * Gets the number of sources user wants information about via the command-line.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getNumSources(BufferedReader br) {
-    System.out.print("Please enter the number of sources for which you want data: ");
-    String command = null;
-
-    try {
-      if ((command = br.readLine()) == null) {
-        System.out.println("Error encountered while trying to read in number of sources.");
-        return false;
-      }
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-
-    try {
-      this.numSources = Integer.parseInt(command);
-    }
-    catch (NumberFormatException e) {
-      System.out.println("Invalid input. Exiting...");
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Gets a list of source names from the user via the command-line.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getSourceNames(BufferedReader br) {
-    String command = null;
-
-    for (int i = 0; i < this.numSources; i++) {
-      System.out.print("Please enter the name of source " + (i + 1) + ": ");
-      try {
-        if ((command = br.readLine()) == null) {
-          System.out.println("Error encountered while trying to read in source name.");
-          return false;
-        }
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-        return false;
-      }
-      this.sourceNames.add(command);
-    }
-    return true;
-  }
-
-  /**
-   * Gets a sampling interval in minutes from the user via the command-line.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getSamplingInterval(BufferedReader br) {
-    String command = null;
-    boolean isValidInput = false;
-
-    while (!isValidInput) {
-      try {
-        System.out.print("Please enter a sampling interval in minutes: ");
-        if ((command = br.readLine()) == null) {
-          System.out.println("Error encountered while trying to read in sampling interval.");
-          return false;
-        }
-        this.samplingInterval = Integer.parseInt(command);
-        if (this.samplingInterval < 1) {
-          throw new NumberFormatException();
-        }
-        isValidInput = true;
-      }
-      catch (NumberFormatException e) {
-        System.out.print("Error: Input must be a number and greater than 0. ");
-        System.out.println("Please try again.");
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Gets the energy consumed for each source that the user inputed at the specified sampling
-   * interval (in minutes).
+   * Gets the energy consumed for each source between startTimestamp and endTimestamp; data is
+   * sampled at the specified sampling interval (in minutes).
    * 
    * @return Data to output to CSV file.
    */
   public String getEnergyData() {
-    StringBuffer buffer = new StringBuffer();
-    String msg = "Timestamp";
-    double[] energyDatas = new double[this.sourceNames.size()];
     int index = 0;
+    String msg = "";
 
-    for (String s : this.sourceNames) {
-      buffer.append(msg);
-      msg = "," + s;
-    }
-    buffer.append(msg);
+    StringBuffer buffer = new StringBuffer();
+    buffer.append(this.getTableHeader());
 
     XMLGregorianCalendar start = this.startTimestamp;
     XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
     while (Tstamp.lessThan(start, this.endTimestamp)) {
-      msg = "\n" + end.getMonth() + "/" + end.getDay() + "/" + end.getYear() + " ";
-      buffer.append(msg);
-      msg = end.getHour() + ":" + end.getMinute() + ":" + end.getSecond() + ",";
+      msg = "\n" + this.getTimestamp(end.toGregorianCalendar().getTime().getTime()) + ",";
       buffer.append(msg);
       try {
         index = 0;
         for (String s : this.sourceNames) {
           try {
             end = Tstamp.incrementMinutes(start, this.samplingInterval);
-            energyDatas[index] +=
-                this.client.getEnergyConsumed(s, start, end, this.samplingInterval);
-            msg = String.format("%.0f", energyDatas[index]) + ",";
+            msg = this.getInfo(this.client.getEnergy(s, start, end, this.samplingInterval)) + ",";
           }
           catch (BadXmlException e) {
             msg = "N/A,";
@@ -184,7 +86,7 @@ public class EnergyExporter extends HneiExporter {
   }
 
   /**
-   * Prints information in SensorData objects to a CSV file.
+   * Prints energy information to a CSV file.
    * 
    * @return True if successful, false otherwise.
    */
@@ -224,6 +126,36 @@ public class EnergyExporter extends HneiExporter {
     }
 
     return success;
+  }
+
+  /**
+   * Returns a table header with names of columns.
+   * 
+   * @return A table header with names of columns.
+   */
+  @Override
+  public String getTableHeader() {
+    StringBuffer buffer = new StringBuffer();
+    String msg = "Timestamp";
+    
+    for (String s : this.sourceNames) {
+      buffer.append(msg);
+      msg = "," + s;
+    }
+    buffer.append(msg);
+    return buffer.toString();
+  }
+
+  /**
+   * Returns the amount of energy consumed from the SensorData object in kWh.
+   * 
+   * @param data SensorData object that contains the amount of energy consumed.
+   * @return Energy in kWh.
+   */
+  @Override
+  public String getInfo(SensorData data) {
+    double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
+    return String.format("%.05f", energy / 1000.0);
   }
 
   /**

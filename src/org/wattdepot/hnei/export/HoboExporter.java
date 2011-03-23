@@ -37,19 +37,19 @@ public class HoboExporter extends Exporter {
   /**
    * Returns information stored in a SensorData object.
    * 
-   * @param datum SensorData object from which to extract information.
+   * @param data SensorData object from which to extract information.
    * @return Information stored in the SensorData object.
    */
   @Override
-  public String getInfo(SensorData datum) {
+  public String getInfo(SensorData data) {
     String str = null;
     StringBuffer buffer = new StringBuffer();
-    buffer.append(datum.getSource().substring(datum.getSource().lastIndexOf("/") + 1));
-    str = "," + datum.getTimestamp().toString();
+    buffer.append(data.getSource().substring(data.getSource().lastIndexOf("/") + 1));
+    str = "," + data.getTimestamp().toString();
     buffer.append(str);
-    str = "," + datum.getProperty("tempF") + "," + datum.getProperty("rh%");
+    str = "," + data.getProperty("tempF") + "," + data.getProperty("rh%");
     buffer.append(str);
-    str = "," + datum.getProperty("lumenPerSqFt") + "\n";
+    str = "," + data.getProperty("lumenPerSqFt") + "\n";
     buffer.append(str);
     return buffer.toString();
   }

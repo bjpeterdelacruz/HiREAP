@@ -36,14 +36,29 @@ public abstract class Exporter {
   /** Timestamp used to get last sensor data. */
   protected XMLGregorianCalendar endTimestamp;
 
-  /** Formats dates that are in the format MM/DD/YYYY. */
+  /** Formats dates that are in the format MM/dd/yyyy. */
   protected SimpleDateFormat formatDate;
+
+  /** Formats dates that are in the format yyyy-MM-dd hh:mm:ss a. */
+  protected SimpleDateFormat formatDateTime;
 
   /** List of all sources that are stored on WattDepot server. */
   protected List<Source> sources;
 
   /** List of source names. */
   protected List<String> sourceNames;
+
+  /** Total number of sources. */
+  protected int numSources;
+
+  /** Sampling interval in minutes for energy consumed. */
+  protected int samplingInterval;
+
+  /** Specifies the granularity of the data: hourly, daily, weekly, or monthly. */
+  protected String granularity;
+
+  /**  */
+  protected int multiplier;
 
   /**
    * Option to print only the most relevant information or all information in SensorData objects.
@@ -87,6 +102,64 @@ public abstract class Exporter {
   }
 
   /**
+   * Gets the number of sources user wants information about via the command-line.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return True if input is successful, false otherwise.
+   */
+  public boolean getNumSources(BufferedReader br) {
+    System.out.print("Please enter the number of sources for which you want data: ");
+    String command = null;
+
+    try {
+      if ((command = br.readLine()) == null) {
+        System.out.println("Error encountered while trying to read in number of sources.");
+        return false;
+      }
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    try {
+      this.numSources = Integer.parseInt(command);
+    }
+    catch (NumberFormatException e) {
+      System.out.println("Invalid input. Exiting...");
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Gets a list of source names from the user via the command-line.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return True if input is successful, false otherwise.
+   */
+  public boolean getSourceNames(BufferedReader br) {
+    String command = null;
+
+    for (int i = 0; i < this.numSources; i++) {
+      System.out.print("Please enter the name of source " + (i + 1) + ": ");
+      try {
+        if ((command = br.readLine()) == null) {
+          System.out.println("Error encountered while trying to read in source name.");
+          return false;
+        }
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+        return false;
+      }
+      this.sourceNames.add(command);
+    }
+    return true;
+  }
+
+  /**
    * Asks the user via the command-line whether to print everything stored in SensorData object.
    * 
    * @param br Used to get information from the command-line.
@@ -111,6 +184,41 @@ public abstract class Exporter {
     catch (IOException e) {
       e.printStackTrace();
       return false;
+    }
+    return true;
+  }
+
+  /**
+   * Gets a sampling interval in minutes from the user via the command-line.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return True if input is successful, false otherwise.
+   */
+  public boolean getSamplingInterval(BufferedReader br) {
+    String command = null;
+    boolean isValidInput = false;
+
+    while (!isValidInput) {
+      try {
+        System.out.print("Please enter a sampling interval in minutes: ");
+        if ((command = br.readLine()) == null) {
+          System.out.println("Error encountered while trying to read in sampling interval.");
+          return false;
+        }
+        this.samplingInterval = Integer.parseInt(command);
+        if (this.samplingInterval < 1) {
+          throw new NumberFormatException();
+        }
+        isValidInput = true;
+      }
+      catch (NumberFormatException e) {
+        System.out.print("Error: Input must be a number and greater than 0. ");
+        System.out.println("Please try again.");
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+        return false;
+      }
     }
     return true;
   }
@@ -180,6 +288,27 @@ public abstract class Exporter {
       return false;
     }
 
+    return true;
+  }
+
+  /**
+   * Returns the time given in milliseconds in string format.
+   * 
+   * @param milliseconds Time in milliseconds.
+   * @return Time in string format <code>yyyy-MM-dd hh:mm:ss</code>.
+   */
+  public String getTimestamp(long milliseconds) {
+    return this.formatDateTime.format(milliseconds);
+  }
+
+  /**
+   * Gets the granularity of the data from the user: hourly, daily, weekly, or monthly.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return True if input is successful, false otherwise.
+   */
+  public boolean getGranularity(BufferedReader br) {
+    // TODO: Get granularity. Set multiplier based on granularity.
     return true;
   }
 
