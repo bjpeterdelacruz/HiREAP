@@ -51,7 +51,7 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
       return null;
     }
 
-    if (col.length != 11 && col.length != 10) {
+    if (col.length != 19 && col.length != 21) {
       String msg = "Row not in specified format:\n" + rowToString(col);
       this.log.log(Level.WARNING, msg);
       return null;
@@ -101,56 +101,48 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(date.getTime());
 
     SensorData data = null;
-    if ("power".equalsIgnoreCase(this.dataType)) {
-      Property powerConsumed = new Property(SensorData.POWER_CONSUMED, values[0]);
-      String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
-      data = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
 
-      data.addProperty(new Property("powerGenerated", values[1]));
-      int index = 0;
-      if (col.length == 11) {
-        data.addProperty(new Property("grid1-power", values[2]));
-        data.addProperty(new Property("grid2-power", values[3]));
-        index = 3;
-      }
-      else {
-        data.addProperty(new Property("grid-power", values[2]));
-        index = 2;
-      }
-      data.addProperty(new Property("airConditioner1-power", values[index + 1]));
-      data.addProperty(new Property("airConditioner2-power", values[index + 2]));
-      data.addProperty(new Property("dhw1-power", values[index + 3]));
-      data.addProperty(new Property("dhw2-power", values[index + 4]));
-      data.addProperty(new Property("dryer1-power", values[index + 5]));
-      data.addProperty(new Property("dryer2-power", values[index + 6]));
-    }
-    else if ("energy".equalsIgnoreCase(this.dataType)) {
-      Property energyConsumed = new Property(SensorData.ENERGY_CONSUMED, values[0]);
-      String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
-      data = new SensorData(timestamp, this.toolName, sourceUri, energyConsumed);
+    // Store energy data first.
+    Property powerConsumed = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, values[0]);
+    String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
+    data = new SensorData(timestamp, this.toolName, sourceUri, powerConsumed);
 
-      data.addProperty(new Property("energyGenerated", values[1]));
-      int index = 0;
-      if (col.length == 11) {
-        data.addProperty(new Property("grid1-energy", values[2]));
-        data.addProperty(new Property("grid2-energy", values[3]));
-        index = 3;
-      }
-      else {
-        data.addProperty(new Property("grid-energy", values[2]));
-        index = 2;
-      }
-      data.addProperty(new Property("airConditioner1-energy", values[index + 1]));
-      data.addProperty(new Property("airConditioner2-energy", values[index + 2]));
-      data.addProperty(new Property("dhw1-energy", values[index + 3]));
-      data.addProperty(new Property("dhw2-energy", values[index + 4]));
-      data.addProperty(new Property("dryer1-energy", values[index + 5]));
-      data.addProperty(new Property("dryer2-energy", values[index + 6]));
+    data.addProperty(new Property(SensorData.ENERGY_GENERATED, values[1]));
+    int index = 0;
+    if (col.length == 21) {
+      data.addProperty(new Property("grid1-energy", values[2]));
+      data.addProperty(new Property("grid2-energy", values[3]));
+      index = 3;
     }
     else {
-      System.err.println("Invalid option for data type.");
-      return null;
+      data.addProperty(new Property("grid-energy", values[2]));
+      index = 2;
     }
+    data.addProperty(new Property("airConditioner1-energy", values[index + 1]));
+    data.addProperty(new Property("airConditioner2-energy", values[index + 2]));
+    data.addProperty(new Property("dhw1-energy", values[index + 3]));
+    data.addProperty(new Property("dhw2-energy", values[index + 4]));
+    data.addProperty(new Property("dryer1-energy", values[index + 5]));
+    data.addProperty(new Property("dryer2-energy", values[index + 6]));
+
+    // Then store power data.
+    data.addProperty(new Property(SensorData.POWER_CONSUMED, values[index + 7]));
+    data.addProperty(new Property(SensorData.POWER_GENERATED, values[index + 8]));
+    if (col.length == 21) {
+      data.addProperty(new Property("grid1-power", values[index + 9]));
+      data.addProperty(new Property("grid2-power", values[index + 10]));
+      index = index + 10;
+    }
+    else {
+      data.addProperty(new Property("grid-power", values[index + 9]));
+      index = index + 9;
+    }
+    data.addProperty(new Property("airConditioner1-power", values[index + 1]));
+    data.addProperty(new Property("airConditioner2-power", values[index + 2]));
+    data.addProperty(new Property("dhw1-power", values[index + 3]));
+    data.addProperty(new Property("dhw2-power", values[index + 4]));
+    data.addProperty(new Property("dryer1-power", values[index + 5]));
+    data.addProperty(new Property("dryer2-power", values[index + 6]));
 
     return data;
   }
@@ -180,16 +172,27 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
     String sourceName = "6363-A_Paro";
     EgaugeRowParserVer2 parser =
         new EgaugeRowParserVer2("EgaugeRowParserVer2", serverUri, sourceName, null);
-    String[] col =
-        { "2011-02-08 09:20", "1.056200000", "-0.000000000", "0.539066667", "0.517133333",
-            "-0.199466667", "-0.296466667", "0.037350000", "0.043000000", "0.000666667",
-            "0.000250000" };
+
+    String noData = "0.000000000";
+    String[] col1 =
+        { "2011-02-07 13:49", "1649.596900278", noData, "1288.171166667", "1212.671317222",
+            "113.022624722", "533.594684444", "-36.533478889", "-12.680254167", "-0.058363056",
+            "-81.699830556", "0.480333333", noData, "0.189333333", "0.366466667",
+            "0.002000000", "0.001000000", "-0.029433333", "-0.034283333", noData,
+            noData };
+    String[] col2 =
+    { "2011-02-07 15:49", "1649.604736944", noData, "1288.171166667", "1212.671317222",
+        "113.022624722", "533.594684444", "-36.533478889", "-12.680254167", "-0.058363056",
+        "-81.699830556", "0.470200000", "", "0.189333333", "0.366466667",
+        "0.001000000", "0.002000000", "-0.029433333", "-0.034283333", noData,
+        noData };
 
     SensorData data = null;
     try {
       client.storeSource(new Source(sourceName, username, true), true);
-      data = parser.parseRow(col);
-      System.out.println(data);
+      data = parser.parseRow(col1);
+      client.storeSensorData(data);
+      data = parser.parseRow(col2);
       client.storeSensorData(data);
     }
     catch (WattDepotClientException e) {
@@ -200,19 +203,29 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
       System.exit(1);
     }
 
-    Date date = null;
+    Date date1 = null;
+    Date date2 = null;
     try {
-      date = parser.formatDateTime.parse("2011-02-08 09:20");
+      date1 = parser.formatDateTime.parse("2011-02-07 13:49");
+      date2 = parser.formatDateTime.parse("2011-02-07 15:49");
     }
     catch (ParseException e) {
       e.printStackTrace();
       System.exit(1);
     }
-    XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(date.getTime());
+    XMLGregorianCalendar timestamp1 = Tstamp.makeTimestamp(date1.getTime());
+    XMLGregorianCalendar timestamp2 = Tstamp.makeTimestamp(date2.getTime());
 
-    System.out.println("\nData:");
+    System.out.println("Data:");
     try {
-      System.out.println(client.getSensorData(sourceName, timestamp));
+      System.out.println(client.getSensorData(sourceName, timestamp1));
+      System.out.println(client.getSensorData(sourceName, timestamp2));
+      XMLGregorianCalendar start = Tstamp.incrementHours(timestamp1, 1);
+      XMLGregorianCalendar end = Tstamp.incrementHours(timestamp2, 0);
+      System.out.print("Energy consumed (Wh): ");
+      System.out.println(client.getEnergyConsumed(sourceName, start, end, 15));
+      client.deleteSensorData(sourceName, timestamp1);
+      client.deleteSensorData(sourceName, timestamp2);
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();

@@ -54,7 +54,8 @@ public class CsvImporter {
    * Command-line program that reads in the first two rows of a CSV file to determine which method
    * to call to process the CSV file; uses reflection to call the appropriate method.
    * 
-   * @param args Contains filename, server URI, username, and password.
+   * @param args Contains server URI, username, password, and type of CSV file to process (Egauge,
+   * HNEI, or Hobo).
    */
   public static void main(String[] args) {
     if (args.length < 3) {

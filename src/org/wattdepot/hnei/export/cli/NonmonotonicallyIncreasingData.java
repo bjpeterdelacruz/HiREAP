@@ -22,7 +22,7 @@ public class NonmonotonicallyIncreasingData implements Retriever {
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
 
-  /** Formats dates that are in the format MM/DD/YYYY. */
+  /** Formats dates that are in the format <code>MM/dd/yyyy</code>. */
   private SimpleDateFormat formatDate;
 
   /**

@@ -153,15 +153,19 @@ public class EgaugeImporter extends Importer {
     }
 
     // Create a source for each appliance.
-    String sourceName = this.sourceName + "-airConditioner";
-    if (!this.process(client, new Source(sourceName, this.username, true))) {
-      return false;
-    }
-    if (!this.process(client, new Source(this.sourceName + "-waterHeater", this.username, true))) {
-      return false;
-    }
-    if (!this.process(client, new Source(this.sourceName + "-dryer", this.username, true))) {
-      return false;
+    if (this.getParser() instanceof EgaugeRowParser) {
+      String sourceName = this.sourceName + "-airConditioner";
+      if (!this.process(client, new Source(sourceName, this.username, true))) {
+        return false;
+      }
+      sourceName = this.sourceName + "-waterHeater";
+      if (!this.process(client, new Source(sourceName, this.username, true))) {
+        return false;
+      }
+      sourceName = this.sourceName + "-dryer";
+      if (!this.process(client, new Source(sourceName, this.username, true))) {
+        return false;
+      }
     }
 
     // Store data on WattDepot server.
@@ -170,16 +174,17 @@ public class EgaugeImporter extends Importer {
     SensorData data = null;
 
     try {
+      double[] energyConsumedToDate = null;
       if (this.getParser() instanceof EgaugeRowParser) {
         ((EgaugeRowParser) this.getParser()).setSourceName(this.sourceName);
+
+        energyConsumedToDate = new double[4];
+        for (int i = 0; i < energyConsumedToDate.length; i++) {
+          energyConsumedToDate[i] = 0.0;
+        }
       }
       else {
         ((EgaugeRowParserVer2) this.getParser()).setSourceName(this.sourceName);
-      }
-
-      double[] energyConsumedToDate = new double[4];
-      for (int i = 0; i < energyConsumedToDate.length; i++) {
-        energyConsumedToDate[i] = 0.0;
       }
 
       System.out.println("Importing data for source " + this.sourceName + "...");
@@ -278,20 +283,16 @@ public class EgaugeImporter extends Importer {
     }
 
     EgaugeImporter client = new EgaugeImporter(filename, serverUri, username, password, true);
-    if (header.length == 11 && header[1].contains("[kWh]")) {
+    if (header.length == 19 || header.length == 21) {
       client.setParser("EgaugeRowParserVer2");
-      ((EgaugeRowParserVer2) client.getParser()).setDataType("energy");
-    }
-    else if ((header.length == 11 || header.length == 10) && header[1].contains("[kW]")) {
-      client.setParser("EgaugeRowParserVer2");
-      ((EgaugeRowParserVer2) client.getParser()).setDataType("power");
     }
     else if (header.length == 5 && header[2].contains("AC")) {
       client.setParser("EgaugeRowParser");
     }
     else {
-      if (header.length != 5 && header.length != 11) {
-        System.err.println("Row not correct length: expected 5 or 11, got " + header.length + ".");
+      if (header.length != 5 && header.length != 19 && header.length != 21) {
+        System.err.print("Row not correct length: expected 5, 19, or 21. ");
+        System.err.println("Got " + header.length + ".");
         System.exit(1);
       }
       System.err.println("Row does not contain column names.");
