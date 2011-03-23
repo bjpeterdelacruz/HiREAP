@@ -1,100 +1,186 @@
 package org.wattdepot.hnei.export;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.ParseException;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
+import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
-import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This program will output a matrix containing energy consumed data in kWh to a CSV file. The rows
- * represent timestamps, and the columns represent sources.
+ * This class will export HNEI energy data for one or more sources at a given sampling interval over
+ * a period of time to a CSV file.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class EnergyMatrixExporter {
+public class EnergyMatrixExporter extends Exporter {
 
-  /** Used to connect to WattDepot server. */
-  protected WattDepotClient client;
-
-  /** Formats dates that are in the format <code>yyyy-MM-dd hh:mm:ss a</code>. */
-  protected SimpleDateFormat formatDateTime;
+  /** Header row for CSV output file. */
+  protected List<String> header;
 
   /**
    * Creates a new EnergyMatrixExporter object.
    * 
-   * @param client Used to connect to WattDepot server.
+   * @param client Used to grab data from the WattDepot server.
    */
   public EnergyMatrixExporter(WattDepotClient client) {
     this.client = client;
+    this.startTimestamp = null;
+    this.endTimestamp = null;
+    this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    this.sources = null;
+    this.sourceNames = new ArrayList<String>();
+    this.numSources = 0;
+    this.samplingInterval = 0;
     this.formatDateTime = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
+    this.header = new ArrayList<String>();
   }
 
   /**
-   * Returns a list of sensor data for a source between two timestamps.
+   * Gets the energy consumed for each source between startTimestamp and endTimestamp; data is
+   * sampled at the specified sampling interval (in minutes).
    * 
-   * @param sourceName Name of a source.
-   * @param prevTimestamp Previous timestamp.
-   * @param currTimestamp Current timestamp.
-   * @return A list of sensor data for a source between two timestamps.
+   * @return Data to output to CSV file.
    */
-  public List<SensorData> getSensorDatas(String sourceName, XMLGregorianCalendar prevTimestamp,
-      XMLGregorianCalendar currTimestamp) {
+  public String getEnergyData() {
+    String msg = "";
+    StringBuffer buffer = new StringBuffer();
+    XMLGregorianCalendar start = this.startTimestamp;
+    XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
+
+    msg = "Number of sources: " + this.sourceNames.size() + "\n\n";
+    msg += "The sampling interval is " + this.samplingInterval + " minute(s).\n\n";
+    msg += "Start: ";
+    msg += this.getTimestamp(this.startTimestamp.toGregorianCalendar().getTime().getTime()) + "\n";
+    msg += "End:   ";
+    msg += this.getTimestamp(this.endTimestamp.toGregorianCalendar().getTime().getTime()) + "\n\n";
+    buffer.append(msg);
+
+    while (Tstamp.lessThan(start, this.endTimestamp)) {
+      this.header.add(this.getTimestamp(end.toGregorianCalendar().getTime().getTime()));
+      start = Tstamp.incrementMinutes(start, this.samplingInterval);
+      end = Tstamp.incrementMinutes(end, this.samplingInterval);
+    }
+    this.header.add(this.getTimestamp(this.endTimestamp.toGregorianCalendar().getTime().getTime()));
+    buffer.append(this.getTableHeader());
+
+    start = this.startTimestamp;
+    end = Tstamp.incrementMinutes(start, this.samplingInterval);
     try {
-      return this.client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
+      for (String s : this.sourceNames) {
+        msg = "\n" + s;
+        buffer.append(msg);
+        while (Tstamp.lessThan(start, this.endTimestamp)) {
+          try {
+            msg = "," + this.getInfo(this.client.getEnergy(s, start, end, this.samplingInterval));
+          }
+          catch (BadXmlException e) {
+            msg = ",N/A";
+          }
+          buffer.append(msg);
+
+          start = Tstamp.incrementMinutes(start, this.samplingInterval);
+          end = Tstamp.incrementMinutes(end, this.samplingInterval);
+        }
+        start = this.startTimestamp;
+        end = Tstamp.incrementMinutes(start, this.samplingInterval);
+      }
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
       return null;
     }
+
+    return buffer.toString();
   }
 
   /**
-   * Returns the energy consumed given a range.
+   * Prints energy information to a CSV file.
    * 
-   * @param sourceName Name of a source.
-   * @param previousTimestamp Previous timestamp at which to grab energy data.
-   * @param currentTimestamp Current timestamp at which to grab energy data.
-   * @param samplingInterval Sampling interval in minutes.
-   * @return A double representing the energy consumed for a source.
+   * @return True if successful, false otherwise.
    */
-  public double getEnergy(String sourceName, XMLGregorianCalendar previousTimestamp,
-      XMLGregorianCalendar currentTimestamp, int samplingInterval) {
+  @Override
+  public boolean printData() {
+    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+    System.out.println("Generating CSV file...\n");
+    System.out.println("Output file: " + today + ".csv\n");
+
+    File outputFile = new File(today + ".csv");
+    outputFile.setWritable(true);
+    BufferedWriter writer = null;
+    boolean success = true;
     try {
-      return this.client.getEnergyConsumed(sourceName, previousTimestamp, currentTimestamp,
-          samplingInterval);
+      writer = new BufferedWriter(new FileWriter(outputFile));
+
+      String result = this.getEnergyData();
+      if (result == null) {
+        throw new IOException();
+      }
+
+      writer.write(result);
+      System.out.println(result);
     }
-    catch (WattDepotClientException e) {
+    catch (IOException e) {
       e.printStackTrace();
-      return Double.NaN;
+      success = false;
     }
+    finally {
+      try {
+        writer.close();
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+        success = false;
+      }
+    }
+
+    return success;
   }
 
   /**
-   * Returns the time given in milliseconds in string format.
+   * Returns a table header with names of columns.
    * 
-   * @param milliseconds Time in milliseconds.
-   * @return Time in string format <code>yyyy-MM-dd hh:mm:ss</code>.
+   * @return A table header with names of columns.
    */
-  public String getTimestamp(long milliseconds) {
-    return this.formatDateTime.format(milliseconds);
+  @Override
+  public String getTableHeader() {
+    StringBuffer buffer = new StringBuffer();
+    String msg = "Sources";
+    for (String s : this.header) {
+      buffer.append(msg);
+      msg = "," + s;
+    }
+    return buffer.toString();
   }
 
   /**
-   * This program will output a matrix containing energy consumed data in kWh to a CSV file. The
-   * rows represent timestamps, and the columns represent sources.
+   * Returns the amount of energy consumed from the SensorData object in kWh.
    * 
-   * @param args Contains filename, server URI, username, and password.
+   * @param data SensorData object that contains the amount of energy consumed.
+   * @return Energy in kWh.
+   */
+  @Override
+  public String getInfo(SensorData data) {
+    double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
+    return String.format("%.05f", energy / 1000.0);
+  }
+
+  /**
+   * Command-line program that will generate a CSV file containing energy information for one or
+   * more sources over a given time period and at a given sampling interval.
+   * 
+   * @param args Server URI, username, and password to connect to the WattDepot server.
    */
   public static void main(String[] args) {
     if (args.length != 3) {
@@ -114,84 +200,18 @@ public class EnergyMatrixExporter {
       System.err.println("Unable to connect to WattDepot server.");
       System.exit(1);
     }
-    EnergyMatrixExporter exporter = new EnergyMatrixExporter(client);
+    EnergyMatrixExporter output = new EnergyMatrixExporter(client);
 
-    // Create output file.
-    File outputFile = new File("output.csv");
-    outputFile.setWritable(true);
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
-    }
-    catch (IOException e) {
-      e.printStackTrace();
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+    if (!output.getNumSources(br) || !output.getSourceNames(br) || !output.getDates(br)) {
       System.exit(1);
     }
 
-    List<Source> sources = null;
-    try {
-      sources = client.getSources();
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
+    if (!output.getSamplingInterval(br) || !output.printData()) {
       System.exit(1);
     }
 
-    Date date = null;
-    XMLGregorianCalendar start = null;
-    XMLGregorianCalendar end = null;
-    try {
-      date = exporter.formatDateTime.parse("2011-02-07 8:00:00 AM");
-      start = Tstamp.makeTimestamp(date.getTime());
-      end = Tstamp.makeTimestamp(exporter.formatDateTime.parse("2011-02-08 8:00:00 AM").getTime());
-    }
-    catch (ParseException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    // Writer header to output file.
-    try {
-      writer.write("Timestamp");
-      for (Source s : sources) {
-        writer.write("," + s.getName());
-      }
-      writer.write("\n");
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    double energy = 0.0;
-    date = start.toGregorianCalendar().getTime();
-    String msg = "";
-    StringBuffer buffer = new StringBuffer();
-    XMLGregorianCalendar currTstamp = Tstamp.makeTimestamp(date.getTime());
-    XMLGregorianCalendar nextTstamp = null;
-
-    // Energy is in kWh.
-    try {
-      while (Tstamp.lessThan(currTstamp, end)) {
-        buffer.append(exporter.getTimestamp(currTstamp.toGregorianCalendar().getTime().getTime()));
-        for (Source s : sources) {
-          nextTstamp = Tstamp.incrementMinutes(currTstamp, 60);
-          energy = exporter.getEnergy(s.getName(), currTstamp, nextTstamp, 60) / 1000.0;
-          msg = "," + String.format("%.05f", energy);
-          buffer.append(msg);
-        }
-        writer.write(buffer.toString() + "\n");
-        currTstamp = Tstamp.incrementMinutes(currTstamp, 60);
-        buffer = new StringBuffer();
-      }
-      writer.close();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    System.out.println("Finished writing energy data to output file!");
   }
 
 }
