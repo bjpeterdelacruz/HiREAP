@@ -16,6 +16,7 @@ import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
+import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
@@ -46,6 +47,7 @@ public class EnergyMatrixExporter extends Exporter {
     this.samplingInterval = 0;
     this.formatDateTime = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
     this.header = new ArrayList<String>();
+    this.sources = new ArrayList<Source>();
   }
 
   /**
@@ -79,12 +81,15 @@ public class EnergyMatrixExporter extends Exporter {
     start = this.startTimestamp;
     end = Tstamp.incrementMinutes(start, this.samplingInterval);
     try {
-      for (String s : this.sourceNames) {
-        msg = "\n" + s;
+      int count = 1;
+      SensorData data = null;
+      for (Source s : this.sources) {
+        msg = "\n" + s.getName();
         buffer.append(msg);
         while (Tstamp.lessThan(start, this.endTimestamp)) {
           try {
-            msg = "," + this.getInfo(this.client.getEnergy(s, start, end, this.samplingInterval));
+            data = this.client.getEnergy(s.getName(), start, end, this.samplingInterval);
+            msg = "," + this.getInfo(data);
           }
           catch (BadXmlException e) {
             msg = ",N/A";
@@ -94,8 +99,11 @@ public class EnergyMatrixExporter extends Exporter {
           start = Tstamp.incrementMinutes(start, this.samplingInterval);
           end = Tstamp.incrementMinutes(end, this.samplingInterval);
         }
+        System.out.print("Finished processing " + count + " out of ");
+        System.out.println(this.sources.size() + "...");
         start = this.startTimestamp;
         end = Tstamp.incrementMinutes(start, this.samplingInterval);
+        count++;
       }
     }
     catch (WattDepotClientException e) {
@@ -184,9 +192,14 @@ public class EnergyMatrixExporter extends Exporter {
    * @param args Server URI, username, and password to connect to the WattDepot server.
    */
   public static void main(String[] args) {
-    if (args.length != 3) {
+    if (args.length != 3 && args.length != 4) {
       System.err.println("Command-line arguments not in correct format. Exiting...");
       System.exit(1);
+    }
+
+    boolean getAllSources = true;
+    if (args.length == 4) {
+      getAllSources = false;
     }
 
     String serverUri = args[0];
@@ -205,11 +218,14 @@ public class EnergyMatrixExporter extends Exporter {
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-    if (!output.getNumSources(br) || !output.getSourceNames(br) || !output.getDates(br)) {
-      System.exit(1);
+    if (getAllSources && !output.getAllSources()) {
+        System.exit(1);
+    }
+    else if (!getAllSources && (!output.getNumSources(br) || !output.getSourceNames(br))) {
+        System.exit(1);
     }
 
-    if (!output.getSamplingInterval(br) || !output.printData()) {
+    if (!output.getDates(br) || !output.getSamplingInterval(br) || !output.printData()) {
       System.exit(1);
     }
 

@@ -154,7 +154,14 @@ public abstract class Exporter {
         e.printStackTrace();
         return false;
       }
-      this.sourceNames.add(command);
+      // this.sourceNames.add(command);
+      try {
+        this.sources.add(this.client.getSource(command));
+      }
+      catch (WattDepotClientException e) {
+        e.printStackTrace();
+        return false;
+      }
     }
     return true;
   }
@@ -288,6 +295,22 @@ public abstract class Exporter {
       return false;
     }
 
+    return true;
+  }
+
+  /**
+   * Gets all of the sources on the WattDepot server.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  public boolean getAllSources() {
+    try {
+      this.sources = this.client.getSources();
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      return false;
+    }
     return true;
   }
 
