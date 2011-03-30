@@ -62,7 +62,7 @@ public class EnergyMatrixExporter extends Exporter {
     XMLGregorianCalendar start = this.startTimestamp;
     XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
 
-    msg = "Number of sources: " + this.sourceNames.size() + "\n\n";
+    msg = "Number of sources: " + this.sources.size() + "\n\n";
     msg += "The sampling interval is " + this.samplingInterval + " minute(s).\n\n";
     msg += "Start: ";
     msg += this.getTimestamp(this.startTimestamp.toGregorianCalendar().getTime().getTime()) + "\n";
