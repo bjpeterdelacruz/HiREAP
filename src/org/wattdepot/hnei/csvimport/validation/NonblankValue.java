@@ -19,6 +19,9 @@ public class NonblankValue implements Validator {
   @Override
   public boolean validateEntry(Object entry) {
     String str = (String) entry;
+    if (str == null) {
+      return false;
+    }
     return !str.isEmpty();
   }
 

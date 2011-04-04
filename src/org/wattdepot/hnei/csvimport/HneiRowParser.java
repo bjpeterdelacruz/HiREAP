@@ -31,7 +31,7 @@ public class HneiRowParser extends RowParser {
   /** Log file for the HneiTabularFileSensor application. */
   protected Logger log;
 
-  /** Formats dates that are in the format MM/DD/YYYY hh/mm/ss (A.M.|P.M.). */
+  /** Formats dates that are in the format MM/DD/YYYY hh:mm:ss (A.M.|P.M.). */
   protected SimpleDateFormat formatDateTime;
 
   /** Formats dates that are in the format MM/DD/YYYY. */
@@ -104,26 +104,35 @@ public class HneiRowParser extends RowParser {
   }
 
   /**
+   * Returns the URI of the WattDepot server.
+   * 
+   * @return The URI of the WattDepot server.
+   */
+  public String getServerUri() {
+    return this.serverUri;
+  }
+
+  /**
    * Parses a row of data for a source from a CSV file provided by HNEI.
    * 
-   * @param col Row from a CSV file that contains data.
+   * @param row Row from a CSV file that contains data.
    * @return SensorData object if parse is successful, null otherwise.
    */
   @Override
-  public SensorData parseRow(String[] col) {
-    if (col == null) {
+  public SensorData parseRow(String[] row) {
+    if (row == null) {
       this.log.log(Level.WARNING, "No input row specified.\n");
       return null;
     }
 
-    if (col.length != 9) {
-      String msg = "Row not in specified format:\n" + rowToString(col);
+    if (row.length != 9) {
+      String msg = "Row not in specified format:\n" + rowToString(row);
       this.log.log(Level.WARNING, msg);
       return null;
     }
 
-    if (col[5].equals("No Reading") || col[6].equals("No Reading")) {
-      String msg = "No reading for source: " + col[0] + "\n" + rowToString(col);
+    if (row[5].equalsIgnoreCase("No Reading") || row[6].equalsIgnoreCase("No Reading")) {
+      String msg = "No reading for source: " + row[0] + "\n" + rowToString(row);
       System.err.print(msg);
       this.log.log(Level.INFO, msg);
       numNoReadings++;
@@ -132,13 +141,13 @@ public class HneiRowParser extends RowParser {
 
     // Run validations.
     boolean result;
-    for (int i = 2; i < col.length; i++) {
+    for (int i = 2; i < row.length; i++) {
       // The eight column is a timestamp, so skip it.
       if (i != 7) {
         for (Validator v : validators) {
-          result = v.validateEntry(col[i]);
+          result = v.validateEntry(row[i]);
           if (!result) {
-            String msg = "[" + col[i] + "] " + v.getErrorMessage() + "\n" + rowToString(col);
+            String msg = "[" + row[i] + "] " + v.getErrorMessage() + "\n" + rowToString(row);
             System.err.print(msg);
             this.log.log(Level.WARNING, msg);
           }
@@ -156,14 +165,14 @@ public class HneiRowParser extends RowParser {
 
     Date installDate = null;
     try {
-      installDate = formatDateTime.parse(col[1]);
+      installDate = formatDateTime.parse(row[1]);
     }
     catch (java.text.ParseException e) {
       try {
-        installDate = formatDate.parse(col[1]);
+        installDate = formatDate.parse(row[1]);
       }
       catch (java.text.ParseException pe) {
-        String msg = "Bad timestamp found in input file: " + col[1] + "\n" + rowToString(col);
+        String msg = "Bad timestamp found in input file: " + row[1] + "\n" + rowToString(row);
         this.log.log(Level.WARNING, msg);
         return null;
       }
@@ -172,34 +181,39 @@ public class HneiRowParser extends RowParser {
 
     Date readingDate = null;
     try {
-      readingDate = formatDateTime.parse(col[7]);
+      readingDate = formatDateTime.parse(row[7]);
     }
     catch (java.text.ParseException e) {
       try {
-        readingDate = formatDate.parse(col[7]);
+        readingDate = formatDate.parse(row[7]);
       }
       catch (java.text.ParseException pe) {
-        String msg = "Bad timestamp found in input file: " + col[7] + "\n" + rowToString(col);
+        String msg = "Bad timestamp found in input file: " + row[7] + "\n" + rowToString(row);
         this.log.log(Level.WARNING, msg);
         return null;
       }
     }
 
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
-    int energy = Integer.parseInt(col[6]) * 1000;
+    int energy = Integer.parseInt(row[6]) * 1000;
+    if (energy < 0) {
+      String msg = "[" + energy + "] Energy consumed to date is less than 0!\n" + rowToString(row);
+      this.log.log(Level.SEVERE, msg);
+      return null;
+    }
     Property energyConsumedToDate = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
-    String mtuPort = col[2] + "-" + col[3];
+    String mtuPort = row[2] + "-" + row[3];
     String sourceUri = Source.sourceToUri(mtuPort, this.serverUri);
     SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
 
-    datum.addProperty(new Property("accountNumber", col[0]));
+    datum.addProperty(new Property("accountNumber", row[0]));
     datum.addProperty(new Property("installDate", installTimestamp.toString()));
-    datum.addProperty(new Property("mtuID", col[2]));
-    datum.addProperty(new Property("port", col[3]));
-    datum.addProperty(new Property("meterType", col[4]));
-    datum.addProperty(new Property("rawRead", col[5]));
-    datum.addProperty(new Property("reading", col[6]));
-    datum.addProperty(new Property("rssi", col[8]));
+    datum.addProperty(new Property("mtuID", row[2]));
+    datum.addProperty(new Property("port", row[3]));
+    datum.addProperty(new Property("meterType", row[4]));
+    datum.addProperty(new Property("rawRead", row[5]));
+    datum.addProperty(new Property("reading", row[6]));
+    datum.addProperty(new Property("rssi", row[8]));
     datum.addProperty(new Property("hourly", "true"));
     datum.addProperty(new Property("daily", "true"));
 
@@ -246,7 +260,7 @@ public class HneiRowParser extends RowParser {
 
     String sourceName = "1951005-1";
     HneiRowParser parser =
-        new HneiRowParser("HneiCsvRowParser", serverUri, sourceName, null);
+        new HneiRowParser("HneiRowParser", serverUri, sourceName, null);
     String[] col1 =
         { "994515990077", "8/1/2009", "1951005", "1", "491", "35958", "035958",
             "1/1/2011 9:00:00 AM", "0" };
