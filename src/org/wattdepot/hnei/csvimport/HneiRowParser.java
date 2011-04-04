@@ -204,20 +204,20 @@ public class HneiRowParser extends RowParser {
     Property energyConsumedToDate = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
     String mtuPort = row[2] + "-" + row[3];
     String sourceUri = Source.sourceToUri(mtuPort, this.serverUri);
-    SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
+    SensorData data = new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
 
-    datum.addProperty(new Property("accountNumber", row[0]));
-    datum.addProperty(new Property("installDate", installTimestamp.toString()));
-    datum.addProperty(new Property("mtuID", row[2]));
-    datum.addProperty(new Property("port", row[3]));
-    datum.addProperty(new Property("meterType", row[4]));
-    datum.addProperty(new Property("rawRead", row[5]));
-    datum.addProperty(new Property("reading", row[6]));
-    datum.addProperty(new Property("rssi", row[8]));
-    datum.addProperty(new Property("hourly", "true"));
-    datum.addProperty(new Property("daily", "true"));
+    data.addProperty(new Property("accountNumber", row[0]));
+    data.addProperty(new Property("installDate", installTimestamp.toString()));
+    data.addProperty(new Property("mtuID", row[2]));
+    data.addProperty(new Property("port", row[3]));
+    data.addProperty(new Property("meterType", row[4]));
+    data.addProperty(new Property("rawRead", row[5]));
+    data.addProperty(new Property("reading", row[6]));
+    data.addProperty(new Property("rssi", row[8]));
+    data.addProperty(new Property("hourly", "true"));
+    data.addProperty(new Property("daily", "true"));
 
-    return datum;
+    return data;
   }
 
   /**
