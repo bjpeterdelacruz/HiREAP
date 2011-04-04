@@ -1,6 +1,7 @@
 package org.wattdepot.hnei.csvimport;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 import java.text.ParseException;
 import java.util.Date;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -24,6 +25,9 @@ public class TestHneiImporter {
   /** */
   private HneiImporter importer;
 
+  /** */
+  private String sourceName = "777777-7";
+
   /**
    * Connects to the WattDepot server, stores a test source on it, and finally stores some test data
    * on the server.
@@ -38,26 +42,25 @@ public class TestHneiImporter {
     String uri = "http://localhost:8182/wattdepot/";
     String username = "admin@example.com";
     String password = "admin@example.com";
-    String sourceName = "JUnitTestSource";
 
     this.client = new WattDepotClient(uri, username, password);
     if (!this.client.isAuthenticated() || !this.client.isHealthy()) {
+      System.out.println("Is authenticated? " + this.client.isAuthenticated());
+      System.out.println("Is healthy? " + this.client.isHealthy());
       fail();
     }
 
     this.importer = new HneiImporter(null, uri, username, password, false);
-    this.storeTestSource(sourceName);
-    this.storeTestData(firstTimestamp, firstReading, sourceName, username);
-    this.storeTestData(secondTimestamp, secondReading, sourceName, username);
+    this.storeTestSource();
+    this.storeTestData(firstTimestamp, firstReading, username);
+    this.storeTestData(secondTimestamp, secondReading, username);
   }
 
   /**
    * Stores a source on the WattDepot server.
-   * 
-   * @param sourceName Test source.
    */
-  private void storeTestSource(String sourceName) {
-    this.importer.setSourceName(sourceName);
+  private void storeTestSource() {
+    this.importer.setSourceName(this.sourceName);
     this.importer.storeSource(this.client);
   }
 
@@ -66,12 +69,11 @@ public class TestHneiImporter {
    * 
    * @param timestamp Timestamp for test data.
    * @param reading Reading for test data.
-   * @param sourceName Test source.
    * @param username Username for authentication.
    */
-  private void storeTestData(String timestamp, String reading, String sourceName, String username) {
+  private void storeTestData(String timestamp, String reading, String username) {
     SensorData data = getSensorData((HneiRowParser) this.importer.parser, timestamp, reading);
-    this.importer.process(this.client, new Source(sourceName, username, true), data);
+    this.importer.process(this.client, new Source(this.sourceName, username, true), data);
   }
 
   /**
@@ -85,8 +87,8 @@ public class TestHneiImporter {
    */
   private SensorData getSensorData(HneiRowParser parser, String timestamp, String reading) {
     String[] row =
-        { "994515990077", "8/1/1999 8:00:00 AM", "1951005", "1", "491", reading, reading,
-            timestamp, "0" };
+        { "994515990077", "8/1/1999 8:00:00 AM", "777777", "7", "491", reading, reading, timestamp,
+            "0" };
     return parser.parseRow(row);
   }
 
@@ -98,19 +100,20 @@ public class TestHneiImporter {
    */
   public void teardown(String firstTimestamp, String secondTimestamp) {
     try {
-      String sourceName = "JUnitTestSource";
       Date firstDate = ((HneiRowParser) this.importer.parser).formatDateTime.parse(firstTimestamp);
       XMLGregorianCalendar firstTstamp = Tstamp.makeTimestamp(firstDate.getTime());
       Date secondDate =
           ((HneiRowParser) this.importer.parser).formatDateTime.parse(secondTimestamp);
       XMLGregorianCalendar secondTstamp = Tstamp.makeTimestamp(secondDate.getTime());
-      this.client.deleteSensorData(sourceName, firstTstamp);
-      this.client.deleteSensorData(sourceName, secondTstamp);
+      this.client.deleteSensorData(this.sourceName, firstTstamp);
+      this.client.deleteSensorData(this.sourceName, secondTstamp);
     }
     catch (ParseException e) {
+      System.out.println(e);
       fail();
     }
     catch (WattDepotClientException e) {
+      System.out.println(e);
       fail();
     }
   }
@@ -119,19 +122,40 @@ public class TestHneiImporter {
    * Passes if the counts for the number of sources and sensor data stored on the server are
    * correct.
    */
+  @Test
   public void sanityCheck() {
     String firstTimestamp = "8/1/1999 9:00:00 AM";
     String secondTimestamp = "8/2/1999 1:00:00 AM";
-    setup(firstTimestamp, secondTimestamp, "30000", "40000");
-    teardown(firstTimestamp, secondTimestamp);
-  }
 
-  /**
-   * Tests the HneiImporter class.
-   */
-  @Test
-  public void testImporter() {
-    int x = 25;
-    System.out.println(x);
+    Date firstDate = null;
+    Date secondDate = null;
+    XMLGregorianCalendar firstTstamp = null;
+    XMLGregorianCalendar secondTstamp = null;
+
+    setup(firstTimestamp, secondTimestamp, "30000", "40000");
+
+    try {
+      firstDate = ((HneiRowParser) this.importer.parser).formatDateTime.parse(firstTimestamp);
+      firstTstamp = Tstamp.makeTimestamp(firstDate.getTime());
+      secondDate = ((HneiRowParser) this.importer.parser).formatDateTime.parse(secondTimestamp);
+      secondTstamp = Tstamp.makeTimestamp(secondDate.getTime());
+    }
+    catch (ParseException e) {
+      System.out.println(e);
+      fail();
+    }
+
+    try {
+      assertEquals("number of sources is 1", 1, this.client.getSources().size());
+      assertEquals("number of data is 2", 2, this.client.getSensorDatas(this.sourceName,
+          firstTstamp, secondTstamp).size());
+      teardown(firstTimestamp, secondTimestamp);
+      assertEquals("number of data is 0", 0, this.client.getSensorDatas(this.sourceName,
+          firstTstamp, secondTstamp).size());
+    }
+    catch (WattDepotClientException e) {
+      System.out.println(e);
+      fail();
+    }
   }
 }

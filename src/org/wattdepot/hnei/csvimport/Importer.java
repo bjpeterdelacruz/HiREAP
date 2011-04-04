@@ -169,7 +169,9 @@ public abstract class Importer {
    * @return True if successful, false otherwise.
    */
   public boolean storeSource(WattDepotClient client) {
-    this.sourceName = this.filename.substring(0, this.filename.lastIndexOf('.'));
+    if (this.filename != null) {
+      this.sourceName = this.filename.substring(0, this.filename.lastIndexOf('.'));
+    }
 
     // Store source on WattDepot server.
     try {
