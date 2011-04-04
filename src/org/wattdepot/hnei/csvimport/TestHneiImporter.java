@@ -19,13 +19,13 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class TestHneiImporter {
 
-  /** */
+  /** Used to store and retrieve sources and data on WattDepot server. */
   private WattDepotClient client;
 
-  /** */
+  /** Used to parse row of HNEI energy data. */
   private HneiImporter importer;
 
-  /** */
+  /** Name of test source. */
   private String sourceName = "777777-7";
 
   /**
@@ -146,7 +146,7 @@ public class TestHneiImporter {
     }
 
     try {
-      assertEquals("number of sources is 1", 1, this.client.getSources().size());
+      assertEquals("number of sources is 2226", 2226, this.client.getSources().size());
       assertEquals("number of data is 2", 2, this.client.getSensorDatas(this.sourceName,
           firstTstamp, secondTstamp).size());
       teardown(firstTimestamp, secondTimestamp);
@@ -157,5 +157,26 @@ public class TestHneiImporter {
       System.out.println(e);
       fail();
     }
+  }
+
+  /**
+   * Passes if the sampling interval is set properly.
+   */
+  public void testSetSamplingIntervalProperty() {
+    // TODO: Finish method.
+  }
+
+  /**
+   * Passes if property for monotonically increasing is set properly.
+   */
+  public void testSetMonotonicallyIncreasingProperty() {
+    // TODO: Finish method.
+  }
+
+  /**
+   * Passes if energy consumption over a given time period is computed correctly.
+   */
+  public void testEnergyConsumptionComputation() {
+    // TODO: Finish method.
   }
 }

@@ -103,7 +103,8 @@ public class HneiImporter extends Importer {
    * @param data SensorData for a source.
    * @return Updated SensorData for a source.
    */
-  public SensorData checkValue(WattDepotClient client, Entry entry, SensorData data) {
+  public SensorData setMonotonicallyIncreasingProperty(WattDepotClient client, Entry entry,
+      SensorData data) {
     String isIncreasing = "isMonotonicallyIncreasing";
     Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
     if (monoIncrVal.validateEntry(entry)) {
@@ -126,11 +127,13 @@ public class HneiImporter extends Importer {
    * @param data SensorData for a source.
    * @return Updated SensorData object for a source.
    */
-  public SensorData setSamplingInterval(WattDepotClient client, Entry entry, SensorData data) {
+  public SensorData setSamplingIntervalProp(WattDepotClient client, Entry entry, SensorData data) {
     Calendar day = Calendar.getInstance();
     int d = entry.getTimestamp().getDay();
     day.set(entry.getTimestamp().getYear(), entry.getTimestamp().getMonth() - 1, d, 0, 0, 0);
+    // e.g. 8/1/2009 12:00:00 AM
     XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
+    // e.g. 8/1/2009 11:59:59 PM
     XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
 
     List<SensorData> datas;
@@ -526,14 +529,14 @@ public class HneiImporter extends Importer {
 
         // Check if readings are monotonically increasing.
         if (data.getProperty("isMonotonicallyIncreasing") == null) {
-          data = this.checkValue(client, e, data);
+          data = this.setMonotonicallyIncreasingProperty(client, e, data);
         }
         else {
           continue;
         }
 
         // Classify data as either hourly or daily.
-        data = this.setSamplingInterval(client, e, data);
+        data = this.setSamplingIntervalProp(client, e, data);
         if (data == null) {
           return false;
         }
