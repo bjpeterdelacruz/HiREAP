@@ -47,7 +47,7 @@ public class TestHneiRowParser {
    * Should pass if a row with an invalid length is passed into the parseRow method.
    */
   @Test
-  public void testParseRowInvalidRowLength() {
+  public void testInvalidRowLength() {
     String[] row = new String[5];
     SensorData data = setupParser().parseRow(row);
     assertNull(NULL_MESSAGE, data);
@@ -57,7 +57,7 @@ public class TestHneiRowParser {
    * Should pass if a row with no energy data is passed into the parseRow method.
    */
   @Test
-  public void testParseRowNoReadings() {
+  public void testNoReadings() {
     String[] row = setupRow();
     HneiRowParser parser = setupParser();
 
@@ -80,7 +80,7 @@ public class TestHneiRowParser {
    * Should pass if a row with invalid fields is passed into the parseRow method.
    */
   @Test
-  public void testParseRowInvalidFields() {
+  public void testInvalidFields() {
     String[] row = setupRow();
     HneiRowParser parser = setupParser();
 
