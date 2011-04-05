@@ -120,14 +120,14 @@ public class HneiImporter extends Importer {
   }
 
   /**
-   * Sets the sampling interval, either hourly or daily, for a SensorData object.
+   * Sets the type of data, either hourly or daily, for a SensorData object.
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param entry Current entry in CSV file.
    * @param data SensorData for a source.
    * @return Updated SensorData object for a source.
    */
-  public SensorData setSamplingIntervalProp(WattDepotClient client, Entry entry, SensorData data) {
+  public SensorData setTypeOfDataProperty(WattDepotClient client, Entry entry, SensorData data) {
     Calendar day = Calendar.getInstance();
     int d = entry.getTimestamp().getDay();
     day.set(entry.getTimestamp().getYear(), entry.getTimestamp().getMonth() - 1, d, 0, 0, 0);
@@ -536,7 +536,7 @@ public class HneiImporter extends Importer {
         }
 
         // Classify data as either hourly or daily.
-        data = this.setSamplingIntervalProp(client, e, data);
+        data = this.setTypeOfDataProperty(client, e, data);
         if (data == null) {
           return false;
         }
