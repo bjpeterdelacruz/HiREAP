@@ -528,12 +528,7 @@ public class HneiImporter extends Importer {
         data = client.getSensorData(e.getSourceName(), e.getTimestamp());
 
         // Check if readings are monotonically increasing.
-        if (data.getProperty("isMonotonicallyIncreasing") == null) {
-          data = this.setMonotonicallyIncreasingProperty(client, e, data);
-        }
-        else {
-          continue;
-        }
+        data = this.setMonotonicallyIncreasingProperty(client, e, data);
 
         // Classify data as either hourly or daily.
         data = this.setTypeOfDataProperty(client, e, data);
