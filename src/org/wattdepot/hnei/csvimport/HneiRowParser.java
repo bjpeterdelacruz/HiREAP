@@ -195,7 +195,7 @@ public class HneiRowParser extends RowParser {
     }
 
     XMLGregorianCalendar timestamp = Tstamp.makeTimestamp(readingDate.getTime());
-    int energy = Integer.parseInt(row[6]) * 1000;
+    int energy = Integer.parseInt(row[6]) * 1000; // energy is in kWh
     if (energy < 0) {
       String msg = "[" + energy + "] Energy consumed to date is less than 0!\n" + rowToString(row);
       this.log.log(Level.SEVERE, msg);

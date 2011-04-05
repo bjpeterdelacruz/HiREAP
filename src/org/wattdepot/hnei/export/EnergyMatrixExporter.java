@@ -62,13 +62,15 @@ public class EnergyMatrixExporter extends Exporter {
     XMLGregorianCalendar start = this.startTimestamp;
     XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
 
-    msg = "Number of sources: " + this.sources.size() + "\n\n";
-    msg += "The sampling interval is " + this.samplingInterval + " minute(s).\n\n";
-    msg += "Start: ";
-    msg += this.getTimestamp(this.startTimestamp.toGregorianCalendar().getTime().getTime()) + "\n";
-    msg += "End:   ";
-    msg += this.getTimestamp(this.endTimestamp.toGregorianCalendar().getTime().getTime()) + "\n\n";
-    buffer.append(msg);
+    // msg = "Number of sources: " + this.sources.size() + "\n\n";
+    // msg += "The sampling interval is " + this.samplingInterval + " minute(s).\n\n";
+    // msg += "Start: ";
+    // msg += this.getTimestamp(this.startTimestamp.toGregorianCalendar().getTime().getTime()) +
+    // "\n";
+    // msg += "End:   ";
+    // msg += this.getTimestamp(this.endTimestamp.toGregorianCalendar().getTime().getTime()) +
+    // "\n\n";
+    // buffer.append(msg);
 
     while (Tstamp.lessThan(start, this.endTimestamp)) {
       this.header.add(this.getTimestamp(end.toGregorianCalendar().getTime().getTime()));
@@ -219,10 +221,10 @@ public class EnergyMatrixExporter extends Exporter {
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
     if (getAllSources && !output.getAllSources()) {
-        System.exit(1);
+      System.exit(1);
     }
     else if (!getAllSources && (!output.getNumSources(br) || !output.getSourceNames(br))) {
-        System.exit(1);
+      System.exit(1);
     }
 
     if (!output.getDates(br) || !output.getSamplingInterval(br) || !output.printData()) {
