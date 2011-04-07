@@ -184,7 +184,7 @@ public class EnergyMatrixExporter extends Exporter {
   @Override
   public String getInfo(SensorData data) {
     double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
-    return String.format("%.05f", energy / 1000.0);
+    return String.format("%d", Math.round(energy / 1000.0));
   }
 
   /**

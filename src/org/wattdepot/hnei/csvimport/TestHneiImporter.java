@@ -4,16 +4,24 @@ import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_PASSWORD_KEY;
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KEY;
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_USERNAME_KEY;
 
 /**
  * JUnit tests for the HneiImporter class. The tests check:
@@ -42,12 +50,23 @@ public class TestHneiImporter {
   private static final String ERROR_MESSAGE = "Unable to retrieve data.";
 
   /**
-   * Starts the WattDepot server.
+   * Reads in URI, username, and password from properties file, starts up the WattDepot server, and
+   * then stores a test source.
    */
-  private void setup() {
-    String uri = "http://localhost:8182/wattdepot/";
-    String username = "admin@example.com";
-    String password = "admin@example.com";
+  @Before
+  public void setup() {
+    DataInputClientProperties props = null;
+    try {
+      props = new DataInputClientProperties();
+    }
+    catch (IOException e) {
+      System.out.println(e);
+      fail();
+    }
+
+    String uri = props.get(WATTDEPOT_URI_KEY);
+    String username = props.get(WATTDEPOT_USERNAME_KEY);
+    String password = props.get(WATTDEPOT_PASSWORD_KEY);
 
     this.client = new WattDepotClient(uri, username, password);
     if (!this.client.isAuthenticated() || !this.client.isHealthy()) {
@@ -93,14 +112,24 @@ public class TestHneiImporter {
 
   /**
    * Deletes test data from WattDepot server.
-   * 
-   * @param timestamp Timestamp for SensorData object.
    */
-  private void teardown(String timestamp) {
+  @After
+  public void deleteData() {
+    String startTimestamp = "1/1/1999 00:00:00 AM";
+    String endTimestamp = "12/31/1999 11:59:59 PM";
+    List<SensorData> datas = null;
+
     try {
-      Date date = ((HneiRowParser) this.importer.parser).formatDateTime.parse(timestamp);
-      XMLGregorianCalendar tstamp = Tstamp.makeTimestamp(date.getTime());
-      this.client.deleteSensorData(SOURCE_NAME, tstamp);
+      Date date = ((HneiRowParser) this.importer.parser).formatDateTime.parse(startTimestamp);
+      XMLGregorianCalendar startTstamp = Tstamp.makeTimestamp(date.getTime());
+      date = ((HneiRowParser) this.importer.parser).formatDateTime.parse(endTimestamp);
+      XMLGregorianCalendar endTstamp = Tstamp.makeTimestamp(date.getTime());
+      datas = this.client.getSensorDatas(SOURCE_NAME, startTstamp, endTstamp);
+      if (!datas.isEmpty()) {
+        for (SensorData d : datas) {
+          this.client.deleteSensorData(SOURCE_NAME, d.getTimestamp());
+        }
+      }
     }
     catch (ParseException e) {
       System.out.println(e);
@@ -126,7 +155,6 @@ public class TestHneiImporter {
     XMLGregorianCalendar firstTstamp = null;
     XMLGregorianCalendar secondTstamp = null;
 
-    this.setup();
     this.putData(firstTimestamp, "3000");
     this.putData(secondTimestamp, "4000");
     try {
@@ -142,12 +170,11 @@ public class TestHneiImporter {
 
     try {
       // assertEquals("number of sources is 2226", 2226, this.client.getSources().size());
-      assertEquals("number of data is 2", 2, this.client.getSensorDatas(SOURCE_NAME, firstTstamp,
-          secondTstamp).size());
-      this.teardown(firstTimestamp);
-      this.teardown(secondTimestamp);
-      assertEquals("number of data is 0", 0, this.client.getSensorDatas(SOURCE_NAME, firstTstamp,
-          secondTstamp).size());
+      assertEquals("number of data is 2", 2,
+          this.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp).size());
+      this.deleteData();
+      assertEquals("number of data is 0", 0,
+          this.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp).size());
     }
     catch (WattDepotClientException e) {
       System.out.println(e);
@@ -183,7 +210,6 @@ public class TestHneiImporter {
     XMLGregorianCalendar startTstamp = null;
     XMLGregorianCalendar endTstamp = null;
 
-    this.setup();
     this.putData(timestamp1, "30000");
 
     try {
@@ -215,7 +241,7 @@ public class TestHneiImporter {
       assertNull("data is not hourly", data1.getProperty("hourly"));
     }
 
-    this.teardown(timestamp1);
+    this.deleteData();
 
     /***** Test hourly sensor data. *****/
     this.putData(timestamp1, "40000");
@@ -235,9 +261,6 @@ public class TestHneiImporter {
       assertNotNull("data is hourly", data2.getProperty("hourly"));
       assertNull("data is not daily", data2.getProperty("daily"));
     }
-
-    this.teardown(timestamp1);
-    this.teardown(timestamp2);
   }
 
   /**
@@ -290,7 +313,6 @@ public class TestHneiImporter {
     XMLGregorianCalendar startTstamp = null;
     XMLGregorianCalendar endTstamp = null;
 
-    this.setup();
     this.putData(timestamp1, "30000");
     this.putData(timestamp2, "29999");
 
@@ -326,8 +348,7 @@ public class TestHneiImporter {
     assertEquals("energy is increassing", "true", data1.getProperty(isMonotonicallyIncreasing));
     assertEquals("energy is decreasing", "false", data2.getProperty(isMonotonicallyIncreasing));
 
-    this.teardown(timestamp1);
-    this.teardown(timestamp2);
+    this.deleteData();
 
     /***** Test with valid energy data. *****/
     this.putData(timestamp1, "500");
@@ -345,9 +366,6 @@ public class TestHneiImporter {
       assertEquals("energy is increasing", "true", data1.getProperty(isMonotonicallyIncreasing));
       assertEquals("energy is increasing", "true", data2.getProperty(isMonotonicallyIncreasing));
     }
-
-    this.teardown(timestamp1);
-    this.teardown(timestamp2);
   }
 
   /**
@@ -373,7 +391,6 @@ public class TestHneiImporter {
     XMLGregorianCalendar startTstamp = null;
     XMLGregorianCalendar endTstamp = null;
 
-    this.setup();
     this.putData(timestamp1, "3000");
     this.putData(timestamp2, "6000");
 
@@ -406,8 +423,5 @@ public class TestHneiImporter {
       System.out.println(e);
       fail();
     }
-
-    this.teardown(timestamp1);
-    this.teardown(timestamp2);
   }
 }
