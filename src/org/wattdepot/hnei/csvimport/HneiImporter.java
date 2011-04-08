@@ -160,36 +160,39 @@ public class HneiImporter extends Importer {
    * Adds energy and power data to a SensorData object.
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
-   * @param entry Current entry in CSV file.
+   * @param sourceName Name of a source.
    * @param data SensorData for a source.
    * @return Updated SensorData object for a source.
    */
-  public SensorData addProperties(WattDepotClient client, Entry entry, SensorData data) {
+  public SensorData addProperties(WattDepotClient client, String sourceName, SensorData data) {
     List<SensorData> datas = null;
     try {
-      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(data.getTimestamp(), -2);
-      datas = client.getSensorDatas(entry.getSourceName(), prevTimestamp, data.getTimestamp());
+      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(data.getTimestamp(), -365);
+      datas = client.getSensorDatas(sourceName, prevTimestamp, data.getTimestamp());
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
       return null;
     }
 
+    double energy = 0.0;
+
     if (datas.size() > 1) {
       SensorData prevData = datas.get(datas.size() - 2);
       double prevEnergy = prevData.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
       double currEnergy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
-      double energy = Math.abs(prevEnergy - currEnergy);
-      data.addProperty(new Property(SensorData.ENERGY_CONSUMED, energy));
+      energy = Math.abs(prevEnergy - currEnergy);
 
-      long prevTimestamp = prevData.getTimestamp().toGregorianCalendar().getTimeInMillis();
-      long currTimestamp = data.getTimestamp().toGregorianCalendar().getTimeInMillis();
-      double hours = Math.abs(prevTimestamp - currTimestamp) / 1000.0 / 60.0 / 60.0;
-      if (hours > 0) {
-        double power = energy / hours;
-        data.addProperty(new Property(SensorData.POWER_CONSUMED, power));
-      }
+      // long prevTimestamp = prevData.getTimestamp().toGregorianCalendar().getTimeInMillis();
+      // long currTimestamp = data.getTimestamp().toGregorianCalendar().getTimeInMillis();
+      // double hours = Math.abs(prevTimestamp - currTimestamp) / 1000.0 / 60.0 / 60.0;
+      // if (hours > 0) {
+        // double power = energy / hours;
+        // data.addProperty(new Property(SensorData.POWER_CONSUMED, power));
+      // }
     }
+
+    data.addProperty(new Property(SensorData.ENERGY_CONSUMED, energy));
 
     return data;
   }
@@ -543,7 +546,7 @@ public class HneiImporter extends Importer {
         this.allSources.add(temp);
 
         // Add energyConsumed.
-        data = this.addProperties(client, e, data);
+        data = this.addProperties(client, e.getSourceName(), data);
         if (data == null) {
           return false;
         }

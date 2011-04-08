@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
+import javax.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.junit.After;
 import org.junit.Before;
@@ -17,7 +18,6 @@ import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
-import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_PASSWORD_KEY;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KEY;
@@ -87,10 +87,29 @@ public class TestHneiImporter {
    * @param reading Reading for test data in kWh.
    */
   private void putData(String timestamp, String reading) {
-    String username = "admin@example.com";
-    SensorData data = this.getSensorData((HneiRowParser) this.importer.parser, timestamp, reading);
-    // Call process in Importer class to store SensorData object on WattDepot server.
-    this.importer.process(this.client, new Source(SOURCE_NAME, username, true), data);
+    try {
+      Date date = ((HneiRowParser) this.importer.parser).formatDateTime.parse(timestamp);
+      XMLGregorianCalendar tstamp = Tstamp.makeTimestamp(date.getTime());
+
+      SensorData data =
+          this.getSensorData((HneiRowParser) this.importer.parser, timestamp, reading);
+      this.client.storeSensorData(data);
+      data = this.importer.addProperties(this.client, SOURCE_NAME, data);
+      this.client.deleteSensorData(SOURCE_NAME, tstamp);
+      this.client.storeSensorData(data);
+    }
+    catch (WattDepotClientException e) {
+      System.out.println(e);
+      fail();
+    }
+    catch (JAXBException e) {
+      System.out.println(e);
+      fail();
+    }
+    catch (ParseException e) {
+      System.out.println(e);
+      fail();
+    }
   }
 
   /**
