@@ -66,7 +66,7 @@ public class TestHneiImporter {
       fail();
     }
     TestHneiImporter.importer = new HneiImporter(null, uri, username, password, false);
-    // Store test source on WattDepot server. It's okay if source already exists.
+    // Store test source on WattDepot server.
     TestHneiImporter.importer.setSourceName(SOURCE_NAME);
     TestHneiImporter.importer.storeSource(TestHneiImporter.client);
   }
