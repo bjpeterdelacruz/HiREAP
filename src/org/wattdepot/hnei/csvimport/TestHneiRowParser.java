@@ -16,7 +16,7 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  */
 public class TestHneiRowParser {
 
-  /** */
+  /** Displays the message <code>data is null</code>. */
   public static final String NULL_MESSAGE = "data is null";
 
   /**
@@ -24,7 +24,7 @@ public class TestHneiRowParser {
    * 
    * @return A new HneiRowParser object.
    */
-  public HneiRowParser setupParser() {
+  private HneiRowParser setupParser() {
     HneiRowParser parser =
         new HneiRowParser("HneiRowParser", "http://localhost:8182/wattdepot/", "1951005-1", null);
     parser.log = Logger.getLogger(HneiImporter.class.getName());
@@ -36,7 +36,7 @@ public class TestHneiRowParser {
    * 
    * @return A valid row for testing.
    */
-  public String[] setupRow() {
+  private String[] setupRow() {
     String[] row =
         { "994515990077", "8/1/2009", "1951005", "1", "491", "35958", "035958",
             "1/1/2011 9:00:00 AM", "0" };

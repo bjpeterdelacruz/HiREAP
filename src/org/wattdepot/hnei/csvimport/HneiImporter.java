@@ -143,42 +143,23 @@ public class HneiImporter extends Importer {
     msg = "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
     buffer.append(msg);
     String runtime = this.getRuntime(this.importStartTime, this.importEndTime);
-    msg = "\n\nImport Runtime                     : " + runtime + "\n";
+    msg = "\n\nImport Runtime                     : " + runtime + "\n\n";
     buffer.append(msg);
     try {
       long importRuntime = this.importEndTime - this.importStartTime;
       long numSourcesPerSecond = this.numTotalSources / (importRuntime / 1000);
       msg = Long.toString(numSourcesPerSecond);
       if (numSourcesPerSecond > 1) {
-        msg += " entries imported per second.\n";
+        msg += " entries imported per second.\n\n";
       }
       else {
-        msg += " entry imported per second.\n";
+        msg += " entry imported per second.\n\n";
       }
       buffer.append(msg);
     }
     catch (ArithmeticException e) {
-      msg = "Number of entries processed per second is immeasurable.\n";
+      msg = "Number of entries processed per second is immeasurable.\n\n";
       buffer.append(msg);
-    }
-    msg = "\n--------------------------------------------------\n";
-    buffer.append(msg);
-    if (this.allNonmonoIncrVals.isEmpty()) {
-      msg = "\nNo non-monotonically increasing data were found during import.\n";
-      buffer.append(msg);
-    }
-    else {
-      msg = "\nNumber of entries with non-monotonically increasing data: ";
-      buffer.append(msg);
-      msg = this.allNonmonoIncrVals.size() + "\n\n";
-      buffer.append(msg);
-      String str = null;
-      StringBuffer buff = new StringBuffer();
-      for (Entry e : this.allNonmonoIncrVals) {
-        str = e.toString() + "\n";
-        buff.append(str);
-      }
-      buffer.append(buff.toString());
     }
     log.log(Level.INFO, buffer.toString());
     System.out.print(buffer.toString());
