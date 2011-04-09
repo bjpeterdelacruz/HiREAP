@@ -18,6 +18,7 @@ import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.Entry;
+import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 
@@ -175,7 +176,12 @@ public abstract class Importer {
 
     // Store source on WattDepot server.
     try {
-      client.storeSource(new Source(sourceName, username, true), false);
+      Source source = new Source(sourceName, username, true);
+      Property prop = new Property();
+      prop.setKey(Source.SUPPORTS_ENERGY_COUNTERS);
+      prop.setValue("true");
+      source.addProperty(prop);
+      client.storeSource(source, false);
     }
     catch (OverwriteAttemptedException e) {
       String msg = "Source " + sourceName + " already exists on server.\n";
