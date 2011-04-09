@@ -3,15 +3,12 @@ package org.wattdepot.hnei.csvimport;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import java.io.IOException;
-import java.text.ParseException;
-import java.util.Date;
 import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
@@ -67,39 +64,28 @@ public class TestHneiImporter {
     }
     TestHneiImporter.importer = new HneiImporter(null, uri, username, password, false);
     // Store test source on WattDepot server.
-    TestHneiImporter.importer.setSourceName(SOURCE_NAME);
-    TestHneiImporter.importer.storeSource(TestHneiImporter.client);
+    TestHneiImporter.importer.storeSource(TestHneiImporter.client, SOURCE_NAME);
   }
 
   /**
    * Deletes test data from WattDepot server.
+   * 
+   * @throws Exception if problems are encountered trying to delete sensor data from server.
    */
   @After
-  public void deleteData() {
-    String startTimestamp = "1/1/1999 00:00:00 AM";
-    String endTimestamp = "12/31/1999 11:59:59 PM";
-    List<SensorData> datas = null;
+  public void deleteData() throws Exception {
+    String startTimestamp = "1999-01-01T00:00:00.000-10:00";
+    String endTimestamp = "1999-12-31T11:59:59.000-10:00";
 
-    try {
-      Date date =
-          ((HneiRowParser) TestHneiImporter.importer.parser).formatDateTime.parse(startTimestamp);
-      XMLGregorianCalendar startTstamp = Tstamp.makeTimestamp(date.getTime());
-      date = ((HneiRowParser) TestHneiImporter.importer.parser).formatDateTime.parse(endTimestamp);
-      XMLGregorianCalendar endTstamp = Tstamp.makeTimestamp(date.getTime());
-      datas = TestHneiImporter.client.getSensorDatas(SOURCE_NAME, startTstamp, endTstamp);
-      if (!datas.isEmpty()) {
-        for (SensorData d : datas) {
-          TestHneiImporter.client.deleteSensorData(SOURCE_NAME, d.getTimestamp());
-        }
+    XMLGregorianCalendar startTstamp = Tstamp.makeTimestamp(startTimestamp);
+    XMLGregorianCalendar endTstamp = Tstamp.makeTimestamp(endTimestamp);
+
+    List<SensorData> datas =
+        TestHneiImporter.client.getSensorDatas(SOURCE_NAME, startTstamp, endTstamp);
+    if (!datas.isEmpty()) {
+      for (SensorData d : datas) {
+        TestHneiImporter.client.deleteSensorData(SOURCE_NAME, d.getTimestamp());
       }
-    }
-    catch (ParseException e) {
-      System.out.println(e);
-      fail();
-    }
-    catch (WattDepotClientException e) {
-      System.out.println(e);
-      fail();
     }
   }
 

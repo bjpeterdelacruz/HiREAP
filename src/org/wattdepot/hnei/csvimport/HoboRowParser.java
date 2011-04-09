@@ -94,13 +94,13 @@ public class HoboRowParser extends HneiRowParser {
 
     // Property powerConsumed = new Property(SensorData.POWER_CONSUMED, Integer.parseInt(col[1]));
     String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
-    SensorData datum = new SensorData(timestamp, this.toolName, sourceUri, new Properties());
+    SensorData data = new SensorData(timestamp, this.toolName, sourceUri, new Properties());
 
-    datum.addProperty(new Property("tempF", col[2]));
-    datum.addProperty(new Property("rh%", col[3]));
-    datum.addProperty(new Property("lumenPerSqFt", col[4]));
+    data.addProperty(new Property("tempF", col[2]));
+    data.addProperty(new Property("rh%", col[3]));
+    data.addProperty(new Property("lumenPerSqFt", col[4]));
 
-    return datum;
+    return data;
   }
 
 }

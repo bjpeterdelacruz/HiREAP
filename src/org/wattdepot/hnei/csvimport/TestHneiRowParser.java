@@ -119,8 +119,6 @@ public class TestHneiRowParser {
     catch (ParseException e) {
       fail();
     }
-
-    System.out.println("testValidDates: PASSED");
   }
 
   /**
@@ -133,10 +131,10 @@ public class TestHneiRowParser {
     SensorData data = parser.parseRow(row);
 
     // Check number of properties.
-    assertEquals("size is 11", 11, data.getProperties().getProperty().size());
+    assertEquals("size is 1", 1, data.getProperties().getProperty().size());
     // Check source name.
-    String mtu = data.getProperty("mtuID");
-    String port = data.getProperty("port");
+    String mtu = row[2];
+    String port = row[3];
     String sourceName = parser.getServerUri() + "sources/" + mtu + "-" + port;
     assertEquals("sourceName is " + sourceName, sourceName, data.getSource());
     // Check if energy data is valid.

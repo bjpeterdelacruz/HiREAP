@@ -1,24 +1,17 @@
 package org.wattdepot.hnei.csvimport;
 
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.hnei.csvimport.validation.Entry;
-import org.wattdepot.hnei.csvimport.validation.EntrySortByTimestamp;
+import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 import au.com.bytecode.opencsv.CSVReader;
@@ -46,7 +39,6 @@ public class HneiImporter extends Importer {
     this.log = Logger.getLogger(HneiImporter.class.getName());
     this.filename = filename;
     this.serverUri = uri;
-    this.sourceName = null;
     this.username = username;
     this.password = password;
     this.skipFirstRow = skipFirstRow;
@@ -64,8 +56,6 @@ public class HneiImporter extends Importer {
     this.numHourly = 0;
     this.entries = new ArrayList<Entry>();
     this.allSources = new ArrayList<Entry>();
-    this.allMtus = new HashSet<Entry>();
-    this.allDuplicateMtus = new ArrayList<Entry>();
     this.allNonmonoIncrVals = new ArrayList<Entry>();
     this.importStartTime = 0;
     this.importEndTime = 0;
@@ -75,93 +65,16 @@ public class HneiImporter extends Importer {
 
   /**
    * Sets the parser. Called after setting source name.
-   */
-  public void setParser() {
-    this.parser = new HneiRowParser(this.toolName, this.serverUri, this.sourceName, log);
-  }
-
-  /**
-   * Sets the source name.
    * 
    * @param sourceName Name of a source.
    */
-  public void setSourceName(String sourceName) {
-    this.sourceName = sourceName;
+  public void setParser(String sourceName) {
+    this.parser = new HneiRowParser(this.toolName, this.serverUri, sourceName, log);
   }
 
   // TODO: Type of data (hourly or daily) should be a property of source, not sensor data.
 
   // TODO: Implement a test for monotonicity in CsvImporter after all data has been imported.
-
-  /**
-   * Adds all sources that have multiple MTU IDs to a list.
-   */
-  public void getMultipleMtuIds() {
-    Collections.sort(this.allSources);
-
-    this.allMtus = new HashSet<Entry>(this.allSources);
-    List<Entry> sourceMtus = new ArrayList<Entry>();
-    for (Entry e : this.allMtus) {
-      sourceMtus.add(e);
-    }
-
-    Collections.sort(sourceMtus);
-
-    Set<Entry> mtus = new HashSet<Entry>();
-    for (int index = 0; index < sourceMtus.size() - 1; index++) {
-      if (sourceMtus.get(index).getSourceName().equals(sourceMtus.get(index + 1).getSourceName())) {
-        mtus.add(sourceMtus.get(index));
-        mtus.add(sourceMtus.get(index + 1));
-      }
-    }
-
-    for (Entry e : mtus) {
-      this.allDuplicateMtus.add(e);
-    }
-
-    Collections.sort(this.allDuplicateMtus);
-  }
-
-  /**
-   * Creates a CSV file that contains sources with multiple MTU IDs.
-   * 
-   * @return True if successful, false otherwise.
-   */
-  public boolean generateCsvFileWithMultipleMtuIds() {
-    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
-    File outputFile = new File(today + ".csv");
-    outputFile.setWritable(true);
-
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-
-    String str = null;
-    StringBuffer buffer = new StringBuffer();
-    str = "Account Number,MTU ID\n";
-    buffer.append(str);
-    for (Entry e : this.allDuplicateMtus) {
-      buffer.append(e.getSourceName());
-      str = "," + e.getMtuId() + "\n";
-      buffer.append(str);
-    }
-
-    try {
-      writer.write(buffer.toString());
-      writer.close();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-
-    return true;
-  }
 
   /**
    * Prints results of parsing CSV file to standard output and log file.
@@ -267,27 +180,6 @@ public class HneiImporter extends Importer {
       }
       buffer.append(buff.toString());
     }
-    msg = "\n--------------------------------------------------\n";
-    buffer.append(msg);
-    if (this.allDuplicateMtus.isEmpty()) {
-      msg = "\nNo sources have multiple MTU IDs.\n\n";
-      buffer.append(msg);
-    }
-    else {
-      msg = "\nNumber of sources with multiple MTU IDs: " + this.allDuplicateMtus.size() + "\n\n";
-      buffer.append(msg);
-      String str = null;
-      StringBuffer buff = new StringBuffer();
-      for (Entry e : this.allDuplicateMtus) {
-        str = e.toString();
-        if (!e.isMonotonicallyIncreasing()) {
-          str += " -- Data from this source and MTU ID is not monotonically increasing.";
-        }
-        str += "\n";
-        buff.append(str);
-      }
-      buffer.append(buff.toString());
-    }
     log.log(Level.INFO, buffer.toString());
     System.out.print(buffer.toString());
   }
@@ -332,11 +224,11 @@ public class HneiImporter extends Importer {
     }
 
     SensorData data = null;
+    Source source = null;
 
     try {
-      Entry entry = null;
       int counter = 1;
-      String source = null;
+      String sourceName = null;
       String[] line = null;
 
       System.out.println("Reading in CSV file [" + this.filename + "]...\n");
@@ -348,14 +240,15 @@ public class HneiImporter extends Importer {
             this.numInvalidEntries++;
           }
           else {
-            source = line[2] + "-" + line[3];
-            this.setSourceName(source);
-            this.setParser();
-            entry = new Entry(source, data.getProperty("reading"), data.getTimestamp(), null);
-            entry.setMtuId(data.getProperty("mtuID"));
-            this.entries.add(entry);
+            sourceName = line[2] + "-" + line[3];
+            this.setParser(sourceName);
 
-            if (this.process(client, new Source(source, this.username, true), data)) {
+            source = new Source(sourceName, this.username, true);
+            source.addProperty(new Property("accountNumber", line[0]));
+            source.addProperty(new Property("installDate", line[1]));
+            source.addProperty(new Property("meterType", line[4]));
+
+            if (this.process(client, source, data)) {
               this.numEntriesProcessed++;
             }
             else {
@@ -390,16 +283,7 @@ public class HneiImporter extends Importer {
       return true;
     }
 
-    // Get all sources that have multiple MTU IDs.
-    this.getMultipleMtuIds();
-
-    Collections.sort(this.entries, new EntrySortByTimestamp());
-
     this.printStats();
-
-    if (!this.allDuplicateMtus.isEmpty() && !this.generateCsvFileWithMultipleMtuIds()) {
-      return false;
-    }
 
     return true;
   }

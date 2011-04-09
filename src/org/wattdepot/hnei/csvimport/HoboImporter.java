@@ -40,6 +40,15 @@ public class HoboImporter extends Importer {
   }
 
   /**
+   * Sets the parser. Called after setting source name.
+   * 
+   * @param sourceName Name of a source.
+   */
+  public void setParser(String sourceName) {
+    this.parser = new HoboRowParser(this.toolName, this.serverUri, sourceName, log);
+  }
+
+  /**
    * Prints results of parsing CSV file to standard output and log file.
    */
   @Override
@@ -82,7 +91,8 @@ public class HoboImporter extends Importer {
       return false;
     }
 
-    if (!this.setupLogger() || !this.storeSource(client)) {
+    String sourceName = this.filename.substring(0, this.filename.lastIndexOf('.') - 1);
+    if (!this.setupLogger() || !this.storeSource(client, sourceName)) {
       return false;
     }
 
@@ -98,7 +108,7 @@ public class HoboImporter extends Importer {
       for (int i = 0; i < 100; i++) {
         line = reader.readNext();
       // while ((line = reader.readNext()) != null) {
-        ((HoboRowParser) this.getParser()).setSourceName(this.sourceName);
+        this.setParser(sourceName);
         if ((data = ((HoboRowParser) this.getParser()).parseRow(line)) == null) {
           this.numInvalidEntries++;
         }

@@ -41,9 +41,6 @@ public abstract class Importer {
   /** URI of WattDepot server to send data to. */
   protected String serverUri;
 
-  /** Name of Source to send data to. */
-  protected String sourceName;
-
   /** Username to use when sending data to server. */
   protected String username;
 
@@ -167,20 +164,13 @@ public abstract class Importer {
    * Stores a source on the WattDepot server if it is not already on there.
    * 
    * @param client Used to store a source on the WattDepot server.
+   * @param sourceName Name of a source.
    * @return True if successful, false otherwise.
    */
-  public boolean storeSource(WattDepotClient client) {
-    if (this.filename != null) {
-      this.sourceName = this.filename.substring(0, this.filename.lastIndexOf('.'));
-    }
-
-    // Store source on WattDepot server.
+  public boolean storeSource(WattDepotClient client, String sourceName) {
     try {
-      Source source = new Source(sourceName, username, true);
-      Property prop = new Property();
-      prop.setKey(Source.SUPPORTS_ENERGY_COUNTERS);
-      prop.setValue("true");
-      source.addProperty(prop);
+      Source source = new Source(sourceName, this.username, true);
+      source.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
       client.storeSource(source, false);
     }
     catch (OverwriteAttemptedException e) {
@@ -214,6 +204,7 @@ public abstract class Importer {
   public boolean process(WattDepotClient client, Source source, SensorData data) {
     try {
       try {
+        source.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
         client.storeSource(source, false);
         this.numNewSources++;
       }
@@ -255,6 +246,7 @@ public abstract class Importer {
   public boolean process(WattDepotClient client, Source source) {
     try {
       try {
+        source.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
         client.storeSource(source, false);
         this.numNewSources++;
       }

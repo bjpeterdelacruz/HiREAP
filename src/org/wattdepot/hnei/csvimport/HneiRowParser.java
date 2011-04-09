@@ -1,6 +1,5 @@
 package org.wattdepot.hnei.csvimport;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -8,10 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
-import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.NonblankValue;
 import org.wattdepot.hnei.csvimport.validation.NumericValue;
@@ -139,7 +135,7 @@ public class HneiRowParser extends RowParser {
       return null;
     }
 
-    // Run validations.
+    // Run validations on row before adding properties to source in importer class.
     boolean result;
     for (int i = 2; i < row.length; i++) {
       // The eight column is a timestamp, so skip it.
@@ -162,22 +158,6 @@ public class HneiRowParser extends RowParser {
         }
       }
     }
-
-    Date installDate = null;
-    try {
-      installDate = formatDateTime.parse(row[1]);
-    }
-    catch (java.text.ParseException e) {
-      try {
-        installDate = formatDate.parse(row[1]);
-      }
-      catch (java.text.ParseException pe) {
-        String msg = "Bad timestamp found in input file: " + row[1] + "\n" + rowToString(row);
-        this.log.log(Level.WARNING, msg);
-        return null;
-      }
-    }
-    XMLGregorianCalendar installTimestamp = Tstamp.makeTimestamp(installDate.getTime());
 
     Date readingDate = null;
     try {
@@ -204,20 +184,8 @@ public class HneiRowParser extends RowParser {
     Property energyConsumedToDate = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);
     String mtuPort = row[2] + "-" + row[3];
     String sourceUri = Source.sourceToUri(mtuPort, this.serverUri);
-    SensorData data = new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
 
-    data.addProperty(new Property("accountNumber", row[0]));
-    data.addProperty(new Property("installDate", installTimestamp.toString()));
-    data.addProperty(new Property("mtuID", row[2]));
-    data.addProperty(new Property("port", row[3]));
-    data.addProperty(new Property("meterType", row[4]));
-    data.addProperty(new Property("rawRead", row[5]));
-    data.addProperty(new Property("reading", row[6]));
-    data.addProperty(new Property("rssi", row[8]));
-    data.addProperty(new Property("hourly", "true"));
-    data.addProperty(new Property("daily", "true"));
-
-    return data;
+    return new SensorData(timestamp, this.toolName, sourceUri, energyConsumedToDate);
   }
 
   /**
@@ -234,81 +202,6 @@ public class HneiRowParser extends RowParser {
       buffer.append(temp);
     }
     return buffer.toString() + "\n";
-  }
-
-  /**
-   * Test program to see if row parser works.
-   * 
-   * @param args URI, username, and password to connect to WattDepot server.
-   */
-  public static void main(String[] args) {
-    if (args.length != 3) {
-      System.err.println("Command-line arguments not in correct format. Exiting...");
-      System.exit(1);
-    }
-
-    String serverUri = args[0];
-    String username = args[1];
-    String password = args[2];
-
-    WattDepotClient client = new WattDepotClient(serverUri, username, password);
-    if (!client.isHealthy() || !client.isAuthenticated()) {
-      System.err.println("Unable to connect to WattDepot server.");
-      System.exit(1);
-    }
-    System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
-
-    String sourceName = "1951005-1";
-    HneiRowParser parser =
-        new HneiRowParser("HneiRowParser", serverUri, sourceName, null);
-    String[] col1 =
-        { "994515990077", "8/1/2009", "1951005", "1", "491", "35958", "035958",
-            "1/1/2011 9:00:00 AM", "0" };
-    String[] col2 =
-        { "994515990077", "8/1/2009", "1951005", "1", "491", "35955", "035955",
-            "1/1/2011 8:00:00 AM", "0" };
-
-    SensorData datum1 = null;
-    SensorData datum2 = null;
-    try {
-      client.storeSource(new Source(sourceName, username, true), true);
-      datum1 = parser.parseRow(col1);
-      System.out.println(datum1);
-      client.storeSensorData(datum1);
-      datum2 = parser.parseRow(col2);
-      System.out.println(datum2);
-      client.storeSensorData(datum2);
-    }
-    catch (WattDepotClientException e) {
-      System.err.println(e);
-    }
-    catch (JAXBException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    Date date1 = null;
-    Date date2 = null;
-    try {
-      date1 = parser.formatDateTime.parse("1/1/2011 8:00:00 AM");
-      date2 = parser.formatDateTime.parse("1/1/2011 9:00:00 AM");
-    }
-    catch (ParseException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    XMLGregorianCalendar timestamp1 = Tstamp.makeTimestamp(date1.getTime());
-    XMLGregorianCalendar timestamp2 = Tstamp.makeTimestamp(date2.getTime());
-
-    System.out.println("\nData:");
-    try {
-      System.out.println(client.getSensorData(sourceName, timestamp1));
-      System.out.println(client.getSensorData(sourceName, timestamp2));
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
   }
 
 }
