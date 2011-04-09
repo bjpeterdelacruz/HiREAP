@@ -146,7 +146,7 @@ public class TestHneiImporter {
   /**
    * Passes if energy consumption over a given time period is computed correctly.
    * 
-   * @throws Exception if there are any problems storing a SensorData object.
+   * @throws Exception if there are any problems.
    */
   @Test
   public void testEnergyConsumptionComputation() throws Exception {

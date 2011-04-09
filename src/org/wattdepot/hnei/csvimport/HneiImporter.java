@@ -14,19 +14,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParseException;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.hnei.csvimport.validation.EntrySortByTimestamp;
-import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
-import org.wattdepot.hnei.csvimport.validation.Validator;
-import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
-import org.wattdepot.util.tstamp.Tstamp;
 import au.com.bytecode.opencsv.CSVReader;
 
 /**
@@ -95,107 +89,9 @@ public class HneiImporter extends Importer {
     this.sourceName = sourceName;
   }
 
-  /**
-   * Checks to see if value of entry is monotonically increasing.
-   * 
-   * @param client WattDepotClient used to connect to the WattDepot server.
-   * @param entry Current entry in CSV file.
-   * @param data SensorData for a source.
-   * @return Updated SensorData for a source.
-   */
-  public SensorData setMonotonicallyIncreasingProperty(WattDepotClient client, Entry entry,
-      SensorData data) {
-    String isIncreasing = "isMonotonicallyIncreasing";
-    Validator monoIncrVal = new MonotonicallyIncreasingValue(client);
-    if (monoIncrVal.validateEntry(entry)) {
-      data.getProperties().getProperty().add(new Property(isIncreasing, "true"));
-    }
-    else {
-      log.log(Level.WARNING, monoIncrVal.getErrorMessage());
-      data.getProperties().getProperty().add(new Property(isIncreasing, "false"));
-      entry.setMonotonicallyIncreasing(false);
-      this.allNonmonoIncrVals.add(entry);
-    }
-    return data;
-  }
+  // TODO: Type of data (hourly or daily) should be a property of source, not sensor data.
 
-  /**
-   * Sets the type of data, either hourly or daily, for a SensorData object.
-   * 
-   * @param client WattDepotClient used to connect to the WattDepot server.
-   * @param entry Current entry in CSV file.
-   * @param data SensorData for a source.
-   * @return Updated SensorData object for a source.
-   */
-  public SensorData setTypeOfDataProperty(WattDepotClient client, Entry entry, SensorData data) {
-    Calendar day = Calendar.getInstance();
-    int d = entry.getTimestamp().getDay();
-    day.set(entry.getTimestamp().getYear(), entry.getTimestamp().getMonth() - 1, d, 0, 0, 0);
-    // e.g. 8/1/2009 12:00:00 AM
-    XMLGregorianCalendar start = Tstamp.makeTimestamp(day.getTime().getTime());
-    // e.g. 8/1/2009 11:59:59 PM
-    XMLGregorianCalendar end = Tstamp.incrementSeconds(Tstamp.incrementDays(start, 1), -1);
-
-    List<SensorData> datas;
-    try {
-      datas = client.getSensorDatas(entry.getSourceName(), start, end);
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
-      return null;
-    }
-
-    if (datas.size() == 1) {
-      data.getProperties().getProperty().remove(new Property("hourly", "true"));
-      this.numDaily++;
-    }
-    else {
-      data.getProperties().getProperty().remove(new Property("daily", Boolean.toString(true)));
-      this.numHourly++;
-    }
-    return data;
-  }
-
-  /**
-   * Adds energy and power data to a SensorData object.
-   * 
-   * @param client WattDepotClient used to connect to the WattDepot server.
-   * @param sourceName Name of a source.
-   * @param data SensorData for a source.
-   * @return Updated SensorData object for a source.
-   */
-  public SensorData addProperties(WattDepotClient client, String sourceName, SensorData data) {
-    List<SensorData> datas = null;
-    try {
-      XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(data.getTimestamp(), -365);
-      datas = client.getSensorDatas(sourceName, prevTimestamp, data.getTimestamp());
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
-      return null;
-    }
-
-    double energy = 0.0;
-
-    if (datas.size() > 1) {
-      SensorData prevData = datas.get(datas.size() - 2);
-      double prevEnergy = prevData.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
-      double currEnergy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
-      energy = Math.abs(prevEnergy - currEnergy);
-
-      // long prevTimestamp = prevData.getTimestamp().toGregorianCalendar().getTimeInMillis();
-      // long currTimestamp = data.getTimestamp().toGregorianCalendar().getTimeInMillis();
-      // double hours = Math.abs(prevTimestamp - currTimestamp) / 1000.0 / 60.0 / 60.0;
-      // if (hours > 0) {
-        // double power = energy / hours;
-        // data.addProperty(new Property(SensorData.POWER_CONSUMED, power));
-      // }
-    }
-
-    data.addProperty(new Property(SensorData.ENERGY_CONSUMED, energy));
-
-    return data;
-  }
+  // TODO: Implement a test for monotonicity in CsvImporter after all data has been imported.
 
   /**
    * Adds all sources that have multiple MTU IDs to a list.
@@ -231,7 +127,7 @@ public class HneiImporter extends Importer {
    * 
    * @return True if successful, false otherwise.
    */
-  public boolean generateCsvFile() {
+  public boolean generateCsvFileWithMultipleMtuIds() {
     String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
     File outputFile = new File(today + ".csv");
     outputFile.setWritable(true);
@@ -336,17 +232,6 @@ public class HneiImporter extends Importer {
     String runtime = this.getRuntime(this.importStartTime, this.importEndTime);
     msg = "\n\nImport Runtime                     : " + runtime + "\n";
     buffer.append(msg);
-    runtime = this.getRuntime(this.validateStartTime, this.validateEndTime);
-    msg = "Validation Runtime                 : " + runtime + "\n";
-    buffer.append(msg);
-    if (this.numEntriesProcessed > 0) {
-      runtime = this.getRuntime(this.importStartTime, this.validateEndTime);
-      msg = "Total Runtime                      : " + runtime + "\n\n";
-    }
-    else {
-      msg = "Total Runtime                      : 00:00:00\n\n";
-    }
-    buffer.append(msg);
     try {
       long importRuntime = this.importEndTime - this.importStartTime;
       long numSourcesPerSecond = this.numTotalSources / (importRuntime / 1000);
@@ -356,16 +241,6 @@ public class HneiImporter extends Importer {
       }
       else {
         msg += " entry imported per second.\n";
-      }
-      buffer.append(msg);
-      long validateRuntime = this.validateEndTime - this.validateStartTime;
-      numSourcesPerSecond = this.numTotalSources / (validateRuntime / 1000);
-      msg = Long.toString(numSourcesPerSecond);
-      if (numSourcesPerSecond > 1) {
-        msg += " entries validated per second.\n";
-      }
-      else {
-        msg += " entry validated per second.\n";
       }
       buffer.append(msg);
     }
@@ -467,8 +342,6 @@ public class HneiImporter extends Importer {
       System.out.println("Reading in CSV file [" + this.filename + "]...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
-      // for (int i = 0; i < 1000; i++) {
-      // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
         try {
           if ((data = this.getParser().parseRow(line)) == null) {
@@ -517,59 +390,6 @@ public class HneiImporter extends Importer {
       return true;
     }
 
-    // /////////////////////////////////////////////////
-    // Done importing file. Now do some post-processing.
-    // /////////////////////////////////////////////////
-    System.out.print("Checking if readings are monotonically increasing and ");
-    System.out.println("are either hourly or daily... This may take a while.");
-
-    int counter = 1;
-    this.validateStartTime = Calendar.getInstance().getTimeInMillis();
-    try {
-      Entry temp = null;
-      for (Entry e : this.entries) {
-        data = client.getSensorData(e.getSourceName(), e.getTimestamp());
-
-        // Check if readings are monotonically increasing.
-        data = this.setMonotonicallyIncreasingProperty(client, e, data);
-
-        // Classify data as either hourly or daily.
-        data = this.setTypeOfDataProperty(client, e, data);
-        if (data == null) {
-          return false;
-        }
-
-        temp = new Entry(e.getSourceName(), null, null, e.getMtuId());
-        if (data.getProperty("isMonotonicallyIncreasing").equals("false")) {
-          temp.setMonotonicallyIncreasing(false);
-        }
-        this.allSources.add(temp);
-
-        // Add energyConsumed.
-        data = this.addProperties(client, e.getSourceName(), data);
-        if (data == null) {
-          return false;
-        }
-
-        // Update sensor data on server.
-        client.deleteSensorData(e.getSourceName(), e.getTimestamp());
-        client.storeSensorData(data);
-
-        if (++counter % 500 == 0) {
-          System.out.println("Processing entry " + counter + "...");
-        }
-      }
-      this.validateEndTime = Calendar.getInstance().getTimeInMillis();
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
-      return false;
-    }
-    catch (JAXBException e) {
-      e.printStackTrace();
-      return false;
-    }
-
     // Get all sources that have multiple MTU IDs.
     this.getMultipleMtuIds();
 
@@ -577,73 +397,11 @@ public class HneiImporter extends Importer {
 
     this.printStats();
 
-    if (!this.allDuplicateMtus.isEmpty() && !this.generateCsvFile()) {
+    if (!this.allDuplicateMtus.isEmpty() && !this.generateCsvFileWithMultipleMtuIds()) {
       return false;
     }
 
     return true;
-
-  }
-
-  /**
-   * Given a CSV file with data for lots of sources, this program will parse each row, create a
-   * SensorData object from each, and store the sensor data on a WattDepot server.
-   * 
-   * @param args Contains filename, server URI, username, and password.
-   */
-  public static void main(String[] args) {
-    if (args.length < 3 || args.length > 4) {
-      System.err.println("Command-line arguments not in correct format. Exiting...");
-      System.exit(1);
-    }
-
-    String serverUri = args[0];
-    String username = args[1];
-    String password = args[2];
-
-    boolean processAllFiles = false;
-    if (args.length == 4 && "-all".equalsIgnoreCase(args[3])) {
-      processAllFiles = true;
-    }
-    else if (args.length == 4 && !"-all".equalsIgnoreCase(args[3])) {
-      System.err.println("Illegal flag for fourth parameter. Expected [-all], got [" + args[3]
-          + "].");
-      System.exit(1);
-    }
-
-    boolean processNextFile = true;
-    String response = "";
-    String dirName = System.getProperties().getProperty("user.dir");
-    String[] children = Importer.getAllCsvFiles(dirName);
-
-    for (int index = 0; index < children.length; index++) {
-      if (processNextFile) {
-        HneiImporter inputClient =
-            new HneiImporter(children[index], serverUri, username, password, true);
-
-        System.out.println("Processing " + children[index] + "...");
-        if (!inputClient.processCsvFile() && !inputClient.closeLogger()) {
-          System.exit(1);
-        }
-      }
-
-      if (!processAllFiles) {
-        if (index == children.length - 1) {
-          break;
-        }
-
-        response = Importer.processNextFile(children[index + 1]);
-        if ("no".equalsIgnoreCase(response)) {
-          processNextFile = false;
-        }
-        else if ("quit".equalsIgnoreCase(response)) {
-          break;
-        }
-        else {
-          processNextFile = true;
-        }
-      }
-    }
   }
 
 }
