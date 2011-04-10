@@ -306,7 +306,7 @@ public abstract class Importer {
    * @param endTime End time of a run.
    * @return Time in string format hh:mm:ss.
    */
-  public String getRuntime(long startTime, long endTime) {
+  public static String getRuntime(long startTime, long endTime) {
     long milliseconds = endTime - startTime;
     long hours = milliseconds / (1000 * 60 * 60);
     long minutes = (milliseconds % (1000 * 60 * 60)) / (1000 * 60);

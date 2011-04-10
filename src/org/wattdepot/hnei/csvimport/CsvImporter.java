@@ -236,8 +236,8 @@ public class CsvImporter {
       System.exit(1);
     }
 
-    long runtime = (endTime - startTime) / 1000;
-    System.out.println("Bulk import successful!\n\nBulk import runtime: " + runtime + " seconds");
+    String runtime = Importer.getRuntime(startTime, endTime);
+    System.out.println("Bulk import successful!\n\nBulk import runtime: " + runtime);
   }
 
 }

@@ -151,7 +151,7 @@ public class HneiImporter extends Importer {
     buffer.append(msg);
     msg = "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
     buffer.append(msg);
-    String runtime = this.getRuntime(this.importStartTime, this.importEndTime);
+    String runtime = Importer.getRuntime(this.importStartTime, this.importEndTime);
     msg = "\n\nImport Runtime                     : " + runtime + "\n\n";
     buffer.append(msg);
     try {
