@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -145,6 +146,8 @@ public class CsvImporter {
     }
 
     // Call processCsvFile method in appropriate class.
+    long startTime = 0;
+    long endTime = 0;
     try {
       String response = null;
       String dirName = System.getProperties().getProperty("user.dir");
@@ -165,6 +168,8 @@ public class CsvImporter {
       Boolean isSuccessful = null;
 
       String file = null;
+
+      startTime = Calendar.getInstance().getTimeInMillis();
       for (int index = 0; index < children.length; index++) {
         System.out.println("Processing file " + (index + 1) + " out of " + children.length + "...");
 
@@ -204,6 +209,7 @@ public class CsvImporter {
           }
         }
       }
+      endTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IllegalAccessException e) {
       e.printStackTrace();
@@ -230,7 +236,8 @@ public class CsvImporter {
       System.exit(1);
     }
 
-    System.out.println("Import successful!");
+    String runtime = Importer.getRuntime(startTime, endTime);
+    System.out.println("Bulk import successful!\n\nBulk import runtime: " + runtime);
   }
 
 }

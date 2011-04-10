@@ -18,6 +18,7 @@ import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.RowParser;
 import org.wattdepot.hnei.csvimport.validation.Entry;
+import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 
@@ -39,9 +40,6 @@ public abstract class Importer {
 
   /** URI of WattDepot server to send data to. */
   protected String serverUri;
-
-  /** Name of Source to send data to. */
-  protected String sourceName;
 
   /** Username to use when sending data to server. */
   protected String username;
@@ -166,16 +164,14 @@ public abstract class Importer {
    * Stores a source on the WattDepot server if it is not already on there.
    * 
    * @param client Used to store a source on the WattDepot server.
+   * @param sourceName Name of a source.
    * @return True if successful, false otherwise.
    */
-  public boolean storeSource(WattDepotClient client) {
-    if (this.filename != null) {
-      this.sourceName = this.filename.substring(0, this.filename.lastIndexOf('.'));
-    }
-
-    // Store source on WattDepot server.
+  public boolean storeSource(WattDepotClient client, String sourceName) {
     try {
-      client.storeSource(new Source(sourceName, username, true), false);
+      Source source = new Source(sourceName, this.username, true);
+      source.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
+      client.storeSource(source, false);
     }
     catch (OverwriteAttemptedException e) {
       String msg = "Source " + sourceName + " already exists on server.\n";
@@ -208,6 +204,7 @@ public abstract class Importer {
   public boolean process(WattDepotClient client, Source source, SensorData data) {
     try {
       try {
+        source.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
         client.storeSource(source, false);
         this.numNewSources++;
       }
@@ -249,6 +246,7 @@ public abstract class Importer {
   public boolean process(WattDepotClient client, Source source) {
     try {
       try {
+        source.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
         client.storeSource(source, false);
         this.numNewSources++;
       }
@@ -308,7 +306,7 @@ public abstract class Importer {
    * @param endTime End time of a run.
    * @return Time in string format hh:mm:ss.
    */
-  public String getRuntime(long startTime, long endTime) {
+  public static String getRuntime(long startTime, long endTime) {
     long milliseconds = endTime - startTime;
     long hours = milliseconds / (1000 * 60 * 60);
     long minutes = (milliseconds % (1000 * 60 * 60)) / (1000 * 60);

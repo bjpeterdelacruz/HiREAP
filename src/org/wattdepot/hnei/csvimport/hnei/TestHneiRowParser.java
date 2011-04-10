@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.hnei;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
@@ -16,7 +16,7 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  */
 public class TestHneiRowParser {
 
-  /** */
+  /** Displays the message <code>data is null</code>. */
   public static final String NULL_MESSAGE = "data is null";
 
   /**
@@ -24,7 +24,7 @@ public class TestHneiRowParser {
    * 
    * @return A new HneiRowParser object.
    */
-  public HneiRowParser setupParser() {
+  private HneiRowParser setupParser() {
     HneiRowParser parser =
         new HneiRowParser("HneiRowParser", "http://localhost:8182/wattdepot/", "1951005-1", null);
     parser.log = Logger.getLogger(HneiImporter.class.getName());
@@ -36,7 +36,7 @@ public class TestHneiRowParser {
    * 
    * @return A valid row for testing.
    */
-  public String[] setupRow() {
+  private String[] setupRow() {
     String[] row =
         { "994515990077", "8/1/2009", "1951005", "1", "491", "35958", "035958",
             "1/1/2011 9:00:00 AM", "0" };
@@ -119,8 +119,6 @@ public class TestHneiRowParser {
     catch (ParseException e) {
       fail();
     }
-
-    System.out.println("testValidDates: PASSED");
   }
 
   /**
@@ -133,10 +131,10 @@ public class TestHneiRowParser {
     SensorData data = parser.parseRow(row);
 
     // Check number of properties.
-    assertEquals("size is 11", 11, data.getProperties().getProperty().size());
+    assertEquals("size is 1", 1, data.getProperties().getProperty().size());
     // Check source name.
-    String mtu = data.getProperty("mtuID");
-    String port = data.getProperty("port");
+    String mtu = row[2];
+    String port = row[3];
     String sourceName = parser.getServerUri() + "sources/" + mtu + "-" + port;
     assertEquals("sourceName is " + sourceName, sourceName, data.getSource());
     // Check if energy data is valid.

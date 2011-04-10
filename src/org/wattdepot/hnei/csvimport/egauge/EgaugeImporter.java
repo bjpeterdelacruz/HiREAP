@@ -1,10 +1,11 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.egauge;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.logging.Logger;
 import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.hnei.csvimport.Importer;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
@@ -57,18 +58,20 @@ public class EgaugeImporter extends Importer {
   /**
    * Returns an array of SensorData objects containing energy and power data.
    * 
+   * @param sourceName Name of a source.
    * @param data SensorData object containing information for the entire house, including
    * appliances.
    * @param energyConsumedToDate Energy data for entire house and all appliances.
    * @return An array of SensorData objects containing energy and power data.
    */
-  public SensorData[] getSensorDatas(SensorData data, double[] energyConsumedToDate) {
+  public SensorData[] getSensorDatas(String sourceName, SensorData data,
+      double[] energyConsumedToDate) {
     SensorData[] sensorDatas = new SensorData[4];
 
     // Whole House
     double power = Double.parseDouble(data.getProperty(SensorData.POWER_CONSUMED));
     Property powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
-    String sourceUri = Source.sourceToUri(this.sourceName, this.serverUri);
+    String sourceUri = Source.sourceToUri(sourceName, this.serverUri);
     SensorData wholeHouse =
         new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
@@ -76,7 +79,7 @@ public class EgaugeImporter extends Importer {
     String acPower = data.getProperty("airConditioner").replace(",", "");
     power = Double.parseDouble(acPower);
     powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
-    sourceUri = Source.sourceToUri(this.sourceName + "-airConditioner", this.serverUri);
+    sourceUri = Source.sourceToUri(sourceName + "-airConditioner", this.serverUri);
     SensorData airConditioner =
         new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
@@ -84,7 +87,7 @@ public class EgaugeImporter extends Importer {
     String whPower = data.getProperty("waterHeater").replace(",", "");
     power = Integer.parseInt(whPower);
     powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
-    sourceUri = Source.sourceToUri(this.sourceName + "-waterHeater", this.serverUri);
+    sourceUri = Source.sourceToUri(sourceName + "-waterHeater", this.serverUri);
     SensorData waterHeater =
         new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
@@ -92,7 +95,7 @@ public class EgaugeImporter extends Importer {
     String dryerPower = data.getProperty("dryer").replace(",", "");
     power = Integer.parseInt(dryerPower);
     powerConsumed = new Property(SensorData.POWER_CONSUMED, power);
-    sourceUri = Source.sourceToUri(this.sourceName + "-dryer", this.serverUri);
+    sourceUri = Source.sourceToUri(sourceName + "-dryer", this.serverUri);
     SensorData dryer = new SensorData(data.getTimestamp(), this.toolName, sourceUri, powerConsumed);
 
     sensorDatas[0] = wholeHouse;
@@ -148,21 +151,22 @@ public class EgaugeImporter extends Importer {
       return false;
     }
 
-    if (!this.setupLogger() || !this.storeSource(client)) {
+    String mainSourceName = this.filename.substring(0, this.filename.lastIndexOf('.') - 1);
+    if (!this.setupLogger() || !this.storeSource(client, mainSourceName)) {
       return false;
     }
 
     // Create a source for each appliance.
     if (this.getParser() instanceof EgaugeRowParser) {
-      String sourceName = this.sourceName + "-airConditioner";
+      String sourceName = mainSourceName + "-airConditioner";
       if (!this.process(client, new Source(sourceName, this.username, true))) {
         return false;
       }
-      sourceName = this.sourceName + "-waterHeater";
+      sourceName = mainSourceName + "-waterHeater";
       if (!this.process(client, new Source(sourceName, this.username, true))) {
         return false;
       }
-      sourceName = this.sourceName + "-dryer";
+      sourceName = mainSourceName + "-dryer";
       if (!this.process(client, new Source(sourceName, this.username, true))) {
         return false;
       }
@@ -176,7 +180,7 @@ public class EgaugeImporter extends Importer {
     try {
       double[] energyConsumedToDate = null;
       if (this.getParser() instanceof EgaugeRowParser) {
-        ((EgaugeRowParser) this.getParser()).setSourceName(this.sourceName);
+        ((EgaugeRowParser) this.getParser()).setSourceName(mainSourceName);
 
         energyConsumedToDate = new double[4];
         for (int i = 0; i < energyConsumedToDate.length; i++) {
@@ -184,10 +188,10 @@ public class EgaugeImporter extends Importer {
         }
       }
       else {
-        ((EgaugeRowParserVer2) this.getParser()).setSourceName(this.sourceName);
+        ((EgaugeRowParserVer2) this.getParser()).setSourceName(mainSourceName);
       }
 
-      System.out.println("Importing data for source " + this.sourceName + "...");
+      System.out.println("Importing data for source " + mainSourceName + "...");
       // for (int i = 0; i < 100; i++) {
       // line = reader.readNext();
       while ((line = reader.readNext()) != null) {
@@ -203,7 +207,7 @@ public class EgaugeImporter extends Importer {
         }
         else {
           if (this.getParser() instanceof EgaugeRowParser) {
-            SensorData[] datas = getSensorDatas(data, energyConsumedToDate);
+            SensorData[] datas = getSensorDatas(mainSourceName, data, energyConsumedToDate);
             if (datas == null) {
               System.err.println("Problem encountered while getting sensor data.");
               return false;

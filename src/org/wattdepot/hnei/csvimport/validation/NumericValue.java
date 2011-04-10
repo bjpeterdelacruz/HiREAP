@@ -8,7 +8,7 @@ package org.wattdepot.hnei.csvimport.validation;
 public class NumericValue implements Validator {
 
   /** Error message. */
-  private static final String errorMessage = "Entry is not a valid number.";
+  private static final String ERROR_MESSAGE = "Entry is not a valid number.";
 
   /**
    * Checks to make sure that an entry is a valid number.
@@ -36,7 +36,7 @@ public class NumericValue implements Validator {
    */
   @Override
   public String getErrorMessage() {
-    return errorMessage;
+    return ERROR_MESSAGE;
   }
 
 }

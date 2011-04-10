@@ -27,10 +27,8 @@ public class HneiWattDepotCli {
    */
   public HneiWattDepotCli(WattDepotClient client) {
     this.commands = new HashMap<String, Retriever>();
-    this.commands.put("daily", new DailySensorData(client));
-    this.commands.put("hourly", new HourlySensorDatas(client));
-    this.commands.put("non-mono", new NonmonotonicallyIncreasingData(client));
     this.commands.put("all_data", new SourceSensorDatas(client));
+    this.commands.put("interpolate", new InterpolatedSensorData(client));
   }
 
   /**
@@ -95,28 +93,17 @@ public class HneiWattDepotCli {
       else if (command[0].equals("h") || command[0].equals("help")) {
         hneiExporter.getHelp();
       }
-      else if (command[0].equals("daily") && command.length == 4) {
-        String d = "daily";
-        if (!hneiExporter.commands.get(d).getSensorData(command[1], command[2], null, command[3])) {
-          System.exit(1);
-        }
-      }
-      else if (command[0].equals("hourly") && command.length == 4) {
-        String h = "hourly";
-        if (!hneiExporter.commands.get(h).getSensorData(command[1], command[2], null, command[3])) {
-          System.exit(1);
-        }
-      }
-      else if (command[0].equals("non-mono") && command.length == 4) {
-        String n = "non-mono";
-        if (!hneiExporter.commands.get(n).getSensorData(command[1], command[2], null, command[3])) {
-          System.exit(1);
-        }
-      }
-      else if (command[0].equals("all_data") && command.length == 5) {
+      else if (command[0].equals("all_data") && command.length == 4) {
         String a = "all_data";
         if (!hneiExporter.commands.get(a).getSensorData(command[1], command[2], command[3],
-            command[4])) {
+            command[3])) {
+          System.exit(1);
+        }
+      }
+      else if (command[0].equals("interpolate") && command.length == 4) {
+        String a = "interpolate";
+        if (!hneiExporter.commands.get(a).getSensorData(command[1], command[2], command[3],
+            command[3])) {
           System.exit(1);
         }
       }
@@ -125,6 +112,7 @@ public class HneiWattDepotCli {
         System.out.println(msg);
       }
     }
+
     System.out.println("Exiting...");
   }
 }

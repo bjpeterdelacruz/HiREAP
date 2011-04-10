@@ -1,10 +1,6 @@
 package org.wattdepot.hnei.csvimport.validation;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.ResourceNotFoundException;
 import org.wattdepot.client.WattDepotClient;
@@ -28,9 +24,6 @@ public class MonotonicallyIncreasingValue implements Validator {
   /** Sensor data for a source at the current timestamp. */
   private SensorData currentData;
 
-  /** Used to make a timestamp in the test program. */
-  private SimpleDateFormat formatDateTime;
-
   /**
    * Creates a new MonotonicallyIncreasingValue object.
    * 
@@ -38,7 +31,6 @@ public class MonotonicallyIncreasingValue implements Validator {
    */
   public MonotonicallyIncreasingValue(WattDepotClient client) {
     this.client = client;
-    this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
   }
 
   /**
@@ -56,7 +48,7 @@ public class MonotonicallyIncreasingValue implements Validator {
     String sourceName = ((Entry) entry).getSourceName();
     XMLGregorianCalendar currTimestamp = ((Entry) entry).getTimestamp();
 
-    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -2);
+    XMLGregorianCalendar prevTimestamp = Tstamp.incrementDays(currTimestamp, -30);
     try {
       List<SensorData> sensorDatas =
           this.client.getSensorDatas(sourceName, prevTimestamp, currTimestamp);
@@ -98,36 +90,5 @@ public class MonotonicallyIncreasingValue implements Validator {
     errorMessage += this.currentData.getProperty(reading) + ") for ";
     errorMessage += this.currentData.getSource() + ".";
     return errorMessage;
-  }
-
-  /**
-   * Test program to see if validator works.
-   * 
-   * @param args Information used to connect to WattDepot server.
-   */
-  public static void main(String[] args) {
-    if (args.length != 3) {
-      System.err.println("Not enough arguments. Exiting...");
-      System.exit(1);
-    }
-
-    WattDepotClient client = new WattDepotClient(args[0], args[1], args[2]);
-    if (client.isHealthy() && client.isAuthenticated()) {
-      MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue(client);
-      XMLGregorianCalendar currTimestamp = null;
-      try {
-        Date timestamp = validator.formatDateTime.parse("2/4/2011 5:33:44 PM");
-        currTimestamp = Tstamp.makeTimestamp(timestamp.getTime());
-      }
-      catch (ParseException e) {
-        e.printStackTrace();
-        System.exit(1);
-      }
-      Entry currentData = new Entry("1770606-1", "27381000", currTimestamp, null); // 027385
-      System.out.println(validator.validateEntry(currentData));
-    }
-    else {
-      System.err.println("Unable to connect to WattDepot server.");
-    }
   }
 }

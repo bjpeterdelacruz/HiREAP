@@ -3,7 +3,6 @@ package org.wattdepot.hnei.export.cli;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
@@ -12,12 +11,11 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * This class is used by the HneiWattDepotCli class to get all energy data for a particular source
- * at a given interval.
+ * This class is used by the HneiWattDepotCli class to get interpolated energy data.
  * 
  * @author BJ Peter DeLaCruz
  */
-public class SourceSensorDatas extends Retriever {
+public class InterpolatedSensorData extends Retriever {
 
   /** Used to fetch sensor data from the WattDepot server. */
   private WattDepotClient client;
@@ -26,11 +24,11 @@ public class SourceSensorDatas extends Retriever {
   private SimpleDateFormat formatDate;
 
   /**
-   * Creates a new SourceSensorDatas object.
+   * Creates a new InterpolatedSensorData object.
    * 
    * @param client Used to connect to WattDepot server.
    */
-  public SourceSensorDatas(WattDepotClient client) {
+  public InterpolatedSensorData(WattDepotClient client) {
     this.client = client;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
   }
@@ -59,31 +57,25 @@ public class SourceSensorDatas extends Retriever {
 
     XMLGregorianCalendar startTimestamp = Tstamp.makeTimestamp(date1.getTime());
     XMLGregorianCalendar endTimestamp = Tstamp.makeTimestamp(date2.getTime());
-    endTimestamp = Tstamp.incrementDays(Tstamp.incrementSeconds(endTimestamp, -1), 1);
 
-    List<SensorData> results = null;
+    SensorData result = null;
+    double energyConsumed = 0.0;
+    long energy = 0;
     try {
-      results = this.client.getSensorDatas(sourceName, startTimestamp, endTimestamp);
+      result = this.client.getEnergy(sourceName, startTimestamp, endTimestamp, 0);
+      energyConsumed = this.client.getEnergyConsumed(sourceName, startTimestamp, endTimestamp, 0);
+      energy = Math.round(energyConsumed);
     }
     catch (WattDepotClientException e) {
       e.printStackTrace();
       return false;
     }
 
-    if (results.isEmpty()) {
-      System.out.println("No data exists for source " + sourceName + " on " + startTimestamp + ".");
-    }
-    else {
-      String msg = "";
-      System.out.println("Timestamp -- Energy (Wh)");
-      for (SensorData d : results) {
-        msg = d.getTimestamp().getMonth() + "/" + d.getTimestamp().getDay();
-        msg += "/" + d.getTimestamp().getYear() + " " + this.getTime(d) + " -- ";
-        System.out.print(msg);
-        System.out.println(String.format("%.0f",
-            d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
-      }
-    }
+    String msg = result.getTimestamp().getMonth() + "/" + result.getTimestamp().getDay();
+    msg += "/" + result.getTimestamp().getYear() + " ";
+    msg += this.getTime(result) + " -- " + energy + " Wh\n";
+
+    System.out.print(msg);
 
     return true;
   }

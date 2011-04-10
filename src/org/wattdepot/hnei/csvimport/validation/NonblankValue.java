@@ -8,7 +8,7 @@ package org.wattdepot.hnei.csvimport.validation;
 public class NonblankValue implements Validator {
 
   /** Error message. */
-  private static final String errorMessage = "Entry cannot be blank.";
+  private static final String ERROR_MESSAGE = "Entry cannot be blank.";
 
   /**
    * Checks to make sure that an entry is non-blank.
@@ -32,7 +32,7 @@ public class NonblankValue implements Validator {
    */
   @Override
   public String getErrorMessage() {
-    return errorMessage;
+    return ERROR_MESSAGE;
   }
 
 }
