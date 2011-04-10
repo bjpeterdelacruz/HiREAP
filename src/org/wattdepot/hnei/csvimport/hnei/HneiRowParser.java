@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.hnei;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

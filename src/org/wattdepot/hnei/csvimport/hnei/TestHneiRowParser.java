@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.hnei;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;

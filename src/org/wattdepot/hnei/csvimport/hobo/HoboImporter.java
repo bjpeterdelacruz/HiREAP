@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.hobo;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.hnei.csvimport.Importer;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import au.com.bytecode.opencsv.CSVReader;
 

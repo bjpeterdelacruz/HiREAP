@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.hnei;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -9,7 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
-import org.wattdepot.datainput.RowParseException;
+import org.wattdepot.hnei.csvimport.Importer;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -75,6 +75,15 @@ public class HneiImporter extends Importer {
   // TODO: Type of data (hourly or daily) should be a property of source, not sensor data.
 
   // TODO: Implement a test for monotonicity in CsvImporter after all data has been imported.
+
+  /**
+   * Returns the row parser used to parse CSV files from HNEI.
+   * 
+   * @return The row parser used to parse CSV files from HNEI.
+   */
+  public HneiRowParser getParser() {
+    return (HneiRowParser) this.parser;
+  }
 
   /**
    * Prints results of parsing CSV file to standard output and log file.
@@ -216,30 +225,24 @@ public class HneiImporter extends Importer {
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
       while ((line = reader.readNext()) != null) {
-        try {
-          if ((data = this.getParser().parseRow(line)) == null) {
-            this.numInvalidEntries++;
+        if ((data = this.getParser().parseRow(line)) == null) {
+          this.numInvalidEntries++;
+        }
+        else {
+          sourceName = line[2] + "-" + line[3];
+          this.setParser(sourceName);
+
+          source = new Source(sourceName, this.username, true);
+          source.addProperty(new Property("accountNumber", line[0]));
+          source.addProperty(new Property("installDate", line[1]));
+          source.addProperty(new Property("meterType", line[4]));
+
+          if (this.process(client, source, data)) {
+            this.numEntriesProcessed++;
           }
           else {
-            sourceName = line[2] + "-" + line[3];
-            this.setParser(sourceName);
-
-            source = new Source(sourceName, this.username, true);
-            source.addProperty(new Property("accountNumber", line[0]));
-            source.addProperty(new Property("installDate", line[1]));
-            source.addProperty(new Property("meterType", line[4]));
-
-            if (this.process(client, source, data)) {
-              this.numEntriesProcessed++;
-            }
-            else {
-              this.numInvalidEntries++;
-            }
+            this.numInvalidEntries++;
           }
-        }
-        catch (RowParseException e) {
-          log.log(Level.SEVERE, "There was a problem parsing the entry for source " + source);
-          this.numInvalidEntries++;
         }
         this.numTotalEntries++;
         if ((++counter % 500) == 0) {

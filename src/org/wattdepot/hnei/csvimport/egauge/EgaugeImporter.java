@@ -1,10 +1,11 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.egauge;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.logging.Logger;
 import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.hnei.csvimport.Importer;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;

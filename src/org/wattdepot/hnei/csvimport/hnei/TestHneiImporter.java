@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.hnei;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
@@ -101,7 +101,7 @@ public class TestHneiImporter {
         { "994515990077", "8/1/1999 8:00:00 AM", "111111", "1", "491", reading, reading, timestamp,
             "0" };
 
-    SensorData data = ((HneiRowParser) TestHneiImporter.importer.parser).parseRow(row);
+    SensorData data = TestHneiImporter.importer.getParser().parseRow(row);
     TestHneiImporter.client.storeSensorData(data);
   }
 

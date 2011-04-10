@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.csvimport.egauge;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -10,6 +10,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.hnei.csvimport.hnei.HneiRowParser;
 import org.wattdepot.hnei.csvimport.validation.NonblankValue;
 import org.wattdepot.hnei.csvimport.validation.NumericValue;
 import org.wattdepot.hnei.csvimport.validation.Validator;
