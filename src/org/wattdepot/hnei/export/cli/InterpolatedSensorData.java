@@ -73,7 +73,7 @@ public class InterpolatedSensorData extends Retriever {
 
     String msg = result.getTimestamp().getMonth() + "/" + result.getTimestamp().getDay();
     msg += "/" + result.getTimestamp().getYear() + " ";
-    msg += this.getTime(result) + " -- " + energy + " Wh\n";
+    msg += this.getTime(result) + "   " + energy + " Wh\n";
 
     System.out.print(msg);
 

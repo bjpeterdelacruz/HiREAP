@@ -5,9 +5,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.wattdepot.client.WattDepotClient;
+import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.resource.property.jaxb.Property;
+import org.wattdepot.resource.source.jaxb.Source;
 
 /**
  * A command-line client for displaying information provided by HNEI that is stored on the WattDepot
@@ -15,7 +19,7 @@ import org.wattdepot.client.WattDepotClient;
  * 
  * @author BJ Peter DeLaCruz
  */
-public class HneiWattDepotCli {
+public class HireapCli {
 
   /** A list of commands that will grab data from the WattDepot server. */
   private Map<String, Retriever> commands;
@@ -25,7 +29,7 @@ public class HneiWattDepotCli {
    * 
    * @param client Used to connect to WattDepot server.
    */
-  public HneiWattDepotCli(WattDepotClient client) {
+  public HireapCli(WattDepotClient client) {
     this.commands = new HashMap<String, Retriever>();
     this.commands.put("all_data", new SourceSensorDatas(client));
     this.commands.put("interpolate", new InterpolatedSensorData(client));
@@ -40,6 +44,8 @@ public class HneiWattDepotCli {
     System.out.println("To use this program, type one of the following commands:\n");
     System.out.println(">> q | quit\nQuits the program.");
     System.out.println(">> h | help\nDisplays this help message.");
+    System.out.println(">> a | all_sources");
+    System.out.println("Displays all sources that are available on the WattDepot server.");
     while (i.hasNext()) {
       System.out.print(i.next().getValue().getHelp());
     }
@@ -68,7 +74,7 @@ public class HneiWattDepotCli {
     }
     System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
 
-    HneiWattDepotCli hneiExporter = new HneiWattDepotCli(client);
+    HireapCli hneiExporter = new HireapCli(client);
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
     String line = null;
@@ -87,24 +93,41 @@ public class HneiWattDepotCli {
         System.exit(1);
       }
 
-      if (command[0].equals("q") || command[0].equals("quit")) {
+      if (command[0].equalsIgnoreCase("q") || command[0].equalsIgnoreCase("quit")) {
         break;
       }
       else if (command[0].equals("h") || command[0].equals("help")) {
         hneiExporter.getHelp();
       }
-      else if (command[0].equals("all_data") && command.length == 4) {
+      else if (command[0].equalsIgnoreCase("all_data") && command.length == 4) {
         String a = "all_data";
         if (!hneiExporter.commands.get(a).getSensorData(command[1], command[2], command[3],
             command[3])) {
           System.exit(1);
         }
       }
-      else if (command[0].equals("interpolate") && command.length == 4) {
+      else if (command[0].equalsIgnoreCase("interpolate") && command.length == 4) {
         String a = "interpolate";
         if (!hneiExporter.commands.get(a).getSensorData(command[1], command[2], command[3],
             command[3])) {
           System.exit(1);
+        }
+      }
+      else if ((command[0].equalsIgnoreCase("all_sources") || command[0].equalsIgnoreCase("a"))
+          && command.length == 1) {
+        try {
+          List<Source> sources = client.getSources();
+          for (Source s : sources) {
+            System.out.print(s.getName() + " :");
+            for (Property p : s.getProperties().getProperty()) {
+              System.out.print(" [[key : " + p.getKey() + "] [value : " + p.getValue() + "]]");
+            }
+            System.out.println();
+          }
+        }
+        catch (WattDepotClientException e) {
+          System.out.println(e);
+          break;
         }
       }
       else {

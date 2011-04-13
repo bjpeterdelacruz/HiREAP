@@ -4,9 +4,13 @@ import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KEY;
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.logging.Logger;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
 /**
@@ -16,19 +20,32 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
  */
 public class TestHneiRowParser {
 
+  private static HneiRowParser parser;
+
   /** Displays the message <code>data is null</code>. */
-  public static final String NULL_MESSAGE = "data is null";
+  private static final String NULL_MESSAGE = "data is null";
+
+  /** Name of test source. */
+  private static final String SOURCE_NAME = "1726570-1";
 
   /**
-   * Returns a new HneiRowParser object.
-   * 
-   * @return A new HneiRowParser object.
+   * Reads in URI, username, and password from properties file, starts up the WattDepot server, and
+   * then stores a test source.
    */
-  private HneiRowParser setupParser() {
-    HneiRowParser parser =
-        new HneiRowParser("HneiRowParser", "http://localhost:8182/wattdepot/", "1951005-1", null);
-    parser.log = Logger.getLogger(HneiImporter.class.getName());
-    return parser;
+  @BeforeClass
+  public static void setup() {
+    DataInputClientProperties props = null;
+    try {
+      props = new DataInputClientProperties();
+    }
+    catch (IOException e) {
+      System.out.println(e);
+      fail();
+    }
+
+    String uri = props.get(WATTDEPOT_URI_KEY);
+    TestHneiRowParser.parser = new HneiRowParser("TestHneiRowParser", uri, SOURCE_NAME, null);
+    TestHneiRowParser.parser.log = Logger.getLogger(HneiRowParser.class.getName());
   }
 
   /**
@@ -49,7 +66,7 @@ public class TestHneiRowParser {
   @Test
   public void testInvalidRowLength() {
     String[] row = new String[5];
-    SensorData data = setupParser().parseRow(row);
+    SensorData data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
   }
 
@@ -59,21 +76,20 @@ public class TestHneiRowParser {
   @Test
   public void testNoReadings() {
     String[] row = setupRow();
-    HneiRowParser parser = setupParser();
 
     row[5] = "NO READING";
-    SensorData data = parser.parseRow(row);
+    SensorData data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
     row[5] = "35958";
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     assertNotNull("data is not null", data);
     row[6] = "no reading";
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
     row[6] = "035958";
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     assertNotNull("data is not null", data);
-    assertEquals("number of readings is 2", 2, parser.getNumNoReadings());
+    assertEquals("number of readings is 2", 2, TestHneiRowParser.parser.getNumNoReadings());
   }
 
   /**
@@ -82,19 +98,19 @@ public class TestHneiRowParser {
   @Test
   public void testInvalidFields() {
     String[] row = setupRow();
-    HneiRowParser parser = setupParser();
 
     row[2] = "";
-    SensorData data = parser.parseRow(row);
+    SensorData data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
     row[2] = null;
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
     row[2] = "Z33";
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
-    assertEquals("number of blank values is 2", 2, parser.getNumBlankValues());
-    assertEquals("number of non-numeric values is 1", 1, parser.getNumNonnumericValues());
+    assertEquals("number of blank values is 2", 2, TestHneiRowParser.parser.getNumBlankValues());
+    int result = TestHneiRowParser.parser.getNumNonnumericValues();
+    assertEquals("number of non-numeric values is 1", 1, result);
   }
 
   /**
@@ -103,10 +119,9 @@ public class TestHneiRowParser {
   @Test
   public void testValidDates() {
     String[] row = setupRow();
-    HneiRowParser parser = setupParser();
 
     try {
-      parser.formatDate.parse(row[1]);
+      TestHneiRowParser.parser.formatDate.parse(row[1]);
     }
     catch (ParseException e) {
       fail();
@@ -114,7 +129,7 @@ public class TestHneiRowParser {
 
     row[1] = "8/1/2009 12:00:00 AM";
     try {
-      parser.formatDateTime.parse(row[1]);
+      TestHneiRowParser.parser.formatDateTime.parse(row[1]);
     }
     catch (ParseException e) {
       fail();
@@ -127,24 +142,24 @@ public class TestHneiRowParser {
   @Test
   public void testDataProperties() {
     String[] row = setupRow();
-    HneiRowParser parser = setupParser();
-    SensorData data = parser.parseRow(row);
+    SensorData data = TestHneiRowParser.parser.parseRow(row);
 
     // Check number of properties.
     assertEquals("size is 1", 1, data.getProperties().getProperty().size());
     // Check source name.
     String mtu = row[2];
     String port = row[3];
-    String sourceName = parser.getServerUri() + "sources/" + mtu + "-" + port;
+    String sourceName = TestHneiRowParser.parser.getServerUri() + "sources/" + mtu + "-" + port;
     assertEquals("sourceName is " + sourceName, sourceName, data.getSource());
     // Check if energy data is valid.
     row[6] = "-777";
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     assertNull(NULL_MESSAGE, data);
     // Check if energy data is stored in SensorData object.
     row[6] = "1000";
-    data = parser.parseRow(row);
+    data = TestHneiRowParser.parser.parseRow(row);
     double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
     assertEquals("energy is " + energy, new Double(1000000.0), new Double(energy));
   }
+
 }

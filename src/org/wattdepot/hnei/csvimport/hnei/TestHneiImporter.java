@@ -1,8 +1,9 @@
 package org.wattdepot.hnei.csvimport.hnei;
 
-import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
-import java.io.IOException;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.junit.After;
@@ -10,6 +11,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.datainput.DataInputClientProperties;
+import org.wattdepot.hnei.csvimport.validation.Entry;
+import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_PASSWORD_KEY;
@@ -37,20 +40,38 @@ public class TestHneiImporter {
   /** Name of test source. */
   private static final String SOURCE_NAME = "111111-1";
 
+  /** MTU of test source. */
+  private static final String MTU = "111111";
+
+  /** Start date. */
+  private static final String START_DATE = "1999-01-01T06:00:00.000-10:00";
+
+  /** End date. */
+  private static final String END_DATE = "1999-12-31T23:59:59.000-10:00";
+
+  /** Some test data. */
+  private static final String[][] SAMPLE_DATA =
+      {
+          { "994103718077", "8/1/2008", MTU, "1", "491", "35641", "035641", "7/1/1999 11:36:35 PM",
+              "0" },
+          { "994103718078", "8/2/2008", MTU, "1", "492", "35640", "035640", "7/1/1999 10:35:13 PM",
+              "0" },
+          { "994103718079", "8/3/2008", MTU, "1", "493", "35638", "035638", "7/1/1999 9:33:51 PM",
+              "0" },
+          { "994103718080", "8/4/2008", MTU, "1", "494", "35636", "035636", "7/1/1999 8:32:29 PM",
+              "0" },
+          { "994103718081", "8/5/2008", MTU, "1", "495", "35633", "035633", "7/1/1999 7:31:07 PM",
+              "0" } };
+
   /**
-   * Reads in URI, username, and password from properties file, starts up the WattDepot server, and
-   * then stores a test source.
+   * Reads in URI, username, and password from a properties file, connects to a WattDepot server,
+   * and then stores a test source.
+   * 
+   * @throws Exception if unable to connect to WattDepot server.
    */
   @BeforeClass
-  public static void setup() {
-    DataInputClientProperties props = null;
-    try {
-      props = new DataInputClientProperties();
-    }
-    catch (IOException e) {
-      System.out.println(e);
-      fail();
-    }
+  public static void setup() throws Exception {
+    DataInputClientProperties props = new DataInputClientProperties();
 
     String uri = props.get(WATTDEPOT_URI_KEY);
     String username = props.get(WATTDEPOT_USERNAME_KEY);
@@ -60,7 +81,7 @@ public class TestHneiImporter {
     if (!TestHneiImporter.client.isAuthenticated() || !TestHneiImporter.client.isHealthy()) {
       System.out.println("Is authenticated? " + TestHneiImporter.client.isAuthenticated());
       System.out.println("Is healthy? " + TestHneiImporter.client.isHealthy());
-      fail();
+      throw new Exception();
     }
     TestHneiImporter.importer = new HneiImporter(null, uri, username, password, false);
     // Store test source on WattDepot server.
@@ -74,11 +95,8 @@ public class TestHneiImporter {
    */
   @After
   public void deleteData() throws Exception {
-    String startTimestamp = "1999-01-01T00:00:00.000-10:00";
-    String endTimestamp = "1999-12-31T11:59:59.000-10:00";
-
-    XMLGregorianCalendar startTstamp = Tstamp.makeTimestamp(startTimestamp);
-    XMLGregorianCalendar endTstamp = Tstamp.makeTimestamp(endTimestamp);
+    XMLGregorianCalendar startTstamp = Tstamp.makeTimestamp(START_DATE);
+    XMLGregorianCalendar endTstamp = Tstamp.makeTimestamp(END_DATE);
 
     List<SensorData> datas =
         TestHneiImporter.client.getSensorDatas(SOURCE_NAME, startTstamp, endTstamp);
@@ -157,4 +175,98 @@ public class TestHneiImporter {
     System.out.println(TestHneiImporter.client.getEnergyConsumed(SOURCE_NAME, startTstamp,
         endTstamp, 60));
   }
+
+  /**
+   * Passes if sensor data is successfully stored on WattDepot server.
+   * 
+   * @throws Exception if there are any problems.
+   */
+  @Test
+  public void testNumberOfDataImported() throws Exception {
+    SensorData[] datas = new SensorData[SAMPLE_DATA.length];
+
+    for (int idx = 0; idx < SAMPLE_DATA.length; idx++) {
+      datas[idx] = TestHneiImporter.importer.getParser().parseRow(SAMPLE_DATA[idx]);
+      assertNotNull("data is not null", datas[idx]);
+      TestHneiImporter.importer.process(TestHneiImporter.client, datas[idx]);
+    }
+
+    XMLGregorianCalendar firstTstamp = Tstamp.makeTimestamp(START_DATE);
+    XMLGregorianCalendar secondTstamp = Tstamp.makeTimestamp(END_DATE);
+
+    List<SensorData> results =
+        TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp);
+    assertEquals("results is 5", 5, results.size());
+  }
+
+  /**
+   * Passes if energy is monotonically increasing.
+   * 
+   * @throws Exception if there are any problems.
+   */
+  @Test
+  public void testValidData() throws Exception {
+    SensorData[] datas = new SensorData[SAMPLE_DATA.length];
+
+    for (int idx = 0; idx < SAMPLE_DATA.length; idx++) {
+      datas[idx] = TestHneiImporter.importer.getParser().parseRow(SAMPLE_DATA[idx]);
+      assertNotNull("data is not null", datas[idx]);
+      TestHneiImporter.importer.process(TestHneiImporter.client, datas[idx]);
+    }
+
+    XMLGregorianCalendar firstTstamp = Tstamp.makeTimestamp(START_DATE);
+    XMLGregorianCalendar secondTstamp = Tstamp.makeTimestamp(END_DATE);
+
+    List<SensorData> results =
+        TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp);
+    assertEquals("results is 5", 5, results.size());
+
+    MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue();
+    validator.setDatas(results);
+    Entry entry = null;
+    for (SensorData d : datas) {
+      entry = new Entry(SOURCE_NAME, null, d.getTimestamp(), null);
+      validator.setCurrentData(d);
+      assertTrue("data is monotonically increasing", validator.validateEntry(entry));
+    }
+  }
+
+  /**
+   * Passes if energy is not monotonically increasing.
+   * 
+   * @throws Exception if there are any problems.
+   */
+  @Test
+  public void testInvalidData() throws Exception {
+    SensorData[] datas = new SensorData[SAMPLE_DATA.length];
+
+    for (int idx = 0, reading = 50000; idx < SAMPLE_DATA.length; idx++, reading++) {
+      SAMPLE_DATA[idx][6] = Integer.toString(reading);
+      datas[idx] = TestHneiImporter.importer.getParser().parseRow(SAMPLE_DATA[idx]);
+      assertNotNull("data is not null", datas[idx]);
+      TestHneiImporter.importer.process(TestHneiImporter.client, datas[idx]);
+    }
+
+    XMLGregorianCalendar firstTstamp = Tstamp.makeTimestamp(START_DATE);
+    XMLGregorianCalendar secondTstamp = Tstamp.makeTimestamp(END_DATE);
+
+    List<SensorData> results =
+        TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp);
+    assertEquals("results is 5", 5, results.size());
+
+    MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue();
+    validator.setDatas(results);
+    Entry entry = null;
+    for (int idx = 0; idx < SAMPLE_DATA.length; idx++) {
+      entry = new Entry(SOURCE_NAME, null, results.get(idx).getTimestamp(), null);
+      validator.setCurrentData(results.get(idx));
+      if (idx > 0) {
+        assertFalse("data is not monotonically increasing", validator.validateEntry(entry));
+      }
+      else {
+        assertTrue("data is monotonically increasing", validator.validateEntry(entry));
+      }
+    }
+  }
+
 }

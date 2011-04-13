@@ -108,12 +108,15 @@ public class CsvImporter {
     String packageName = "org.wattdepot.hnei.csvimport";
 
     if (cl.getOptionValue("d").equals("hnei")) {
+      packageName += ".hnei";
       csvFileType = "Hnei";
     }
     else if (cl.getOptionValue("d").equals("egauge")) {
+      packageName += ".egauge";
       csvFileType = "Egauge";
     }
     else if (cl.getOptionValue("d").equals("hobo")) {
+      packageName += ".hobo";
       csvFileType = "Hobo";
     }
 

@@ -31,8 +31,8 @@ public class Entry implements Comparable<Entry> {
    * Creates a new ReadingData object.
    * 
    * @param sourceName Name of source where power is consumed.
+   * @param reading Energy consumed by a source.
    * @param timestamp Timestamp at which reading took place.
-   * @param reading Power consumed by a source.
    * @param mtuId MTU ID.
    */
   public Entry(String sourceName, String reading, XMLGregorianCalendar timestamp, String mtuId) {
