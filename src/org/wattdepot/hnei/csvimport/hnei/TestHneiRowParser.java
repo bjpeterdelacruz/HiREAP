@@ -25,6 +25,7 @@ public class TestHneiRowParser {
   /** Displays the message <code>data is null</code>. */
   private static final String NULL_MESSAGE = "data is null";
 
+  /** Name of test source. */
   private static final String SOURCE_NAME = "1726570-1";
 
   /**

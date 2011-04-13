@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
-import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
@@ -33,11 +32,8 @@ public class EnergyMatrixExporter extends Exporter {
 
   /**
    * Creates a new EnergyMatrixExporter object.
-   * 
-   * @param client Used to grab data from the WattDepot server.
    */
-  public EnergyMatrixExporter(WattDepotClient client) {
-    this.client = client;
+  public EnergyMatrixExporter() {
     this.startTimestamp = null;
     this.endTimestamp = null;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
@@ -191,32 +187,18 @@ public class EnergyMatrixExporter extends Exporter {
    * Command-line program that will generate a CSV file containing energy information for one or
    * more sources over a given time period and at a given sampling interval.
    * 
-   * @param args Server URI, username, and password to connect to the WattDepot server.
+   * @param args One argument to specify whether data for all sources should be exported. 
    */
   public static void main(String[] args) {
-    if (args.length != 3 && args.length != 4) {
-      System.err.println("Command-line arguments not in correct format. Exiting...");
-      System.exit(1);
-    }
-
     boolean getAllSources = true;
-    if (args.length == 4) {
+    if (args.length == 1) {
       getAllSources = false;
     }
 
-    String serverUri = args[0];
-    String username = args[1];
-    String password = args[2];
-
-    WattDepotClient client = new WattDepotClient(serverUri, username, password);
-    if (client.isHealthy() && client.isAuthenticated()) {
-      System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
-    }
-    else {
-      System.err.println("Unable to connect to WattDepot server.");
+    EnergyMatrixExporter output = new EnergyMatrixExporter();
+    if (!output.setup()) {
       System.exit(1);
     }
-    EnergyMatrixExporter output = new EnergyMatrixExporter(client);
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 

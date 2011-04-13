@@ -1,11 +1,9 @@
 package org.wattdepot.hnei.csvimport.hnei;
 
-import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import java.io.IOException;
 import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.junit.After;
@@ -15,7 +13,6 @@ import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.hnei.csvimport.validation.Entry;
 import org.wattdepot.hnei.csvimport.validation.MonotonicallyIncreasingValue;
-import org.wattdepot.hnei.csvimport.validation.Validator;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_PASSWORD_KEY;
@@ -43,41 +40,38 @@ public class TestHneiImporter {
   /** Name of test source. */
   private static final String SOURCE_NAME = "111111-1";
 
+  /** MTU of test source. */
   private static final String MTU = "111111";
 
+  /** Start date. */
   private static final String START_DATE = "1999-01-01T06:00:00.000-10:00";
 
+  /** End date. */
   private static final String END_DATE = "1999-12-31T23:59:59.000-10:00";
 
   /** Some test data. */
-  private static final String[][] SAMPLE_DATA = {
-      { "994103718077", "8/1/2008", MTU, "1", "491", "35641", "035641",
-          "7/1/1999 11:36:35 PM", "0" },
-      { "994103718078", "8/2/2008", MTU, "1", "492", "35640", "035640",
-          "7/1/1999 10:35:13 PM", "0" },
-      { "994103718079", "8/3/2008", MTU, "1", "493", "35638", "035638", "7/1/1999 9:33:51 PM",
-          "0" },
-      { "994103718080", "8/4/2008", MTU, "1", "494", "35636", "035636", "7/1/1999 8:32:29 PM",
-          "0" },
-      { "994103718081", "8/5/2008", MTU, "1", "495", "35633", "035633", "7/1/1999 7:31:07 PM",
-          "0" } };
+  private static final String[][] SAMPLE_DATA =
+      {
+          { "994103718077", "8/1/2008", MTU, "1", "491", "35641", "035641", "7/1/1999 11:36:35 PM",
+              "0" },
+          { "994103718078", "8/2/2008", MTU, "1", "492", "35640", "035640", "7/1/1999 10:35:13 PM",
+              "0" },
+          { "994103718079", "8/3/2008", MTU, "1", "493", "35638", "035638", "7/1/1999 9:33:51 PM",
+              "0" },
+          { "994103718080", "8/4/2008", MTU, "1", "494", "35636", "035636", "7/1/1999 8:32:29 PM",
+              "0" },
+          { "994103718081", "8/5/2008", MTU, "1", "495", "35633", "035633", "7/1/1999 7:31:07 PM",
+              "0" } };
 
   /**
-   * Reads in URI, username, and password from properties file, starts up the WattDepot server, and
-   * then stores a test source.
+   * Reads in URI, username, and password from a properties file, connects to a WattDepot server,
+   * and then stores a test source.
    * 
    * @throws Exception if unable to connect to WattDepot server.
    */
   @BeforeClass
   public static void setup() throws Exception {
-    DataInputClientProperties props = null;
-    try {
-      props = new DataInputClientProperties();
-    }
-    catch (IOException e) {
-      System.out.println(e);
-      fail();
-    }
+    DataInputClientProperties props = new DataInputClientProperties();
 
     String uri = props.get(WATTDEPOT_URI_KEY);
     String username = props.get(WATTDEPOT_USERNAME_KEY);
@@ -227,10 +221,12 @@ public class TestHneiImporter {
         TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp);
     assertEquals("results is 5", 5, results.size());
 
-    Validator validator = new MonotonicallyIncreasingValue(TestHneiImporter.client);
+    MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue();
+    validator.setDatas(results);
     Entry entry = null;
     for (SensorData d : datas) {
       entry = new Entry(SOURCE_NAME, null, d.getTimestamp(), null);
+      validator.setCurrentData(d);
       assertTrue("data is monotonically increasing", validator.validateEntry(entry));
     }
   }
@@ -258,10 +254,12 @@ public class TestHneiImporter {
         TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp);
     assertEquals("results is 5", 5, results.size());
 
-    Validator validator = new MonotonicallyIncreasingValue(TestHneiImporter.client);
+    MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue();
+    validator.setDatas(results);
     Entry entry = null;
     for (int idx = 0; idx < SAMPLE_DATA.length; idx++) {
       entry = new Entry(SOURCE_NAME, null, results.get(idx).getTimestamp(), null);
+      validator.setCurrentData(results.get(idx));
       if (idx > 0) {
         assertFalse("data is not monotonically increasing", validator.validateEntry(entry));
       }

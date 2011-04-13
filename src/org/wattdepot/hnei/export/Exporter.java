@@ -1,5 +1,8 @@
 package org.wattdepot.hnei.export;
 
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_PASSWORD_KEY;
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KEY;
+import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_USERNAME_KEY;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,6 +15,7 @@ import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
@@ -64,6 +68,35 @@ public abstract class Exporter {
    * Option to print only the most relevant information or all information in SensorData objects.
    */
   protected boolean printVerbose;
+
+  /**
+   * Reads in URI, username, and password from a properties file, connects to a WattDepot server,
+   * and then stores a test source.
+   * 
+   * @return true if connection is established, false otherwise.
+   */
+  public boolean setup() {
+    DataInputClientProperties props = null;
+    try {
+      props = new DataInputClientProperties();
+    }
+    catch (IOException e) {
+      System.out.println(e);
+      return false;
+    }
+
+    String uri = props.get(WATTDEPOT_URI_KEY);
+    String username = props.get(WATTDEPOT_USERNAME_KEY);
+    String password = props.get(WATTDEPOT_PASSWORD_KEY);
+
+    this.client = new WattDepotClient(uri, username, password);
+    if (!this.client.isAuthenticated() || !this.client.isHealthy()) {
+      System.out.println("Is authenticated? " + this.client.isAuthenticated());
+      System.out.println("Is healthy? " + this.client.isHealthy());
+      return false;
+    }
+    return true;
+  }
 
   /**
    * Gets a date from the user via the command-line.
