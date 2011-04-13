@@ -75,10 +75,10 @@ public class SourceSensorDatas extends Retriever {
     }
     else {
       String msg = "";
-      System.out.println("Timestamp -- Energy (Wh)");
+      System.out.println("Timestamp            Energy (Wh)");
       for (SensorData d : results) {
         msg = d.getTimestamp().getMonth() + "/" + d.getTimestamp().getDay();
-        msg += "/" + d.getTimestamp().getYear() + " " + this.getTime(d) + " -- ";
+        msg += "/" + d.getTimestamp().getYear() + " " + this.getTime(d) + "   ";
         System.out.print(msg);
         System.out.println(String.format("%.0f",
             d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE)));
