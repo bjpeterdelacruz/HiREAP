@@ -4,6 +4,9 @@ import static org.junit.Assert.fail;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_PASSWORD_KEY;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KEY;
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_USERNAME_KEY;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -99,6 +102,49 @@ public class HireapDataValidator {
   }
 
   /**
+   * Prints a string of sources whose sensor data are not monotonically increasing, along with the
+   * timestamps for those data to a CSV file.
+   * 
+   * @param startTime Start date.
+   * @param endTime End date.
+   * @return True if successful, false otherwise.
+   */
+  public boolean printData(XMLGregorianCalendar startTime, XMLGregorianCalendar endTime) {
+    String outputFilename = startTime + "_" + endTime + ".csv";
+    File outputFile = new File(outputFilename);
+    outputFile.setWritable(true);
+    BufferedWriter writer = null;
+    boolean success = true;
+
+    try {
+      writer = new BufferedWriter(new FileWriter(outputFile));
+
+      String result = this.validateData(startTime, endTime);
+      if (result == null) {
+        throw new IOException();
+      }
+
+      writer.write(result);
+      System.out.println(result);
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      success = false;
+    }
+    finally {
+      try {
+        writer.close();
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+        success = false;
+      }
+    }
+
+    return success;
+  }
+
+  /**
    * A command-line program that finds all sources whose sensor data are not monotonically
    * increasing for a given time period and then returns a string of those sources along with
    * timestamps for those data.
@@ -115,8 +161,9 @@ public class HireapDataValidator {
       XMLGregorianCalendar startTime = Tstamp.makeTimestamp("2010-01-01T06:00:00.000-10:00");
       XMLGregorianCalendar endTime = Tstamp.makeTimestamp("2011-04-01T06:00:00.000-10:00");
 
-      String results = validator.validateData(startTime, endTime);
-      System.out.println(results);
+      if (!validator.printData(startTime, endTime)) {
+        System.exit(1);
+      }
     }
     catch (Exception e) {
       e.printStackTrace();

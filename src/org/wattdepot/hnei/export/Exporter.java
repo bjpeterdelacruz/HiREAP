@@ -61,9 +61,6 @@ public abstract class Exporter {
   /** Specifies the granularity of the data: hourly, daily, weekly, or monthly. */
   protected String granularity;
 
-  /**  */
-  protected int multiplier;
-
   /**
    * Option to print only the most relevant information or all information in SensorData objects.
    */
