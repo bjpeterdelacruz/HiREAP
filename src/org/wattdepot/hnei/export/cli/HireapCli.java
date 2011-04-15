@@ -3,6 +3,7 @@ package org.wattdepot.hnei.export.cli;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.hnei.export.SourceComparator;
 import org.wattdepot.resource.property.jaxb.Property;
 import org.wattdepot.resource.source.jaxb.Source;
 
@@ -117,6 +119,7 @@ public class HireapCli {
           && command.length == 1) {
         try {
           List<Source> sources = client.getSources();
+          Collections.sort(sources, new SourceComparator());
           for (Source s : sources) {
             System.out.print(s.getName() + " :");
             for (Property p : s.getProperties().getProperty()) {

@@ -90,19 +90,31 @@ public class SensorDataTypeSetter {
         System.out.println("Setting type of data stored on " + s.getName() + "...");
         List<SensorData> datas =
             this.client.getSensorDatas(s.getName(), this.startTimestamp, this.endTimestamp);
-        if (datas.size() > 1) {
-          s.addProperty(new Property("hourly", "true"));
-          this.client.storeSource(s, true);
+
+        int numDays = 0;
+        if (!datas.isEmpty()) {
+          XMLGregorianCalendar start = datas.get(0).getTimestamp();
+          XMLGregorianCalendar end = datas.get(datas.size() - 1).getTimestamp();
+          numDays = Tstamp.daysBetween(start, end) + 1;
+        }
+
+        s.getProperties().getProperty().clear();
+        s.addProperty(new Property(Source.SUPPORTS_ENERGY_COUNTERS, "true"));
+
+        if (datas.size() > numDays) {
+          s.addProperty(new Property("dataType", "hourly"));
           System.out.println(s.getName() + ": [hourly]");
         }
-        else if (datas.size() == 1) {
-          s.addProperty(new Property("daily", "true"));
-          this.client.storeSource(s, true);
+        else if (datas.size() <= numDays && !datas.isEmpty()) {
+          s.addProperty(new Property("dataType", "daily"));
           System.out.println(s.getName() + ": [daily]");
         }
         else {
+          s.addProperty(new Property("dataType", "n/a"));
           System.out.println("No sensor data exists for " + s.getName());
         }
+
+        this.client.storeSource(s, true);
       }
     }
     catch (JAXBException e) {
@@ -122,17 +134,23 @@ public class SensorDataTypeSetter {
    * @return True if input is successful, false otherwise.
    */
   public boolean getDate() {
-    System.out.print("Please enter a date in the format mm/dd/yyyy (e.g. 2/1/2011): ");
-    String command = null;
-
     try {
       BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+      String command = null;
+
+      System.out.print("Please enter a start date in the format mm/dd/yyyy (e.g. 2/1/2011): ");
       if ((command = br.readLine()) == null) {
         System.out.println("Error encountered while trying to read in start timestamp.");
         return false;
       }
       this.startTimestamp = Tstamp.makeTimestamp(this.formatDate.parse(command).getTime());
-      this.endTimestamp = Tstamp.incrementDays(Tstamp.incrementSeconds(this.startTimestamp, -1), 1);
+
+      System.out.print("Please enter an end date in the format mm/dd/yyyy (e.g. 2/1/2011): ");
+      if ((command = br.readLine()) == null) {
+        System.out.println("Error encountered while trying to read in end timestamp.");
+        return false;
+      }
+      this.endTimestamp = Tstamp.makeTimestamp(this.formatDate.parse(command).getTime());
     }
     catch (ParseException e) {
       e.printStackTrace();
@@ -156,6 +174,7 @@ public class SensorDataTypeSetter {
     if (!setter.setup() || !setter.getDate() || !setter.processSources()) {
       System.exit(1);
     }
+    System.out.println("Finished updating source information!");
   }
 
 }
