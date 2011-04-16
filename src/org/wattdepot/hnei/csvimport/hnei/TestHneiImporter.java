@@ -140,11 +140,11 @@ public class TestHneiImporter {
     this.putData("7/1/1999 6:00:00 AM", "3000");
     this.putData("7/11/1999 6:00:00 AM", "6000");
 
-    assertEquals("number of data is 2", 2,
-        TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp).size());
+    assertEquals("number of data is 2", 2, TestHneiImporter.client.getSensorDatas(SOURCE_NAME,
+        firstTstamp, secondTstamp).size());
     this.deleteData();
-    assertEquals("number of data is 0", 0,
-        TestHneiImporter.client.getSensorDatas(SOURCE_NAME, firstTstamp, secondTstamp).size());
+    assertEquals("number of data is 0", 0, TestHneiImporter.client.getSensorDatas(SOURCE_NAME,
+        firstTstamp, secondTstamp).size());
   }
 
   /**
@@ -174,6 +174,8 @@ public class TestHneiImporter {
     System.out.println();
     System.out.println(TestHneiImporter.client.getEnergyConsumed(SOURCE_NAME, startTstamp,
         endTstamp, 60));
+    assertEquals("data is 30K", 300000.0, TestHneiImporter.client.getEnergyConsumed(SOURCE_NAME,
+        startTstamp, endTstamp, 60), 0.1);
   }
 
   /**

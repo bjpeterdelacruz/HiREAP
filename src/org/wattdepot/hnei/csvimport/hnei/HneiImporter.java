@@ -59,8 +59,6 @@ public class HneiImporter extends Importer {
     this.allNonmonoIncrVals = new ArrayList<Entry>();
     this.importStartTime = 0;
     this.importEndTime = 0;
-    this.validateStartTime = 0;
-    this.validateEndTime = 0;
   }
 
   /**
@@ -71,10 +69,6 @@ public class HneiImporter extends Importer {
   public void setParser(String sourceName) {
     this.parser = new HneiRowParser(this.toolName, this.serverUri, sourceName, log);
   }
-
-  // TODO: Type of data (hourly or daily) should be a property of source, not sensor data.
-
-  // TODO: Implement a test for monotonicity in CsvImporter after all data has been imported.
 
   /**
    * Returns the row parser used to parse CSV files from HNEI.

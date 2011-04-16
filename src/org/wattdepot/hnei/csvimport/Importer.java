@@ -107,12 +107,6 @@ public abstract class Importer {
   /** End time in seconds to import data from CSV file. */
   protected long importEndTime;
 
-  /** Start time in seconds to validate data. */
-  protected long validateStartTime;
-
-  /** End time in seconds to validate data. */
-  protected long validateEndTime;
-
   /**
    * Returns the parser used to get rows from CSV files.
    * 

@@ -68,6 +68,17 @@ public class EnergyMatrixExporter extends Exporter {
     // "\n\n";
     // buffer.append(msg);
 
+    // If sampling interval is less than a day, don't get energy data for daily sources.
+    if (this.samplingInterval < (60 * 24)) {
+      List<Source> temp = new ArrayList<Source>();
+      for (Source s : this.sources) {
+        if ("daily".equals(s.getProperty("dataType"))) {
+          temp.add(s);
+        }
+      }
+      this.sources.removeAll(temp);
+    }
+
     while (Tstamp.lessThan(start, this.endTimestamp)) {
       this.header.add(this.getTimestamp(end.toGregorianCalendar().getTime().getTime()));
       start = Tstamp.incrementMinutes(start, this.samplingInterval);
