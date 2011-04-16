@@ -2,6 +2,7 @@ package org.wattdepot.hnei.export;
 
 import java.io.Serializable;
 import java.util.Comparator;
+import org.wattdepot.hnei.csvimport.SamplingInterval;
 import org.wattdepot.resource.source.jaxb.Source;
 
 /**
@@ -26,8 +27,9 @@ public class SourceComparator implements Comparator<Source>, Serializable {
    */
   @Override
   public int compare(Source s1, Source s2) {
-    return s1.getProperties().getProperty("dataType")
-        .compareTo(s2.getProperties().getProperty("dataType"));
+    String property1 = s1.getProperties().getProperty(SamplingInterval.SAMPLING_INTERVAL);
+    String property2 = s2.getProperties().getProperty(SamplingInterval.SAMPLING_INTERVAL);
+    return property1.compareTo(property2);
   }
 
 }

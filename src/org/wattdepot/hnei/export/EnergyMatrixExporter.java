@@ -14,6 +14,7 @@ import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClientException;
+import org.wattdepot.hnei.csvimport.SamplingInterval;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
@@ -29,6 +30,9 @@ public class EnergyMatrixExporter extends Exporter {
 
   /** Header row for matrix. */
   protected List<String> header;
+
+  /** */
+  private static final int SAMPLING_INTERVAL_THRESHOLD = 60 * 24;
 
   /**
    * Creates a new EnergyMatrixExporter object.
@@ -68,11 +72,12 @@ public class EnergyMatrixExporter extends Exporter {
     // "\n\n";
     // buffer.append(msg);
 
-    // If sampling interval is less than a day, don't get energy data for daily sources.
-    if (this.samplingInterval < (60 * 24)) {
+    // If the sampling interval is less than a certain threshold, don't get energy data for
+    // particular sources, e.g. daily sources.
+    if (this.samplingInterval < SAMPLING_INTERVAL_THRESHOLD) {
       List<Source> temp = new ArrayList<Source>();
       for (Source s : this.sources) {
-        if ("daily".equals(s.getProperty("dataType"))) {
+        if (s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(SamplingInterval.DAILY)) {
           temp.add(s);
         }
       }
@@ -198,7 +203,7 @@ public class EnergyMatrixExporter extends Exporter {
    * Command-line program that will generate a CSV file containing energy information for one or
    * more sources over a given time period and at a given sampling interval.
    * 
-   * @param args One argument to specify whether data for all sources should be exported. 
+   * @param args One argument to specify whether data for all sources should be exported.
    */
   public static void main(String[] args) {
     boolean getAllSources = true;

@@ -41,9 +41,6 @@ public class SensorDataTypeSetter {
   /** End date for time interval. */
   private XMLGregorianCalendar endTimestamp;
 
-  /** Name of key in properties list. */
-  private static final String DATA_TYPE = "dataType";
-
   /**
    * Creates a new SensorDataTypeSetter object.
    */
@@ -96,7 +93,7 @@ public class SensorDataTypeSetter {
 
         // Remove old property.
         for (Property prop : s.getProperties().getProperty()) {
-          if (prop.getKey().equals(DATA_TYPE)) {
+          if (prop.getKey().equals(SamplingInterval.SAMPLING_INTERVAL)) {
             s.getProperties().getProperty().remove(prop);
             break;
           }
@@ -111,15 +108,16 @@ public class SensorDataTypeSetter {
 
         // Create new property.
         if (datas.size() > numDays) {
-          s.addProperty(new Property(DATA_TYPE, "hourly"));
-          System.out.println(s.getName() + ": [hourly]");
+          s.addProperty(new Property(SamplingInterval.SAMPLING_INTERVAL, SamplingInterval.HOURLY));
+          System.out.println(s.getName() + ": [" + SamplingInterval.HOURLY + "]");
         }
         else if (datas.size() <= numDays && !datas.isEmpty()) {
-          s.addProperty(new Property(DATA_TYPE, "daily"));
-          System.out.println(s.getName() + ": [daily]");
+          s.addProperty(new Property(SamplingInterval.SAMPLING_INTERVAL, SamplingInterval.DAILY));
+          System.out.println(s.getName() + ": [" + SamplingInterval.DAILY + "]");
         }
-        else {
-          s.addProperty(new Property(DATA_TYPE, "n/a"));
+        else if (datas.isEmpty()) {
+          s.addProperty(new Property(SamplingInterval.SAMPLING_INTERVAL,
+              SamplingInterval.NOT_AVAILABLE));
           System.out.println("No sensor data exists for " + s.getName());
         }
 

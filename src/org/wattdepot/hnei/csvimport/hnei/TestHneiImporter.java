@@ -165,6 +165,7 @@ public class TestHneiImporter {
     XMLGregorianCalendar startTstamp = Tstamp.makeTimestamp(startTimestamp);
     XMLGregorianCalendar endTstamp = Tstamp.makeTimestamp(endTimestamp);
 
+    // TODO: Parse row, store data on server, get data from server, and verify.
     this.putData("7/1/1999 6:00:00 AM", "3000");
     this.putData("7/11/1999 6:00:00 AM", "6000");
 
