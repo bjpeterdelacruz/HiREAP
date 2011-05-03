@@ -42,7 +42,7 @@ public class MonotonicallyIncreasingValue implements Validator {
    * timestamp is not greater than nor equal to the reading at the timestamp that was passed in to
    * this validator.
    * 
-   * @param entry The entry to validate.
+   * @param entry The entry to validate (not used by this method).
    * @return True if the entry at the current timestamp is less than the entry at the previous
    * timestamp, false otherwise.
    */

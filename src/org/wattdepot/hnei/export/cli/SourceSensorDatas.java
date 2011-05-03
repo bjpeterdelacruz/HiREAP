@@ -95,8 +95,8 @@ public class SourceSensorDatas extends Retriever {
    */
   @Override
   public String getHelp() {
-    String msg = ">> all_data [source] [start] [end] [total_energy|energy|power]\n";
-    msg += "Retrieves all energy/power data ";
+    String msg = ">> all_data [source] [start] [end]\n";
+    msg += "Retrieves all total energy data ";
     msg += "for a source at the given interval (hh/DD/yyyy).\n\n";
     return msg;
   }

@@ -14,7 +14,6 @@ import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClientException;
-import org.wattdepot.hnei.csvimport.SamplingInterval;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.resource.source.jaxb.Source;
 import org.wattdepot.util.tstamp.Tstamp;
@@ -31,8 +30,8 @@ public class EnergyMatrixExporter extends Exporter {
   /** Header row for matrix. */
   protected List<String> header;
 
-  /** */
-  private static final int SAMPLING_INTERVAL_THRESHOLD = 60 * 24;
+  /** If sampling interval is less than threshold, do not include daily sources in output file. */
+  //private static final int SAMPLING_INTERVAL_THRESHOLD = 60 * 24;
 
   /**
    * Creates a new EnergyMatrixExporter object.
@@ -74,14 +73,24 @@ public class EnergyMatrixExporter extends Exporter {
 
     // If the sampling interval is less than a certain threshold, don't get energy data for
     // particular sources, e.g. daily sources.
-    if (this.samplingInterval < SAMPLING_INTERVAL_THRESHOLD) {
+    //if (this.samplingInterval < SAMPLING_INTERVAL_THRESHOLD) {
+      //List<Source> temp = new ArrayList<Source>();
+      //for (Source s : this.sources) {
+        //if (s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(SamplingInterval.DAILY)) {
+          //temp.add(s);
+        //}
+      //}
+      //this.sources.removeAll(temp);
+    //}
+
+    if (!this.sourceDataType.equals(ALL_DATA)) {
       List<Source> temp = new ArrayList<Source>();
       for (Source s : this.sources) {
-        if (s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(SamplingInterval.DAILY)) {
+        if (!s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(this.sourceDataType)) {
           temp.add(s);
         }
       }
-      this.sources.removeAll(temp);
+      this.sources.removeAll(temp);      
     }
 
     while (Tstamp.lessThan(start, this.endTimestamp)) {
@@ -196,7 +205,7 @@ public class EnergyMatrixExporter extends Exporter {
   @Override
   public String getInfo(SensorData data) {
     double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
-    return String.format("%d", Math.round(energy / 1000.0));
+    return String.format("%.2f", energy / 1000.0);
   }
 
   /**
@@ -206,9 +215,9 @@ public class EnergyMatrixExporter extends Exporter {
    * @param args One argument to specify whether data for all sources should be exported.
    */
   public static void main(String[] args) {
-    boolean getAllSources = true;
-    if (args.length == 1) {
-      getAllSources = false;
+    boolean getAllSources = false;
+    if (args.length == 1 && "-all".equals(args[0])) {
+      getAllSources = true;
     }
 
     EnergyMatrixExporter output = new EnergyMatrixExporter();
@@ -225,10 +234,13 @@ public class EnergyMatrixExporter extends Exporter {
       System.exit(1);
     }
 
-    if (!output.getDates(br) || !output.getSamplingInterval(br) || !output.printData()) {
+    if (!output.getDates(br) || !output.getSamplingInterval(br)) {
       System.exit(1);
     }
 
+    if (!output.getDataType(br) || !output.printData()) {
+      System.exit(1);
+    }
   }
 
 }

@@ -2,7 +2,6 @@ package org.wattdepot.hnei.export;
 
 import java.io.Serializable;
 import java.util.Comparator;
-import org.wattdepot.hnei.csvimport.SamplingInterval;
 import org.wattdepot.resource.source.jaxb.Source;
 
 /**

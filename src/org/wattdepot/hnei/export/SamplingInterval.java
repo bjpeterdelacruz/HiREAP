@@ -1,4 +1,4 @@
-package org.wattdepot.hnei.csvimport;
+package org.wattdepot.hnei.export;
 
 /**
  * This class contains constants for setting the sampling interval property for sources.

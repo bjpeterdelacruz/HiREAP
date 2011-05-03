@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.wattdepot.client.ResourceNotFoundException;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.hnei.export.SourceComparator;
@@ -44,10 +45,12 @@ public class HireapCli {
     Iterator<Entry<String, Retriever>> i = this.commands.entrySet().iterator();
     System.out.println("\n**********\n");
     System.out.println("To use this program, type one of the following commands:\n");
-    System.out.println(">> q | quit\nQuits the program.");
-    System.out.println(">> h | help\nDisplays this help message.");
+    System.out.println(">> q | quit\nQuits the program.\n");
+    System.out.println(">> h | help\nDisplays this help message.\n");
+    System.out
+        .println(">> (p | properties) [source]\nDisplays the properties for a given source.\n");
     System.out.println(">> a | all_sources");
-    System.out.println("Displays all sources that are available on the WattDepot server.");
+    System.out.println("Displays all sources that are available on the WattDepot server.\n");
     while (i.hasNext()) {
       System.out.print(i.next().getValue().getHelp());
     }
@@ -113,6 +116,22 @@ public class HireapCli {
         if (!hneiExporter.commands.get(a).getSensorData(command[1], command[2], command[3],
             command[3])) {
           System.exit(1);
+        }
+      }
+      else if ((command[0].equalsIgnoreCase("properties") || command[0].equalsIgnoreCase("p"))
+          && command.length == 2) {
+        try {
+          List<Property> properties = client.getSource(command[1]).getProperties().getProperty();
+          for (Property p : properties) {
+            System.out.println(p.getKey() + ": " + p.getValue());
+          }
+        }
+        catch (ResourceNotFoundException e) {
+          System.out.println("Source not found. Please try again.");
+        }
+        catch (WattDepotClientException e) {
+          System.out.println(e);
+          break;
         }
       }
       else if ((command[0].equalsIgnoreCase("all_sources") || command[0].equalsIgnoreCase("a"))

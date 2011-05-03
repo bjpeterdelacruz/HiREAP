@@ -58,8 +58,11 @@ public abstract class Exporter {
   /** Sampling interval in minutes for energy consumed. */
   protected int samplingInterval;
 
-  /** Specifies the granularity of the data: hourly, daily, weekly, or monthly. */
-  protected String granularity;
+  /** Specifies the type of data: hourly, daily, weekly, or monthly. */
+  protected String sourceDataType;
+
+  /** Gets all data from all sources on the WattDepot server. */
+  protected static final String ALL_DATA = "all";
 
   /**
    * Option to print only the most relevant information or all information in SensorData objects.
@@ -123,6 +126,33 @@ public abstract class Exporter {
     catch (ParseException e) {
       e.printStackTrace();
       return false;
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Gets the type of energy data the user wants: hourly, daily, or all data.
+   * 
+   * @param br Used to get information from the command-line.
+   * @return True if input is successful, false otherwise.
+   */
+  public boolean getDataType(BufferedReader br) {
+    try {
+      this.sourceDataType = "";
+      while (!this.sourceDataType.equals(SamplingInterval.DAILY)
+          && !this.sourceDataType.equals(SamplingInterval.HOURLY)
+          && !this.sourceDataType.equals(ALL_DATA)) {
+        System.out.print("Please enter the type of data for the sources you want to retrieve ");
+        System.out.print("[daily|hourly|all]: ");
+        if ((this.sourceDataType = br.readLine()) == null) {
+          System.out.println("Error encountered while trying to read in start timestamp.");
+          return false;
+        }
+      }
     }
     catch (IOException e) {
       e.printStackTrace();
@@ -352,17 +382,6 @@ public abstract class Exporter {
    */
   public String getTimestamp(long milliseconds) {
     return this.formatDateTime.format(milliseconds);
-  }
-
-  /**
-   * Gets the granularity of the data from the user: hourly, daily, weekly, or monthly.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getGranularity(BufferedReader br) {
-    // TODO: Get granularity. Set multiplier based on granularity.
-    return true;
   }
 
   /**
