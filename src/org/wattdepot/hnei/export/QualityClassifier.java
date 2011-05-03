@@ -19,30 +19,51 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class QualityClassifier extends EnergyMatrixExporter {
 
+  /** */
+  protected XMLGregorianCalendar dateBeforeStartDate;
+
+  /** */
+  protected XMLGregorianCalendar dateAfterEndDate;
+
+  /**
+   * Grade A sources do not include invalid data and contain energy data from dateBeforeStartDate to
+   * dateAfterEndDate.
+   */
+  protected Set<Source> gradeASources;
+
+  /**
+   * Grade B sources include those that have missing data from dateBeforeStartDate to startTimestamp
+   * and from endTimestamp to dateAfterEndDate.
+   */
+  protected Set<Source> gradeBSources;
+
+  /**
+   * Grade C sources include those that have missing data within time interval and non-monotonically
+   * increasing data.
+   */
+  protected Set<Source> gradeCSources;
+
+  /**
+   * Creates a new QualityClassifier object.
+   */
+  public QualityClassifier() {
+    this.gradeASources = new HashSet<Source>();
+    this.gradeBSources = new HashSet<Source>();
+    this.gradeCSources = new HashSet<Source>();
+  }
+
   /**
    * Verifies all data for all sources for a given time period.
    * 
    * @return True if successful, false otherwise.
    */
   public boolean verifyData() {
-    XMLGregorianCalendar dateBeforeStartDate = Tstamp.incrementDays(this.startTimestamp, -1);
-    XMLGregorianCalendar dateAfterEndDate = Tstamp.incrementDays(this.endTimestamp, 1);
+    this.dateBeforeStartDate = Tstamp.incrementDays(this.startTimestamp, -1);
+    this.dateAfterEndDate = Tstamp.incrementDays(this.endTimestamp, 1);
 
-    // Run validation tests. First, test if all data points for a source are monotonically
-    // increasing.
     MonotonicallyIncreasingValue validator = new MonotonicallyIncreasingValue();
 
     List<Source> sources = null;
-    //
-    //
-    Set<Source> gradeASources = new HashSet<Source>();
-    // Grade B sources include those that have missing data from dateBeforeStartDate to
-    // startTimestamp and from endTimestamp to dateAfterEndDate.
-    Set<Source> gradeBSources = new HashSet<Source>();
-    // Grade C sources include those that have missing data within time interval and
-    // non-monotonically increasing data.
-    Set<Source> gradeCSources = new HashSet<Source>();
-
     List<SensorData> sensorDatas = null;
     Set<SensorData> invalidDatas = new HashSet<SensorData>();
 
@@ -54,46 +75,63 @@ public class QualityClassifier extends EnergyMatrixExporter {
         System.out.println(" [" + (count++) + " of " + sources.size() + "]...");
 
         sensorDatas =
-            this.client.getSensorDatas(s.getName(), dateBeforeStartDate, dateAfterEndDate);
+            this.client
+                .getSensorDatas(s.getName(), this.dateBeforeStartDate, this.dateAfterEndDate);
+
         if (sensorDatas.isEmpty()) {
-          gradeCSources.add(s);
+          this.gradeCSources.add(s);
         }
         else {
+          // If there is some missing data, e.g. start timestamp is May 2, 2011, but first timestamp
+          // is May 5, 2011, flag the source as Grade C.
           if (Tstamp.daysBetween(sensorDatas.get(0).getTimestamp(), this.startTimestamp) != 0
               && Tstamp.greaterThan(sensorDatas.get(0).getTimestamp(), this.startTimestamp)) {
-            gradeCSources.add(s);
+            this.gradeCSources.add(s);
           }
-          else if (Tstamp.daysBetween(sensorDatas.get(sensorDatas.size() - 1).getTimestamp(),
-              this.endTimestamp) != 0
-              && Tstamp.lessThan(sensorDatas.get(sensorDatas.size() - 1).getTimestamp(),
-                  this.endTimestamp)) {
-            gradeCSources.add(s);
+
+          XMLGregorianCalendar timestamp = sensorDatas.get(sensorDatas.size() - 1).getTimestamp();
+
+          // For example, end timestamp is May 31, 2011, but last timestamp is May 20, 2011.
+          if (Tstamp.daysBetween(timestamp, this.endTimestamp) != 0
+              && Tstamp.lessThan(timestamp, this.endTimestamp)) {
+            this.gradeCSources.add(s);
           }
           else {
+            // Test if all data points for a source are non-monotonically increasing. If a data
+            // point is not, then add source to list of Grade C sources.
             validator.setDatas(sensorDatas);
             for (SensorData d : sensorDatas) {
               validator.setCurrentData(d);
               if (!validator.validateEntry(null)) {
-                System.out.println("Source " + s.getName()
-                    + " has non-monotonically increasing data...");
+                String msg = "Source " + s.getName() + " has non-monotonically increasing data...";
+                System.out.println(msg);
                 invalidDatas.add(d);
-                gradeCSources.add(s);
+                this.gradeCSources.add(s);
               }
             }
 
+            // If a source contains daily data, make sure there is at least one data point per day
+            // in given time interval.
+            
+
+            // Verify that data exists before start timestamp and also after end timestamp so
+            // that WattDepot can interpolate data for given time interval.
             sensorDatas =
-                this.client.getSensorDatas(s.getName(), dateBeforeStartDate, this.startTimestamp);
+                this.client.getSensorDatas(s.getName(), this.dateBeforeStartDate,
+                    this.startTimestamp);
+
             if (sensorDatas.isEmpty()) {
-              gradeBSources.add(s);
+              this.gradeBSources.add(s);
             }
             else {
               sensorDatas =
-                  this.client.getSensorDatas(s.getName(), this.endTimestamp, dateAfterEndDate);
+                  this.client.getSensorDatas(s.getName(), this.endTimestamp, this.dateAfterEndDate);
+
               if (sensorDatas.isEmpty()) {
-                gradeBSources.add(s);
+                this.gradeBSources.add(s);
               }
               else {
-                gradeASources.add(s);
+                this.gradeASources.add(s);
               }
             }
           }
@@ -104,11 +142,14 @@ public class QualityClassifier extends EnergyMatrixExporter {
       return false;
     }
 
-    if (!invalidDatas.isEmpty()) {
-      for (SensorData d : sensorDatas) {
-        System.out.println(d.getSource() + ": "
-            + d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE));
-      }
+    System.out.println("Grade B sources:\n-----------------");
+    for (Source s : this.gradeBSources) {
+      System.out.println(s.getName());
+    }
+
+    System.out.println("Grade C sources:\n-----------------");
+    for (Source s : this.gradeCSources) {
+      System.out.println(s.getName());
     }
 
     return true;
@@ -122,20 +163,15 @@ public class QualityClassifier extends EnergyMatrixExporter {
    */
   public static void main(String[] args) {
     QualityClassifier classifier = new QualityClassifier();
-    if (!classifier.setup()) {
+    if (!classifier.setup() && !classifier.getAllSources()) {
       System.exit(1);
     }
 
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-    if (!classifier.getAllSources()) {
-      System.exit(1);
-    }
-
     if (!classifier.getDates(br) || !classifier.verifyData()) {
       System.exit(1);
     }
-
   }
 
 }
