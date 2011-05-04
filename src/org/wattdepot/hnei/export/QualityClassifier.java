@@ -336,8 +336,8 @@ public class QualityClassifier extends EnergyMatrixExporter {
     try {
       writer = new BufferedWriter(new FileWriter(outputFile));
 
-      writer.write(Tstamp.incrementDays(this.startTimestamp, -1) + "\n");
-      writer.write(Tstamp.incrementDays(this.endTimestamp, 1) + "\n" + "\n");
+      writer.write(this.startTimestamp + "\n");
+      writer.write(this.endTimestamp + "\n\n");
 
       for (Source s : sources) {
         writer.write(s.getName() + "\n");
