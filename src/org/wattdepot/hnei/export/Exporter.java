@@ -12,6 +12,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
@@ -27,6 +31,15 @@ import org.wattdepot.util.tstamp.Tstamp;
  * @author BJ Peter DeLaCruz
  */
 public abstract class Exporter {
+
+  /** Log file for this application. */
+  protected Logger log;
+
+  /** Output logging information to a text file. */
+  protected FileHandler txtFile;
+
+  /** Name of the application on the command line. */
+  protected String toolName;
 
   /** Used to grab data from the WattDepot server. */
   protected WattDepotClient client;
@@ -96,6 +109,48 @@ public abstract class Exporter {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Sets up the logger and file handler.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  public boolean setupLogger() {
+    long timeInMillis = Calendar.getInstance().getTimeInMillis();
+    String filename = this.toolName + "-" + timeInMillis + ".log";
+
+    this.log.setLevel(Level.INFO);
+    try {
+      this.txtFile = new FileHandler(filename);
+      this.txtFile.setFormatter(new SimpleFormatter());
+    }
+    catch (IOException e) {
+      System.err.println("Unable to create file handler for logger.");
+      return false;
+    }
+    catch (SecurityException e) {
+      return false;
+    }
+
+    System.out.println("Log file name: " + filename);
+    this.log.addHandler(this.txtFile);
+    return true;
+  }
+
+  /**
+   * Closes the log file.
+   * 
+   * @return True if successful, false otherwise.
+   */
+  public boolean closeLogger() {
+    try {
+      this.txtFile.close();
+      return true;
+    }
+    catch (SecurityException e) {
+      return false;
+    }
   }
 
   /**
@@ -327,8 +382,8 @@ public abstract class Exporter {
       for (Source s : this.sources) {
         data = client.getSensorDatas(s.getName(), this.startTimestamp, this.endTimestamp);
         if (!data.isEmpty()) {
-          for (SensorData datum : data) {
-            buffer.append(this.getInfo(datum));
+          for (SensorData d : data) {
+            buffer.append(this.getInfo(d));
           }
         }
       }
@@ -394,9 +449,9 @@ public abstract class Exporter {
   /**
    * Returns information stored in a SensorData object.
    * 
-   * @param datum SensorData object from which to extract information.
+   * @param data SensorData object from which to extract information.
    * @return Information stored in the SensorData object.
    */
-  public abstract String getInfo(SensorData datum);
+  public abstract String getInfo(SensorData data);
 
 }

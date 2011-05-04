@@ -164,7 +164,7 @@ public class HneiImporter extends Importer {
       msg = "Number of entries processed per second is immeasurable.\n\n";
       buffer.append(msg);
     }
-    log.log(Level.INFO, buffer.toString());
+    this.log.log(Level.INFO, buffer.toString());
     System.out.print(buffer.toString());
   }
 

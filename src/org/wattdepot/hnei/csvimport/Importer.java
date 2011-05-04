@@ -122,11 +122,11 @@ public abstract class Importer {
    * @return True if successful, false otherwise.
    */
   public boolean setupLogger() {
-    log.setLevel(Level.INFO);
+    this.log.setLevel(Level.INFO);
     try {
       long timeInMillis = Calendar.getInstance().getTimeInMillis();
-      txtFile = new FileHandler(toolName + "-" + timeInMillis + ".log");
-      txtFile.setFormatter(new SimpleFormatter());
+      this.txtFile = new FileHandler(this.toolName + "-" + timeInMillis + ".log");
+      this.txtFile.setFormatter(new SimpleFormatter());
     }
     catch (IOException e) {
       System.err.println("Unable to create file handler for logger.");
@@ -135,7 +135,7 @@ public abstract class Importer {
     catch (SecurityException e) {
       return false;
     }
-    log.addHandler(txtFile);
+    this.log.addHandler(this.txtFile);
     return true;
   }
 
@@ -146,7 +146,7 @@ public abstract class Importer {
    */
   public boolean closeLogger() {
     try {
-      txtFile.close();
+      this.txtFile.close();
       return true;
     }
     catch (SecurityException e) {
