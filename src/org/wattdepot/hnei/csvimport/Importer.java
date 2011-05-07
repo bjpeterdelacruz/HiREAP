@@ -230,8 +230,7 @@ public abstract class Importer {
   }
 
   /**
-   * Stores a source on a WattDepot server if it does not exist yet and then stores sensor data for
-   * that source.
+   * Stores a source on a WattDepot server if it does not exist yet.
    * 
    * @param client WattDepotClient used to connect to the WattDepot server.
    * @param source Source that is described by the sensor data.

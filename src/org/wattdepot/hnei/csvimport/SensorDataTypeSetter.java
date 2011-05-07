@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import javax.xml.bind.JAXBException;
@@ -42,11 +43,51 @@ public class SensorDataTypeSetter {
   /** End date for time interval. */
   private XMLGregorianCalendar endTimestamp;
 
+  /** List of WattDepot sources. */
+  private List<Source> sources;
+
   /**
    * Creates a new SensorDataTypeSetter object.
    */
   public SensorDataTypeSetter() {
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    this.sources = new ArrayList<Source>();
+  }
+
+  /**
+   * Sets the WattDepot client.
+   * 
+   * @param client WattDepot client.
+   */
+  public void setClient(WattDepotClient client) {
+    this.client = client;
+  }
+
+  /**
+   * Sets the list of WattDepot sources.
+   * 
+   * @param sources List of WattDepot sources.
+   */
+  public void setSources(List<Source> sources) {
+    this.sources = sources;
+  }
+
+  /**
+   * Sets the start date.
+   * 
+   * @param startTimestamp Start date.
+   */
+  public void setStartTimestamp(XMLGregorianCalendar startTimestamp) {
+    this.startTimestamp = startTimestamp;
+  }
+
+  /**
+   * Sets the end date.
+   * 
+   * @param endTimestamp End date.
+   */
+  public void setEndTimestamp(XMLGregorianCalendar endTimestamp) {
+    this.endTimestamp = endTimestamp;
   }
 
   /**
@@ -75,6 +116,13 @@ public class SensorDataTypeSetter {
       System.out.println("Is healthy? " + this.client.isHealthy());
       return false;
     }
+    try {
+      this.sources = this.client.getSources();
+    }
+    catch (WattDepotClientException e) {
+      e.printStackTrace();
+      return false;
+    }
     return true;
   }
 
@@ -86,8 +134,8 @@ public class SensorDataTypeSetter {
    */
   public boolean processSources() {
     try {
-      List<Source> sources = this.client.getSources();
-      for (Source s : sources) {
+      // List<Source> sources = this.client.getSources();
+      for (Source s : this.sources) {
         System.out.println("Setting type of data stored on " + s.getName() + "...");
         List<SensorData> datas =
             this.client.getSensorDatas(s.getName(), this.startTimestamp, this.endTimestamp);

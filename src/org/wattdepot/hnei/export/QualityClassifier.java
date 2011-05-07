@@ -6,10 +6,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -48,25 +49,25 @@ public class QualityClassifier extends EnergyMatrixExporter {
    * Grade A sources do not include invalid data and contain energy data from dateBeforeStartDate to
    * dateAfterEndDate.
    */
-  protected Set<Source> gradeA_DailySources;
+  protected List<String> gradeA_DailySources;
 
   /**
    * Grade A sources do not include invalid data and contain energy data from dateBeforeStartDate to
    * dateAfterEndDate.
    */
-  protected Set<Source> gradeA_HourlySources;
+  protected List<String> gradeA_HourlySources;
 
   /**
    * Grade B sources include those that have missing data from dateBeforeStartDate to startTimestamp
    * and from endTimestamp to dateAfterEndDate.
    */
-  protected Set<Source> gradeB_Sources;
+  protected List<String> gradeB_Sources;
 
   /**
    * Grade C sources include those that have missing data within time interval and non-monotonically
    * increasing data.
    */
-  protected Set<Source> gradeC_Sources;
+  protected List<String> gradeC_Sources;
 
   /**
    * Creates a new QualityClassifier object.
@@ -78,10 +79,11 @@ public class QualityClassifier extends EnergyMatrixExporter {
     this.gradeA_HourlyFilename = "gradeA_hourly";
     this.gradeB_Filename = "gradeB";
     this.gradeC_Filename = "gradeC";
-    this.gradeA_DailySources = new TreeSet<Source>();
-    this.gradeA_HourlySources = new TreeSet<Source>();
-    this.gradeB_Sources = new TreeSet<Source>();
-    this.gradeC_Sources = new TreeSet<Source>();
+    this.sources = new ArrayList<Source>();
+    this.gradeA_DailySources = new ArrayList<String>();
+    this.gradeA_HourlySources = new ArrayList<String>();
+    this.gradeB_Sources = new ArrayList<String>();
+    this.gradeC_Sources = new ArrayList<String>();
   }
 
   /**
@@ -123,7 +125,7 @@ public class QualityClassifier extends EnergyMatrixExporter {
         if (sensorDatas.isEmpty()) {
           String msg = "No data exists for source " + s.getName() + " between ";
           msg += this.dateBeforeStartDate + " and " + this.dateAfterEndDate + ".\n\n";
-          this.gradeC_Sources.add(s);
+          this.gradeC_Sources.add(s.getName() + "\tNo data exists between time interval.");
           this.log.log(Level.INFO, msg);
           continue;
         }
@@ -137,7 +139,8 @@ public class QualityClassifier extends EnergyMatrixExporter {
           String msg = "Missing data for source " + s.getName() + ".\n";
           msg += "  Start timestamp: " + this.startTimestamp + "\n";
           msg += "  First timestamp: " + timestamp + "\n" + "\n";
-          this.gradeC_Sources.add(s);
+          this.gradeC_Sources.add(s.getName()
+              + "\tMissing some data points after start date. First timestamp: " + timestamp + ".");
           this.log.log(Level.INFO, msg);
           continue;
         }
@@ -150,7 +153,8 @@ public class QualityClassifier extends EnergyMatrixExporter {
           String msg = "Missing data for source " + s.getName() + ".\n";
           msg += "  End timestamp: " + this.endTimestamp + "\n";
           msg += "  Last timestamp: " + timestamp + "\n" + "\n";
-          this.gradeC_Sources.add(s);
+          this.gradeC_Sources.add(s.getName()
+              + "\tMissing some data points before end date. Last timestamp: " + timestamp + ".");
           this.log.log(Level.INFO, msg);
           continue;
         }
@@ -163,8 +167,10 @@ public class QualityClassifier extends EnergyMatrixExporter {
           validator.setCurrentData(d);
           if (!validator.validateEntry(null)) {
             invalidDatas.add(d);
-            this.gradeC_Sources.add(s);
+            this.gradeC_Sources.add(s.getName()
+                + "\tContains data that are not monotonically increasing.");
             containsInvalidData = true;
+            break;
           }
         }
 
@@ -181,58 +187,58 @@ public class QualityClassifier extends EnergyMatrixExporter {
           }
           this.log.log(Level.INFO, buffer.toString());
           invalidDatas.clear();
+          continue;
         }
 
-        if (!this.gradeC_Sources.contains(s)) {
-          // Verify that data exists before start timestamp and also after end timestamp so
-          // that WattDepot can interpolate data for given time interval.
-          timestamp = Tstamp.incrementSeconds(this.startTimestamp, -1);
+        // Verify that data exists before start timestamp and also after end timestamp so
+        // that WattDepot can interpolate data for given time interval.
+        timestamp = Tstamp.incrementSeconds(this.startTimestamp, -1);
 
-          List<SensorData> beforeSensorDatas =
-              this.client.getSensorDatas(s.getName(), this.dateBeforeStartDate, timestamp);
+        List<SensorData> beforeSensorDatas =
+            this.client.getSensorDatas(s.getName(), this.dateBeforeStartDate, timestamp);
 
-          if (beforeSensorDatas.isEmpty()) {
-            String msg = "No data exists for source " + s.getName() + " between ";
-            msg += this.dateBeforeStartDate + " and " + timestamp + ".\n\n";
-            this.gradeB_Sources.add(s);
-            this.log.log(Level.INFO, msg);
-            continue;
+        if (beforeSensorDatas.isEmpty()) {
+          String msg = "No data exists for source " + s.getName() + " between ";
+          msg += this.dateBeforeStartDate + " and " + timestamp + ".\n\n";
+          this.gradeB_Sources.add(s.getName() + "\tNo data points exist before " + timestamp + ".");
+          this.log.log(Level.INFO, msg);
+          continue;
+        }
+
+        timestamp = Tstamp.incrementSeconds(this.endTimestamp, 1);
+
+        List<SensorData> afterSensorDatas =
+            this.client.getSensorDatas(s.getName(), timestamp, this.dateAfterEndDate);
+
+        if (afterSensorDatas.isEmpty()) {
+          String msg = "No data exists for source " + s.getName() + " between ";
+          msg += timestamp + " and " + this.dateAfterEndDate + ".\n\n";
+          this.gradeB_Sources.add(s.getName() + "\tNo data points exist after " + timestamp + ".");
+          this.log.log(Level.INFO, msg);
+          continue;
+        }
+
+        // If source contains daily data, verify that there is only one data point per day for
+        // each day in time interval.
+        if (s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(SamplingInterval.DAILY)) {
+          int expectedNumDailyData =
+              Tstamp.daysBetween(this.dateBeforeStartDate, this.dateAfterEndDate) + 1;
+          if (expectedNumDailyData == sensorDatas.size()) {
+            this.gradeA_DailySources.add(s.getName());
           }
-
-          timestamp = Tstamp.incrementSeconds(this.endTimestamp, 1);
-
-          List<SensorData> afterSensorDatas =
-              this.client.getSensorDatas(s.getName(), timestamp, this.dateAfterEndDate);
-
-          if (afterSensorDatas.isEmpty()) {
-            String msg = "No data exists for source " + s.getName() + " between ";
-            msg += timestamp + " and " + this.dateAfterEndDate + ".\n\n";
-            this.gradeB_Sources.add(s);
-            this.log.log(Level.INFO, msg);
-            continue;
-          }
-
-          // If source contains daily data, verify that there is only one data point per day for
-          // each day in time interval.
-          if (s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(SamplingInterval.DAILY)) {
-            int expectedNumDailyData =
-                Tstamp.daysBetween(this.dateBeforeStartDate, this.dateAfterEndDate) + 1;
-            if (expectedNumDailyData == sensorDatas.size()) {
-              this.gradeA_DailySources.add(s);
-            }
-            else {
-              numIncompleteDailyData++;
-              String msg = "Number of daily data for source " + s.getName() + " is not equal to ";
-              msg += expectedNumDailyData + " [number of daily data found: ";
-              msg += sensorDatas.size() + "].\n\n";
-              this.gradeB_Sources.add(s);
-              this.log.log(Level.INFO, msg);
-            }
-          }
-          // TODO: If source contains hourly data...
           else {
-            this.gradeA_HourlySources.add(s);
+            numIncompleteDailyData++;
+            String msg = "Number of daily data for source " + s.getName() + " is not equal to ";
+            msg += expectedNumDailyData + " [number of daily data found: ";
+            msg += sensorDatas.size() + "].\n\n";
+            this.gradeB_Sources.add(s.getName() + "\tExpected " + expectedNumDailyData
+                + " data points. Found " + sensorDatas.size() + ".");
+            this.log.log(Level.INFO, msg);
           }
+        }
+        // TODO: If source contains hourly data...
+        else {
+          this.gradeA_HourlySources.add(s.getName());
         }
       }
     }
@@ -249,6 +255,11 @@ public class QualityClassifier extends EnergyMatrixExporter {
     timeInterval +=
         "-" + this.endTimestamp.getYear() + "." + this.endTimestamp.getMonth() + "."
             + this.endTimestamp.getDay() + ".txt";
+
+    Collections.sort(this.gradeA_DailySources);
+    Collections.sort(this.gradeA_HourlySources);
+    Collections.sort(this.gradeB_Sources);
+    Collections.sort(this.gradeC_Sources);
 
     String filename = this.gradeA_DailyFilename + "-" + timeInterval;
     if (!writeResultsToFile(filename, this.gradeA_DailySources)) {
@@ -329,7 +340,7 @@ public class QualityClassifier extends EnergyMatrixExporter {
    * @param sources List of all sources stored on the WattDepot server.
    * @return True if successful, false otherwise.
    */
-  public boolean writeResultsToFile(String outputFilename, Set<Source> sources) {
+  public boolean writeResultsToFile(String outputFilename, List<String> sources) {
     File outputFile = new File(outputFilename);
     outputFile.setWritable(true);
     BufferedWriter writer = null;
@@ -339,8 +350,8 @@ public class QualityClassifier extends EnergyMatrixExporter {
       writer.write(this.startTimestamp + "\n");
       writer.write(this.endTimestamp + "\n\n");
 
-      for (Source s : sources) {
-        writer.write(s.getName() + "\n");
+      for (String s : sources) {
+        writer.write(s + "\n");
       }
 
       writer.close();

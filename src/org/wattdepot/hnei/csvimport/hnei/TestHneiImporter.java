@@ -24,7 +24,7 @@ import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_USERNA
  * 
  * <ul>
  * <li>If sources and sample data can be stored on the WattDepot server.</li>
- * <li>If the energy consumed computation is computed correctly.</li>
+ * <li></li>
  * </ul>
  * 
  * @author BJ Peter DeLaCruz
