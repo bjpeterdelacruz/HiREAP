@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    id 'checkstyle'
+    id 'pmd'
+    id 'com.github.spotbugs' version '4.7.2'
+    id 'jacoco'
+}
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+checkstyle {
+    toolVersion = '9.0.1'
+    checkstyleMain.enabled = false
+    checkstyleTest.enabled = false
+}
+
+pmd {
+    toolVersion = '6.40.0'
+}
+
+pmdMain {
+    ruleSetFiles = files("config/pmd/ruleset-config.xml")
+    ruleSets = []
+    enabled = false
+}
+
+pmdTest {
+    ruleSetFiles = files("config/pmd/ruleset-config-test.xml")
+    ruleSets = []
+}
+
+spotbugs {
+    toolVersion = '4.4.2'
+}
+
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugsTest {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'commons-cli', name: 'commons-cli', version: '1.5.0'
+    implementation group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1'
+
+    implementation files('lib/opencsv.jar')
+    implementation files('lib/wattdepot-lib-client.jar')
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.junit.vintage:junit-vintage-engine:5.8.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation 'org.junit.platform:junit-platform-runner:1.8.1'
+}
+
+jar {
+    from configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+wrapper {
+    gradleVersion = '7.2'
+}
+
+test {
+    useJUnitPlatform()
+}
