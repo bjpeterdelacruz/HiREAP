@@ -8,6 +8,7 @@ import java.util.List;
 import javax.xml.datatype.XMLGregorianCalendar;
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.datainput.DataInputClientProperties;
@@ -20,15 +21,12 @@ import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KE
 import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_USERNAME_KEY;
 
 /**
- * JUnit tests for the HneiImporter class. The tests check:
- * 
- * <ul>
- * <li>If sources and sample data can be stored on the WattDepot server.</li>
- * <li></li>
- * </ul>
+ * JUnit tests for the HneiImporter class. The tests check whether sources and sample data
+ * can be stored on the WattDepot server.
  * 
  * @author BJ Peter DeLaCruz
  */
+@Ignore
 public class TestHneiImporter {
 
   /** Used to store and retrieve sources and data on WattDepot server. */

@@ -11,6 +11,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.datainput.DataInputClientProperties;
@@ -20,11 +21,12 @@ import org.wattdepot.resource.sensordata.jaxb.SensorData;
 import org.wattdepot.util.tstamp.Tstamp;
 
 /**
- * JUnit tests for the QualityClassifier class. The tests check if sources are correctly classified
+ * JUnit tests for the QualityClassifier class. The tests check whether sources are correctly classified
  * as Grade A, Grade B, or Grade C.
  * 
  * @author BJ Peter DeLaCruz
  */
+@Ignore
 public class TestQualityClassifier {
 
   /** Used to store and retrieve sources and data on WattDepot server. */

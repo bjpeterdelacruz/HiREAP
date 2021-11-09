@@ -165,7 +165,7 @@ public class TestHneiRowParser {
     row[6] = "1000";
     data = TestHneiRowParser.parser.parseRow(row);
     double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE);
-    assertEquals("energy is " + energy, new Double(1000000.0), new Double(energy));
+    assertEquals("energy is " + energy, Double.valueOf(1000000.0), Double.valueOf(energy));
   }
 
 }
