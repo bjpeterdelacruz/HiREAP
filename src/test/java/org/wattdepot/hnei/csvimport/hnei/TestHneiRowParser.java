@@ -29,22 +29,11 @@ public class TestHneiRowParser {
   private static final String SOURCE_NAME = "1726570-1";
 
   /**
-   * Reads in URI, username, and password from properties file, starts up the WattDepot server, and
-   * then stores a test source.
+   * Sets up the parser that is used for the tests.
    */
   @BeforeClass
   public static void setup() {
-    DataInputClientProperties props = null;
-    try {
-      props = new DataInputClientProperties();
-    }
-    catch (IOException e) {
-      System.out.println(e);
-      fail();
-    }
-
-    String uri = props.get(WATTDEPOT_URI_KEY);
-    TestHneiRowParser.parser = new HneiRowParser("TestHneiRowParser", uri, SOURCE_NAME, null);
+    TestHneiRowParser.parser = new HneiRowParser("TestHneiRowParser", "http://localhost:9001", SOURCE_NAME, null);
     TestHneiRowParser.parser.log = Logger.getLogger(HneiRowParser.class.getName());
   }
 
@@ -123,23 +112,13 @@ public class TestHneiRowParser {
    * Should pass if the dates in the row are valid.
    */
   @Test
-  public void testValidDates() {
+  public void testValidDates() throws ParseException {
     String[] row = setupRow();
 
-    try {
-      TestHneiRowParser.parser.formatDate.parse(row[1]);
-    }
-    catch (ParseException e) {
-      fail();
-    }
+    TestHneiRowParser.parser.formatDate.parse(row[1]);
 
     row[1] = "8/1/2009 12:00:00 AM";
-    try {
-      TestHneiRowParser.parser.formatDateTime.parse(row[1]);
-    }
-    catch (ParseException e) {
-      fail();
-    }
+    TestHneiRowParser.parser.formatDateTime.parse(row[1]);
   }
 
   /**
