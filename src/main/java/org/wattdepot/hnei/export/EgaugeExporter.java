@@ -2,6 +2,8 @@ package org.wattdepot.hnei.export;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
@@ -39,18 +41,17 @@ public class EgaugeExporter extends Exporter {
    */
   @Override
   public String getInfo(SensorData data) {
-    String str = null;
-    StringBuffer buffer = new StringBuffer();
-    buffer.append(data.getSource().substring(data.getSource().lastIndexOf("/") + 1));
-    str = "," + data.getTimestamp().toString();
-    buffer.append(str);
+    StringBuilder builder = new StringBuilder();
+    builder.append(data.getSource().substring(data.getSource().lastIndexOf("/") + 1));
+    String str = "," + data.getTimestamp().toString();
+    builder.append(str);
     str = "," + data.getProperty(SensorData.POWER_CONSUMED);
-    buffer.append(str);
+    builder.append(str);
     str = "," + data.getProperty("airConditioner") + "," + data.getProperty("waterHeater");
-    buffer.append(str);
+    builder.append(str);
     str = "," + data.getProperty("dryer") + "\n";
-    buffer.append(str);
-    return buffer.toString();
+    builder.append(str);
+    return builder.toString();
   }
 
   /**
@@ -79,7 +80,7 @@ public class EgaugeExporter extends Exporter {
     }
     EgaugeExporter output = new EgaugeExporter(client);
 
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     if (!output.getDates(br) || !output.printData()) {
       System.exit(1);

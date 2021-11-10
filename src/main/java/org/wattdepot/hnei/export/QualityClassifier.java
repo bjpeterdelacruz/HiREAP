@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -79,11 +80,11 @@ public class QualityClassifier extends EnergyMatrixExporter {
     this.gradeA_HourlyFilename = "gradeA_hourly";
     this.gradeB_Filename = "gradeB";
     this.gradeC_Filename = "gradeC";
-    this.sources = new ArrayList<Source>();
-    this.gradeA_DailySources = new ArrayList<String>();
-    this.gradeA_HourlySources = new ArrayList<String>();
-    this.gradeB_Sources = new ArrayList<String>();
-    this.gradeC_Sources = new ArrayList<String>();
+    this.sources = new ArrayList<>();
+    this.gradeA_DailySources = new ArrayList<>();
+    this.gradeA_HourlySources = new ArrayList<>();
+    this.gradeB_Sources = new ArrayList<>();
+    this.gradeC_Sources = new ArrayList<>();
   }
 
   /**
@@ -101,8 +102,7 @@ public class QualityClassifier extends EnergyMatrixExporter {
     int totalHourlySources = 0;
     int numIncompleteDailyData = 0;
     // int numIncompleteHourlyData = 0;
-    List<SensorData> sensorDatas = null;
-    Set<SensorData> invalidDatas = new HashSet<SensorData>();
+    Set<SensorData> invalidDatas = new HashSet<>();
 
     try {
       int count = 1;
@@ -118,7 +118,7 @@ public class QualityClassifier extends EnergyMatrixExporter {
         System.out.print("Validating data for source " + s.getName());
         System.out.println(" [" + (count++) + " of " + this.sources.size() + "]...");
 
-        sensorDatas =
+        var sensorDatas =
             this.client
                 .getSensorDatas(s.getName(), this.dateBeforeStartDate, this.dateAfterEndDate);
 
@@ -175,17 +175,17 @@ public class QualityClassifier extends EnergyMatrixExporter {
         }
 
         if (containsInvalidData) {
-          StringBuffer buffer = new StringBuffer();
+          StringBuilder builder = new StringBuilder();
           String msg = "Source " + s.getName();
           msg += " contains data that are not monotonically increasing:\n";
-          buffer.append(msg);
+          builder.append(msg);
           for (SensorData d : invalidDatas) {
             msg = "  Timestamp: " + d.getTimestamp() + " -- Energy (kWh): ";
-            buffer.append(msg);
+            builder.append(msg);
             msg = d.getPropertyAsDouble(SensorData.ENERGY_CONSUMED_TO_DATE) + "\n";
-            buffer.append(msg);
+            builder.append(msg);
           }
-          this.log.log(Level.INFO, buffer.toString());
+          this.log.log(Level.INFO, builder.toString());
           invalidDatas.clear();
           continue;
         }
@@ -277,11 +277,7 @@ public class QualityClassifier extends EnergyMatrixExporter {
     }
 
     filename = this.gradeC_Filename + "-" + timeInterval;
-    if (!writeResultsToFile(filename, this.gradeC_Sources)) {
-      return false;
-    }
-
-    return true;
+    return writeResultsToFile(filename, this.gradeC_Sources);
   }
 
   /**
@@ -291,10 +287,9 @@ public class QualityClassifier extends EnergyMatrixExporter {
    * @param totalDailySources Total number of daily sources.
    * @param totalHourlySources Total number of hourly sources.
    * @param numIncompleteDailyData Number of daily sources that are missing some data.
-   * @return True if successful, false otherwise.
    */
-  public boolean printStats(int totalDailySources, int totalHourlySources,
-      int numIncompleteDailyData) {
+  public void printStats(int totalDailySources, int totalHourlySources,
+                         int numIncompleteDailyData) {
     String msg = "Grade A sources (daily):\n-----------------\nTotal: ";
     msg += this.gradeA_DailySources.size() + "\n" + "\n";
     this.log.log(Level.INFO, msg);
@@ -321,16 +316,12 @@ public class QualityClassifier extends EnergyMatrixExporter {
     System.out.print(msg);
 
     msg = "Number of daily sources that are missing some data: " + numIncompleteDailyData;
-    msg += String.format("\n\nTotal number of daily sources:  %5d\n", totalDailySources);
-    msg += String.format("Total number of hourly sources: %5d\n", totalHourlySources);
-    msg +=
-        String.format("Total number of sources:        %5d\n\n",
-            (totalDailySources + totalHourlySources));
+    msg += String.format("%n%nTotal number of daily sources:  %5d%n", totalDailySources);
+    msg += String.format("Total number of hourly sources: %5d%n", totalHourlySources);
+    msg += String.format("Total number of sources:        %5d%n%n", (totalDailySources + totalHourlySources));
 
     this.log.log(Level.INFO, msg);
     System.out.print(msg);
-
-    return true;
   }
 
   /**
@@ -341,20 +332,18 @@ public class QualityClassifier extends EnergyMatrixExporter {
    * @return True if successful, false otherwise.
    */
   public boolean writeResultsToFile(String outputFilename, List<String> sources) {
-    File outputFile = new File(outputFilename);
-    outputFile.setWritable(true);
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
+    var outputFile = new File(outputFilename);
+    if (!outputFile.setWritable(true)) {
+      return false;
+    }
 
+    try (var writer = new BufferedWriter(new FileWriter(outputFile, StandardCharsets.UTF_8))) {
       writer.write(this.startTimestamp + "\n");
       writer.write(this.endTimestamp + "\n\n");
 
       for (String s : sources) {
         writer.write(s + "\n");
       }
-
-      writer.close();
     }
     catch (IOException e) {
       e.printStackTrace();
@@ -371,12 +360,12 @@ public class QualityClassifier extends EnergyMatrixExporter {
    * @param args One argument to specify whether data for all sources should be exported.
    */
   public static void main(String[] args) {
-    QualityClassifier classifier = new QualityClassifier();
+    var classifier = new QualityClassifier();
     if (!classifier.setup() || !classifier.setupLogger() || !classifier.getAllSources()) {
       System.exit(1);
     }
 
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    var br = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     if (!classifier.getDates(br) || !classifier.verifyData() || !classifier.closeLogger()) {
       System.exit(1);

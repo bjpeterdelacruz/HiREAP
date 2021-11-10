@@ -1,5 +1,7 @@
 package org.wattdepot.hnei.csvimport.validation;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import javax.xml.datatype.XMLGregorianCalendar;
 
 /**
@@ -84,6 +86,7 @@ public class Entry implements Comparable<Entry> {
    * 
    * @param timestamp Timestamp at which reading took place.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public void setTimestamp(XMLGregorianCalendar timestamp) {
     this.timestamp = timestamp;
   }
@@ -93,6 +96,7 @@ public class Entry implements Comparable<Entry> {
    * 
    * @return Timestamp at which reading took place.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   public XMLGregorianCalendar getTimestamp() {
     return timestamp;
   }

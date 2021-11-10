@@ -3,6 +3,7 @@ package org.wattdepot.hnei.csvimport.hnei;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.logging.Level;
@@ -55,9 +56,9 @@ public class HneiImporter extends Importer {
     this.numTotalEntries = 0;
     this.numDaily = 0;
     this.numHourly = 0;
-    this.entries = new ArrayList<Entry>();
-    this.allSources = new ArrayList<Entry>();
-    this.allNonmonoIncrVals = new ArrayList<Entry>();
+    this.entries = new ArrayList<>();
+    this.allSources = new ArrayList<>();
+    this.allNonmonoIncrVals = new ArrayList<>();
     this.importStartTime = 0;
     this.importEndTime = 0;
   }
@@ -85,70 +86,70 @@ public class HneiImporter extends Importer {
    */
   @Override
   public void printStats() {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder builder = new StringBuilder();
     String msg = "\n\n==================================================\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Statistics\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "--------------------------------------------------\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Filename                           : " + this.filename;
-    buffer.append(msg);
+    builder.append(msg);
     if (!this.entries.isEmpty()) {
       Entry entry = this.entries.get(this.entries.size() - 1);
       XMLGregorianCalendar startTimestamp = entry.getTimestamp();
       msg = "\n\nFirst Entry Date                   : " + startTimestamp.toString();
-      buffer.append(msg);
+      builder.append(msg);
       XMLGregorianCalendar endTimestamp = this.entries.get(0).getTimestamp();
-      buffer.append(msg);
+      builder.append(msg);
       msg = "\nLast Entry Date                    : " + endTimestamp.toString();
-      buffer.append(msg);
+      builder.append(msg);
     }
     msg = "\n\nEntries Processed                  : " + this.numEntriesProcessed + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Invalid Entries                    : " + this.numInvalidEntries + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Percentage of Invalid Entries      : ";
-    buffer.append(msg);
+    builder.append(msg);
     double percentage = ((double) this.numInvalidEntries / (double) this.numTotalEntries) * 100.0;
     msg = String.format("%.2f", percentage) + "%\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Total Number of Entries            : " + this.numTotalEntries;
-    buffer.append(msg);
+    builder.append(msg);
     int numBlankValues = ((HneiRowParser) this.parser).getNumBlankValues();
     msg = "\n\nBlank Values                       : " + numBlankValues + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     int numNonnumericValues = ((HneiRowParser) this.parser).getNumNonnumericValues();
     msg = "Non-numeric Values                 : " + numNonnumericValues + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     int numNoReadings = ((HneiRowParser) this.parser).getNumNoReadings();
     msg = "No Readings                        : " + numNoReadings + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Non-monotonically Increasing Data  : " + this.allNonmonoIncrVals.size() + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     int totalViolations = numNonnumericValues + numNoReadings + numBlankValues;
     totalViolations += this.allNonmonoIncrVals.size();
     msg = "Total Number of Failed Validations : " + totalViolations;
-    buffer.append(msg);
+    builder.append(msg);
     msg = "\n\nNew Sources                        : " + this.numNewSources + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Existing Sources                   : " + this.numExistingSources + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Total Number of Sources            : " + this.numTotalSources;
-    buffer.append(msg);
+    builder.append(msg);
     msg = "\n\nNumber of Hourly Data              : " + this.numHourly + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Number of Daily Data               : " + this.numDaily;
-    buffer.append(msg);
+    builder.append(msg);
     msg = "\n\nNew Data                           : " + this.numNewData + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Existing Data                      : " + this.numExistingData + "\n";
-    buffer.append(msg);
+    builder.append(msg);
     msg = "Total Number of Data Imported      : " + (this.numNewData + this.numExistingData);
-    buffer.append(msg);
+    builder.append(msg);
     String runtime = Importer.getRuntime(this.importStartTime, this.importEndTime);
     msg = "\n\nImport Runtime                     : " + runtime + "\n\n";
-    buffer.append(msg);
+    builder.append(msg);
     try {
       long importRuntime = this.importEndTime - this.importStartTime;
       long numSourcesPerSecond = this.numTotalSources / (importRuntime / 1000);
@@ -159,14 +160,14 @@ public class HneiImporter extends Importer {
       else {
         msg += " entry imported per second.\n\n";
       }
-      buffer.append(msg);
+      builder.append(msg);
     }
     catch (ArithmeticException e) {
       msg = "Number of entries processed per second is immeasurable.\n\n";
-      buffer.append(msg);
+      builder.append(msg);
     }
-    this.log.log(Level.INFO, buffer.toString());
-    System.out.print(buffer.toString());
+    this.log.log(Level.INFO, builder.toString());
+    System.out.print(builder);
   }
 
   /**
@@ -180,16 +181,16 @@ public class HneiImporter extends Importer {
     System.out.println("Running HneiImporter...");
 
     // Open CSV file for reading.
-    CSVReader reader = null;
+    CSVReader reader;
     try {
       int line = 1;
       if (!this.skipFirstRow) {
         line = 0;
       }
       char defaultChar = CSVReader.DEFAULT_QUOTE_CHARACTER;
-      reader = new CSVReader(new FileReader(this.filename), ',', defaultChar, line);
+      reader = new CSVReader(new FileReader(this.filename, StandardCharsets.UTF_8), ',', defaultChar, line);
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       System.err.println("File not found! Exiting...");
       return false;
     }
@@ -208,13 +209,13 @@ public class HneiImporter extends Importer {
       return false;
     }
 
-    SensorData data = null;
-    Source source = null;
+    SensorData data;
+    Source source;
 
     try {
       int counter = 1;
-      String sourceName = null;
-      String[] line = null;
+      String sourceName;
+      String[] line;
 
       System.out.println("Reading in CSV file [" + this.filename + "]...\n");
 
@@ -247,8 +248,7 @@ public class HneiImporter extends Importer {
       this.importEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IOException e) {
-      String msg = "There was a problem reading in the input file:\n" + e.toString();
-      msg += "\n\nExiting...";
+      String msg = "There was a problem reading in the input file:\n" + e.getMessage() + "\n\nExiting...";
       System.err.println(msg);
       log.log(Level.SEVERE, msg);
       return false;
@@ -262,7 +262,7 @@ public class HneiImporter extends Importer {
       return true;
     }
 
-    this.printStats();
+    printStats();
 
     return true;
   }

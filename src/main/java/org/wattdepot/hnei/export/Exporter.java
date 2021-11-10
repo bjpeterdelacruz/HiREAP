@@ -8,6 +8,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -44,9 +45,6 @@ public abstract class Exporter {
   /** Used to grab data from the WattDepot server. */
   protected WattDepotClient client;
 
-  /** List of all sources on the WattDepot server. */
-  protected List<SensorData> sensorDatas;
-
   /** Timestamp used to get first sensor data. */
   protected XMLGregorianCalendar startTimestamp;
 
@@ -78,11 +76,6 @@ public abstract class Exporter {
   protected static final String ALL_DATA = "all";
 
   /**
-   * Option to print only the most relevant information or all information in SensorData objects.
-   */
-  protected boolean printVerbose;
-
-  /**
    * Reads in URI, username, and password from a properties file, connects to a WattDepot server,
    * and then stores a test source.
    * 
@@ -94,7 +87,6 @@ public abstract class Exporter {
       props = new DataInputClientProperties();
     }
     catch (IOException e) {
-      System.out.println(e);
       return false;
     }
 
@@ -178,12 +170,7 @@ public abstract class Exporter {
           Tstamp.makeTimestamp(this.formatDate.parse(command).getTime());
       this.endTimestamp = Tstamp.incrementSeconds(Tstamp.incrementDays(timestamp, 1), -1);
     }
-    catch (ParseException e) {
-      e.printStackTrace();
-      return false;
-    }
-    catch (IOException e) {
-      e.printStackTrace();
+    catch (ParseException | IOException e) {
       return false;
     }
     return true;
@@ -282,35 +269,6 @@ public abstract class Exporter {
   }
 
   /**
-   * Asks the user via the command-line whether to print everything stored in SensorData object.
-   * 
-   * @param br Used to get information from the command-line.
-   * @return True if input is successful, false otherwise.
-   */
-  public boolean getVerboseOption(BufferedReader br) {
-    System.out.print("Verbose output [yes|no]? ");
-    String command = null;
-
-    try {
-      if ((command = br.readLine()) == null) {
-        System.out.println("Error encountered while trying to read in option for verbose output.");
-        return false;
-      }
-      if (command.equalsIgnoreCase("y") || command.equalsIgnoreCase("yes")) {
-        this.printVerbose = true;
-      }
-      else {
-        this.printVerbose = false;
-      }
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      return false;
-    }
-    return true;
-  }
-
-  /**
    * Gets a sampling interval in minutes from the user via the command-line.
    * 
    * @param br Used to get information from the command-line.
@@ -363,18 +321,18 @@ public abstract class Exporter {
 
     File outputFile = new File(today + ".csv");
     outputFile.setWritable(true);
-    BufferedWriter writer = null;
+    BufferedWriter writer;
     try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
+      writer = new BufferedWriter(new FileWriter(outputFile, StandardCharsets.UTF_8));
     }
     catch (IOException e) {
       e.printStackTrace();
       return false;
     }
 
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder builder = new StringBuilder();
 
-    buffer.append(this.getTableHeader());
+    builder.append(this.getTableHeader());
 
     try {
       System.out.println("Fetching data from server... Please wait.");
@@ -383,7 +341,7 @@ public abstract class Exporter {
         data = client.getSensorDatas(s.getName(), this.startTimestamp, this.endTimestamp);
         if (!data.isEmpty()) {
           for (SensorData d : data) {
-            buffer.append(this.getInfo(d));
+            builder.append(this.getInfo(d));
           }
         }
       }
@@ -394,8 +352,8 @@ public abstract class Exporter {
     }
 
     try {
-      writer.write(buffer.toString());
-      System.out.println(buffer.toString());
+      writer.write(builder.toString());
+      System.out.println(builder.toString());
     }
     catch (IOException e) {
       e.printStackTrace();

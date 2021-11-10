@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
@@ -92,12 +93,6 @@ public abstract class Importer {
   /** List of all sources and their MTU IDs, with duplicates. */
   protected List<Entry> allSources;
 
-  /** List of all sources and their MTU IDs, no duplicates. */
-  protected Set<Entry> allMtus;
-
-  /** List of all sources that have multiple MTU IDs. */
-  protected List<Entry> allDuplicateMtus;
-
   /** List of all entries that have values that not monotonically increasing. */
   protected List<Entry> allNonmonoIncrVals;
 
@@ -172,13 +167,7 @@ public abstract class Importer {
       System.out.print(msg);
       log.log(Level.INFO, msg);
     }
-    catch (WattDepotClientException e) {
-      System.err.println(e.toString());
-      log.log(Level.SEVERE, e.toString());
-      return false;
-    }
-    catch (JAXBException e) {
-      System.err.println(e.toString());
+    catch (WattDepotClientException | JAXBException e) {
       log.log(Level.SEVERE, e.toString());
       return false;
     }
@@ -216,13 +205,7 @@ public abstract class Importer {
       msg += " already exists on server.\n";
       log.log(Level.INFO, msg);
     }
-    catch (WattDepotClientException e) {
-      System.err.println(e.toString());
-      log.log(Level.SEVERE, e.toString());
-      return false;
-    }
-    catch (JAXBException e) {
-      System.err.println(e.toString());
+    catch (WattDepotClientException | JAXBException e) {
       log.log(Level.SEVERE, e.toString());
       return false;
     }
@@ -249,13 +232,7 @@ public abstract class Importer {
       }
       this.numTotalSources++;
     }
-    catch (WattDepotClientException e) {
-      System.err.println(e.toString());
-      log.log(Level.SEVERE, e.toString());
-      return false;
-    }
-    catch (JAXBException e) {
-      System.err.println(e.toString());
+    catch (WattDepotClientException | JAXBException e) {
       log.log(Level.SEVERE, e.toString());
       return false;
     }
@@ -279,13 +256,7 @@ public abstract class Importer {
       String msg = "Data at " + data.getTimestamp().toString() + " already exists on server.\n";
       log.log(Level.INFO, msg);
     }
-    catch (WattDepotClientException e) {
-      System.err.println(e.toString());
-      log.log(Level.SEVERE, e.toString());
-      return false;
-    }
-    catch (JAXBException e) {
-      System.err.println(e.toString());
+    catch (WattDepotClientException | JAXBException e) {
       log.log(Level.SEVERE, e.toString());
       return false;
     }
@@ -316,12 +287,7 @@ public abstract class Importer {
   public static String[] getAllCsvFiles(String dirName) {
     File dir = new File(dirName);
 
-    FilenameFilter filter = new FilenameFilter() {
-      public boolean accept(File dir, String name) {
-        return name.startsWith("012658") && name.endsWith("csv");
-      }
-    };
-    return dir.list(filter);
+    return dir.list((dir1, name) -> name.startsWith("012658") && name.endsWith("csv"));
   }
 
   /**
@@ -332,7 +298,7 @@ public abstract class Importer {
    * "quit" to exit program.
    */
   public static String processNextFile(String fname) {
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
     String command = "";
     String msg = "Do you want to process the next file [" + fname + "]";
     msg += "or quit the program [ yes | no | quit ]? ";

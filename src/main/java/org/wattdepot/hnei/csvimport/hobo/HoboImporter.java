@@ -3,6 +3,7 @@ package org.wattdepot.hnei.csvimport.hobo;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -69,16 +70,16 @@ public class HoboImporter extends Importer {
     System.out.println("Running HoboImporter...");
 
     // Open CSV file for reading.
-    CSVReader reader = null;
+    CSVReader reader;
     try {
       int lineno = 1;
       if (!this.skipFirstRow) {
         lineno = 0;
       }
-      FileReader fileReader = new FileReader(this.filename);
+      FileReader fileReader = new FileReader(this.filename, StandardCharsets.UTF_8);
       reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, lineno);
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       System.err.println("File not found! Exiting...");
       return false;
     }
@@ -98,17 +99,16 @@ public class HoboImporter extends Importer {
       return false;
     }
 
-    SensorData data = null;
+    SensorData data;
 
     try {
       int counter = 1;
-      String[] line = null;
 
       System.out.println("Reading in CSV file...\n");
 
       this.importStartTime = Calendar.getInstance().getTimeInMillis();
       for (int i = 0; i < 100; i++) {
-        line = reader.readNext();
+        var line = reader.readNext();
       // while ((line = reader.readNext()) != null) {
         this.setParser(sourceName);
         if ((data = ((HoboRowParser) this.getParser()).parseRow(line)) == null) {
@@ -130,8 +130,7 @@ public class HoboImporter extends Importer {
       this.importEndTime = Calendar.getInstance().getTimeInMillis();
     }
     catch (IOException e) {
-      String msg = "There was a problem reading in the input file:\n" + e.toString();
-      msg += "\n\nExiting...";
+      var msg = "There was a problem reading in the input file:\n" + e.getMessage() + "\n\nExiting...";
       System.err.println(msg);
       log.log(Level.SEVERE, msg);
       return false;
@@ -152,12 +151,12 @@ public class HoboImporter extends Importer {
       System.exit(1);
     }
 
-    String filename = args[0];
-    String serverUri = args[1];
-    String username = args[2];
-    String password = args[3];
+    var filename = args[0];
+    var serverUri = args[1];
+    var username = args[2];
+    var password = args[3];
 
-    HoboImporter inputClient = new HoboImporter(filename, serverUri, username, password, true);
+    var inputClient = new HoboImporter(filename, serverUri, username, password, true);
 
     if (!inputClient.processCsvFile()) {
       System.exit(1);

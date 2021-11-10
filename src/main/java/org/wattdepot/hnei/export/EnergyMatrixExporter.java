@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -41,12 +42,12 @@ public class EnergyMatrixExporter extends Exporter {
     this.endTimestamp = null;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     this.sources = null;
-    this.sourceNames = new ArrayList<String>();
+    this.sourceNames = new ArrayList<>();
     this.numSources = 0;
     this.samplingInterval = 0;
     this.formatDateTime = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
-    this.header = new ArrayList<String>();
-    this.sources = new ArrayList<Source>();
+    this.header = new ArrayList<>();
+    this.sources = new ArrayList<>();
   }
 
   /**
@@ -56,10 +57,10 @@ public class EnergyMatrixExporter extends Exporter {
    * @return Data to output to CSV file.
    */
   public String getEnergyData() {
-    String msg = "";
-    StringBuffer buffer = new StringBuffer();
-    XMLGregorianCalendar start = this.startTimestamp;
-    XMLGregorianCalendar end = Tstamp.incrementMinutes(start, this.samplingInterval);
+    var msg = "";
+    var builder = new StringBuilder();
+    var start = this.startTimestamp;
+    var end = Tstamp.incrementMinutes(start, this.samplingInterval);
 
     // msg = "Number of sources: " + this.sources.size() + "\n\n";
     // msg += "The sampling interval is " + this.samplingInterval + " minute(s).\n\n";
@@ -84,8 +85,8 @@ public class EnergyMatrixExporter extends Exporter {
     //}
 
     if (!this.sourceDataType.equals(ALL_DATA)) {
-      List<Source> temp = new ArrayList<Source>();
-      for (Source s : this.sources) {
+      List<Source> temp = new ArrayList<>();
+      for (var s : this.sources) {
         if (!s.getProperty(SamplingInterval.SAMPLING_INTERVAL).equals(this.sourceDataType)) {
           temp.add(s);
         }
@@ -99,25 +100,24 @@ public class EnergyMatrixExporter extends Exporter {
       end = Tstamp.incrementMinutes(end, this.samplingInterval);
     }
     this.header.add(this.getTimestamp(this.endTimestamp.toGregorianCalendar().getTime().getTime()));
-    buffer.append(this.getTableHeader());
+    builder.append(this.getTableHeader());
 
     start = this.startTimestamp;
     end = Tstamp.incrementMinutes(start, this.samplingInterval);
     try {
       int count = 1;
-      SensorData data = null;
       for (Source s : this.sources) {
         msg = "\n" + s.getName();
-        buffer.append(msg);
+        builder.append(msg);
         while (Tstamp.lessThan(start, this.endTimestamp)) {
           try {
-            data = this.client.getEnergy(s.getName(), start, end, this.samplingInterval);
+            var data = this.client.getEnergy(s.getName(), start, end, this.samplingInterval);
             msg = "," + this.getInfo(data);
           }
           catch (BadXmlException e) {
             msg = ",N/A";
           }
-          buffer.append(msg);
+          builder.append(msg);
 
           start = Tstamp.incrementMinutes(start, this.samplingInterval);
           end = Tstamp.incrementMinutes(end, this.samplingInterval);
@@ -134,7 +134,7 @@ public class EnergyMatrixExporter extends Exporter {
       return null;
     }
 
-    return buffer.toString();
+    return builder.toString();
   }
 
   /**
@@ -144,18 +144,17 @@ public class EnergyMatrixExporter extends Exporter {
    */
   @Override
   public boolean printData() {
-    String today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
+    var today = Calendar.getInstance().getTime().toString().replaceAll("[ :]", "_");
     System.out.println("Generating CSV file...\n");
     System.out.println("Output file: " + today + ".csv\n");
 
-    File outputFile = new File(today + ".csv");
-    outputFile.setWritable(true);
-    BufferedWriter writer = null;
-    boolean success = true;
-    try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
+    var outputFile = new File(today + ".csv");
+    if (!outputFile.setWritable(true)) {
+      return false;
+    }
 
-      String result = this.getEnergyData();
+    try (var writer = new BufferedWriter(new FileWriter(outputFile, StandardCharsets.UTF_8))) {
+      var result = this.getEnergyData();
       if (result == null) {
         throw new IOException();
       }
@@ -165,19 +164,10 @@ public class EnergyMatrixExporter extends Exporter {
     }
     catch (IOException e) {
       e.printStackTrace();
-      success = false;
-    }
-    finally {
-      try {
-        writer.close();
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-        success = false;
-      }
+      return false;
     }
 
-    return success;
+    return true;
   }
 
   /**
@@ -187,13 +177,13 @@ public class EnergyMatrixExporter extends Exporter {
    */
   @Override
   public String getTableHeader() {
-    StringBuffer buffer = new StringBuffer();
-    String msg = "Sources";
-    for (String s : this.header) {
-      buffer.append(msg);
+    var builder = new StringBuilder();
+    var msg = "Sources";
+    for (var s : this.header) {
+      builder.append(msg);
       msg = "," + s;
     }
-    return buffer.toString();
+    return builder.toString();
   }
 
   /**
@@ -204,7 +194,7 @@ public class EnergyMatrixExporter extends Exporter {
    */
   @Override
   public String getInfo(SensorData data) {
-    double energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
+    var energy = data.getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
     return String.format("%.2f", energy / 1000.0);
   }
 
@@ -215,17 +205,14 @@ public class EnergyMatrixExporter extends Exporter {
    * @param args One argument to specify whether data for all sources should be exported.
    */
   public static void main(String[] args) {
-    boolean getAllSources = false;
-    if (args.length == 1 && "-all".equals(args[0])) {
-      getAllSources = true;
-    }
+    var getAllSources = args.length == 1 && "-all".equals(args[0]);
 
-    EnergyMatrixExporter output = new EnergyMatrixExporter();
+    var output = new EnergyMatrixExporter();
     if (!output.setup()) {
       System.exit(1);
     }
 
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    var br = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     if (getAllSources && !output.getAllSources()) {
       System.exit(1);

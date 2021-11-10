@@ -37,7 +37,7 @@ public class HneiRowParser extends RowParser {
   protected List<Validator> validators;
 
   /** Total number of entries with no readings. */
-  protected static int numNoReadings = 0;
+  static int numNoReadings = 0;
 
   /** Total number of entries with non-numeric data. */
   protected static int numNonnumericValues = 0;
@@ -58,7 +58,7 @@ public class HneiRowParser extends RowParser {
     this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     this.log = log;
-    this.validators = new ArrayList<Validator>();
+    this.validators = new ArrayList<>();
     this.validators.add(new NonblankValue());
     this.validators.add(new NumericValue());
   }
@@ -159,7 +159,7 @@ public class HneiRowParser extends RowParser {
       }
     }
 
-    Date readingDate = null;
+    Date readingDate;
     try {
       readingDate = formatDateTime.parse(row[7]);
     }
@@ -195,13 +195,13 @@ public class HneiRowParser extends RowParser {
    * @return Row from CSV file that did not pass validation.
    */
   public String rowToString(String[] col) {
-    String temp = null;
-    StringBuffer buffer = new StringBuffer();
+    String temp;
+    StringBuilder builder = new StringBuilder();
     for (String s : col) {
       temp = s + " ";
-      buffer.append(temp);
+      builder.append(temp);
     }
-    return buffer.toString() + "\n";
+    return builder + "\n";
   }
 
 }

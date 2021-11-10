@@ -6,6 +6,7 @@ import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_USERNA
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -50,7 +51,7 @@ public class SensorDataTypeSetter {
    */
   public SensorDataTypeSetter() {
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
-    this.sources = new ArrayList<Source>();
+    this.sources = new ArrayList<>();
   }
 
   /**
@@ -101,7 +102,6 @@ public class SensorDataTypeSetter {
       props = new DataInputClientProperties();
     }
     catch (IOException e) {
-      System.out.println(e);
       throw new RuntimeException(e);
     }
 
@@ -172,12 +172,7 @@ public class SensorDataTypeSetter {
         this.client.storeSource(s, true);
       }
     }
-    catch (JAXBException e) {
-      e.printStackTrace();
-      return false;
-    }
-    catch (WattDepotClientException e) {
-      e.printStackTrace();
+    catch (JAXBException | WattDepotClientException e) {
       return false;
     }
     return true;
@@ -190,7 +185,7 @@ public class SensorDataTypeSetter {
    */
   public boolean getDate() {
     try {
-      BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+      BufferedReader br = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
       String command = null;
 
       System.out.print("Please enter a start date in the format mm/dd/yyyy (e.g. 2/1/2011): ");
@@ -207,12 +202,7 @@ public class SensorDataTypeSetter {
       }
       this.endTimestamp = Tstamp.makeTimestamp(this.formatDate.parse(command).getTime());
     }
-    catch (ParseException e) {
-      e.printStackTrace();
-      return false;
-    }
-    catch (IOException e) {
-      e.printStackTrace();
+    catch (ParseException | IOException e) {
       return false;
     }
     return true;

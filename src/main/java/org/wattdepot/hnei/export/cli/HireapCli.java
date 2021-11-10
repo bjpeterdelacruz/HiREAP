@@ -3,6 +3,7 @@ package org.wattdepot.hnei.export.cli;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -80,7 +81,7 @@ public class HireapCli {
     System.out.println("Successfully connected to " + client.getWattDepotUri() + ".");
 
     HireapCli hneiExporter = new HireapCli(client);
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     String line = null;
     String[] command = null;

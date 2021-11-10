@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import au.com.bytecode.opencsv.CSVReader;
@@ -32,9 +33,9 @@ public class CsvFileMerger {
         line = 0;
       }
       char defaultChar = CSVReader.DEFAULT_QUOTE_CHARACTER;
-      return new CSVReader(new FileReader(filename), ',', defaultChar, line);
+      return new CSVReader(new FileReader(filename, StandardCharsets.UTF_8), ',', defaultChar, line);
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       System.err.println("File [" + filename + "] not found! Exiting...");
       return null;
     }
@@ -70,7 +71,7 @@ public class CsvFileMerger {
     outputFile.setWritable(true);
     BufferedWriter writer = null;
     try {
-      writer = new BufferedWriter(new FileWriter(outputFile));
+      writer = new BufferedWriter(new FileWriter(outputFile, StandardCharsets.UTF_8));
     }
     catch (IOException e) {
       e.printStackTrace();

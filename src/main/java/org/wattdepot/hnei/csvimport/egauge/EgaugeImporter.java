@@ -3,6 +3,7 @@ package org.wattdepot.hnei.csvimport.egauge;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 import org.wattdepot.client.WattDepotClient;
@@ -62,11 +63,9 @@ public class EgaugeImporter extends Importer {
    * @param sourceName Name of a source.
    * @param data SensorData object containing information for the entire house, including
    * appliances.
-   * @param energyConsumedToDate Energy data for entire house and all appliances.
    * @return An array of SensorData objects containing energy and power data.
    */
-  public SensorData[] getSensorDatas(String sourceName, SensorData data,
-      double[] energyConsumedToDate) {
+  public SensorData[] getSensorDatas(String sourceName, SensorData data) {
     SensorData[] sensorDatas = new SensorData[4];
 
     // Whole House
@@ -128,16 +127,16 @@ public class EgaugeImporter extends Importer {
     System.out.println("Running EgaugeImporter...");
 
     // Open CSV file for reading.
-    CSVReader reader = null;
+    CSVReader reader;
     try {
       int lineno = 1;
       if (!this.skipFirstRow) {
         lineno = 0;
       }
-      FileReader fileReader = new FileReader(this.filename);
+      FileReader fileReader = new FileReader(this.filename, StandardCharsets.UTF_8);
       reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, lineno);
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       System.err.println("File not found! Exiting...");
       return false;
     }
@@ -179,14 +178,8 @@ public class EgaugeImporter extends Importer {
     SensorData data = null;
 
     try {
-      double[] energyConsumedToDate = null;
       if (this.getParser() instanceof EgaugeRowParser) {
         ((EgaugeRowParser) this.getParser()).setSourceName(mainSourceName);
-
-        energyConsumedToDate = new double[4];
-        for (int i = 0; i < energyConsumedToDate.length; i++) {
-          energyConsumedToDate[i] = 0.0;
-        }
       }
       else {
         ((EgaugeRowParserVer2) this.getParser()).setSourceName(mainSourceName);
@@ -208,14 +201,7 @@ public class EgaugeImporter extends Importer {
         }
         else {
           if (this.getParser() instanceof EgaugeRowParser) {
-            SensorData[] datas = getSensorDatas(mainSourceName, data, energyConsumedToDate);
-            if (datas == null) {
-              System.err.println("Problem encountered while getting sensor data.");
-              return false;
-            }
-            for (int j = 0; j < datas.length; j++) {
-              energyConsumedToDate[j] += datas[j].getPropertyAsDouble(SensorData.ENERGY_CONSUMED);
-            }
+            SensorData[] datas = getSensorDatas(mainSourceName, data);
 
             if (this.process(client, datas[0]) && this.process(client, datas[1])
                 && this.process(client, datas[2]) && this.process(client, datas[3])) {
@@ -241,7 +227,6 @@ public class EgaugeImporter extends Importer {
       }
     }
     catch (IOException e) {
-      e.printStackTrace();
       return false;
     }
 
@@ -269,9 +254,10 @@ public class EgaugeImporter extends Importer {
     // Open CSV file for reading.
     CSVReader reader = null;
     try {
-      reader = new CSVReader(new FileReader(args[0]), ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 0);
+      var fileReader = new FileReader(args[0], StandardCharsets.UTF_8);
+      reader = new CSVReader(fileReader, ',', CSVReader.DEFAULT_QUOTE_CHARACTER, 0);
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       System.err.println("File not found! Exiting...");
       System.exit(1);
     }

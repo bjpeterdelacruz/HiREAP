@@ -28,12 +28,15 @@ public class CsvImporter {
    * @return List of classes in given directory and sub-directories.
    */
   private List<Class<?>> findClasses(String directory, String packageName) {
-    List<Class<?>> classes = new ArrayList<Class<?>>();
+    List<Class<?>> classes = new ArrayList<>();
     File f = new File(directory);
     if (!f.isDirectory()) {
       return null;
     }
     File[] files = f.listFiles();
+    if (files == null) {
+      throw new RuntimeException(f + " is not a directory.");
+    }
     for (File file : files) {
       if (file.isDirectory()) {
         classes.addAll(findClasses(directory + "/" + file.getName(), packageName));
@@ -43,8 +46,7 @@ public class CsvImporter {
         try {
           classes.add(Class.forName(className));
         }
-        catch (ClassNotFoundException e) {
-          continue;
+        catch (ClassNotFoundException ignored) {
         }
       }
     }
@@ -214,27 +216,7 @@ public class CsvImporter {
       }
       endTime = Calendar.getInstance().getTimeInMillis();
     }
-    catch (IllegalAccessException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    catch (IllegalArgumentException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    catch (SecurityException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    catch (InvocationTargetException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    catch (NoSuchMethodException e) {
-      e.printStackTrace();
-      System.exit(1);
-    }
-    catch (InstantiationException e) {
+    catch (IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException e) {
       e.printStackTrace();
       System.exit(1);
     }
