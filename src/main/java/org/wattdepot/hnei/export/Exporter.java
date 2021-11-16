@@ -60,9 +60,6 @@ public abstract class Exporter {
   /** List of all sources that are stored on WattDepot server. */
   protected List<Source> sources;
 
-  /** List of source names. */
-  protected List<String> sourceNames;
-
   /** Total number of sources. */
   protected int numSources;
 

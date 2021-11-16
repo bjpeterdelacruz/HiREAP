@@ -15,12 +15,12 @@ public interface Validator {
    * @param entry The entry to validate.
    * @return True if entry passes validation, false otherwise.
    */
-  public boolean validateEntry(Object entry);
+  boolean validateEntry(Object entry);
 
   /**
    * Returns a string explaining why validation failed for an entry.
    * 
    * @return An error message.
    */
-  public String getErrorMessage();
+  String getErrorMessage();
 }

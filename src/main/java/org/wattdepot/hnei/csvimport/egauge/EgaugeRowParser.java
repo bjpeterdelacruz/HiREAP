@@ -23,16 +23,17 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class EgaugeRowParser extends HneiRowParser {
 
+  private static final Logger LOGGER = Logger.getLogger(EgaugeRowParser.class.getName());
+  
   /**
    * Creates a new EgaugeRowParser object.
    * 
    * @param toolName Name of the program.
    * @param serverUri URI of WattDepot server.
    * @param sourceName Source that is described by the sensor data.
-   * @param log Log file, created in the HneiTabularFileSensor class.
    */
-  public EgaugeRowParser(String toolName, String serverUri, String sourceName, Logger log) {
-    super(toolName, serverUri, sourceName, log);
+  public EgaugeRowParser(String toolName, String serverUri, String sourceName) {
+    super(toolName, serverUri, sourceName);
     this.formatDateTime = new SimpleDateFormat("MM/dd/yy hh:mm a", Locale.US);
   }
 
@@ -45,13 +46,13 @@ public class EgaugeRowParser extends HneiRowParser {
   @Override
   public SensorData parseRow(String[] col) {
     if (col == null) {
-      this.log.log(Level.WARNING, "No input row specified.\n");
+      LOGGER.log(Level.WARNING, "No input row specified.\n");
       return null;
     }
 
     if (col.length != 5) {
       String msg = "Row not in specified format:\n" + rowToString(col);
-      this.log.log(Level.WARNING, msg);
+      LOGGER.log(Level.WARNING, msg);
       return null;
     }
 
@@ -63,7 +64,7 @@ public class EgaugeRowParser extends HneiRowParser {
         if (!result) {
           String msg = "[" + col[i] + "] " + v.getErrorMessage() + "\n" + rowToString(col);
           System.err.print(msg);
-          this.log.log(Level.WARNING, msg);
+          LOGGER.log(Level.WARNING, msg);
         }
         if (v instanceof NonblankValue && !result) {
           numBlankValues++;
@@ -76,7 +77,7 @@ public class EgaugeRowParser extends HneiRowParser {
       }
     }
 
-    Date date = null;
+    Date date;
     try {
       date = formatDateTime.parse(col[0]);
     }
@@ -86,7 +87,7 @@ public class EgaugeRowParser extends HneiRowParser {
       }
       catch (ParseException pe) {
         String msg = "Bad timestamp found in input file: " + col[0] + "\n" + rowToString(col);
-        this.log.log(Level.WARNING, msg);
+        LOGGER.log(Level.WARNING, msg);
         return null;
       }
     }

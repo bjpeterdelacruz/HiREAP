@@ -1,6 +1,5 @@
 package org.wattdepot.hnei.csvimport.egauge;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -50,10 +49,10 @@ public class EgaugeImporter extends Importer {
    */
   public void setParser(String parserName) {
     if ("EgaugeRowParser".equalsIgnoreCase(parserName)) {
-      this.parser = new EgaugeRowParser(this.toolName, this.serverUri, null, log);
+      this.parser = new EgaugeRowParser(this.toolName, this.serverUri, null);
     }
     else if ("EgaugeRowParserVer2".equalsIgnoreCase(parserName)) {
-      this.parser = new EgaugeRowParserVer2(this.toolName, this.serverUri, null, log);
+      this.parser = new EgaugeRowParserVer2(this.toolName, this.serverUri, null);
     }
   }
 

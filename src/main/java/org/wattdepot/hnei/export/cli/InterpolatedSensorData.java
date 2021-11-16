@@ -5,6 +5,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import javax.xml.datatype.XMLGregorianCalendar;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -28,6 +30,7 @@ public class InterpolatedSensorData extends Retriever {
    * 
    * @param client Used to connect to WattDepot server.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public InterpolatedSensorData(WattDepotClient client) {
     this.client = client;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);

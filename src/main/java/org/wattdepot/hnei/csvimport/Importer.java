@@ -2,13 +2,11 @@ package org.wattdepot.hnei.csvimport;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -89,9 +87,6 @@ public abstract class Importer {
 
   /** List of all entries in CSV file. */
   protected List<Entry> entries;
-
-  /** List of all sources and their MTU IDs, with duplicates. */
-  protected List<Entry> allSources;
 
   /** List of all entries that have values that not monotonically increasing. */
   protected List<Entry> allNonmonoIncrVals;

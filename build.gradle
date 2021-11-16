@@ -11,7 +11,7 @@ targetCompatibility = 11
 
 checkstyle {
     toolVersion = '9.0.1'
-    checkstyleMain.enabled = false
+    // checkstyleMain.enabled = false
     checkstyleTest.enabled = false
 }
 

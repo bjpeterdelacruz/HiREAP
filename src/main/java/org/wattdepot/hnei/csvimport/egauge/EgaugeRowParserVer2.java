@@ -26,16 +26,17 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class EgaugeRowParserVer2 extends HneiRowParser {
 
+  private static final Logger LOGGER = Logger.getLogger(EgaugeRowParserVer2.class.getName());
+  
   /**
    * Creates a new EgaugeRowParser object.
    * 
    * @param toolName Name of the program.
    * @param serverUri URI of WattDepot server.
    * @param sourceName Source that is described by the sensor data.
-   * @param log Log file, created in the HneiTabularFileSensor class.
    */
-  public EgaugeRowParserVer2(String toolName, String serverUri, String sourceName, Logger log) {
-    super(toolName, serverUri, sourceName, log);
+  public EgaugeRowParserVer2(String toolName, String serverUri, String sourceName) {
+    super(toolName, serverUri, sourceName);
     this.formatDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
   }
 
@@ -48,13 +49,13 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
   @Override
   public SensorData parseRow(String[] col) {
     if (col == null) {
-      this.log.log(Level.WARNING, "No input row specified.\n");
+      LOGGER.log(Level.WARNING, "No input row specified.\n");
       return null;
     }
 
     if (col.length != 19 && col.length != 21) {
       String msg = "Row not in specified format:\n" + rowToString(col);
-      this.log.log(Level.WARNING, msg);
+      LOGGER.log(Level.WARNING, msg);
       return null;
     }
 
@@ -66,7 +67,7 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
         if (!result) {
           String msg = "[" + col[i] + "] " + v.getErrorMessage() + "\n" + rowToString(col);
           System.err.print(msg);
-          this.log.log(Level.WARNING, msg);
+          LOGGER.log(Level.WARNING, msg);
         }
         if (v instanceof NonblankValue && !result) {
           numBlankValues++;
@@ -95,7 +96,7 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
       }
       catch (ParseException pe) {
         String msg = "Bad timestamp found in input file: " + col[0] + "\n" + rowToString(col);
-        this.log.log(Level.WARNING, msg);
+        LOGGER.log(Level.WARNING, msg);
         return null;
       }
     }
@@ -171,18 +172,17 @@ public class EgaugeRowParserVer2 extends HneiRowParser {
     System.out.println("Successfully connected to " + client.getWattDepotUri() + ".\n");
 
     String sourceName = "6363-A_Paro";
-    EgaugeRowParserVer2 parser =
-        new EgaugeRowParserVer2("EgaugeRowParserVer2", serverUri, sourceName, null);
+    EgaugeRowParserVer2 parser = new EgaugeRowParserVer2("EgaugeRowParserVer2", serverUri, sourceName);
 
     String noData = "0.000000000";
     String[] col1 =
-        { "2011-02-07 13:49", "1649.596900278", noData, "1288.171166667", "1212.671317222",
+        {"2011-02-07 13:49", "1649.596900278", noData, "1288.171166667", "1212.671317222",
             "113.022624722", "533.594684444", "-36.533478889", "-12.680254167", "-0.058363056",
             "-81.699830556", "0.480333333", noData, "0.189333333", "0.366466667",
             "0.002000000", "0.001000000", "-0.029433333", "-0.034283333", noData,
             noData };
     String[] col2 =
-    { "2011-02-07 15:49", "1649.604736944", noData, "1288.171166667", "1212.671317222",
+    {"2011-02-07 15:49", "1649.604736944", noData, "1288.171166667", "1212.671317222",
         "113.022624722", "533.594684444", "-36.533478889", "-12.680254167", "-0.058363056",
         "-81.699830556", "0.470200000", "", "0.189333333", "0.366466667",
         "0.001000000", "0.002000000", "-0.029433333", "-0.034283333", noData,

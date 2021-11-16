@@ -1,13 +1,11 @@
 package org.wattdepot.hnei.csvimport.hnei;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.wattdepot.client.WattDepotClient;
@@ -36,16 +34,14 @@ public class HneiImporter extends Importer {
    * @param password Password to access the WattDepot server.
    * @param skipFirstRow True if first row contains row headers, false otherwise.
    */
-  public HneiImporter(String filename, String uri, String username, String password,
-      boolean skipFirstRow) {
-    this.log = Logger.getLogger(HneiImporter.class.getName());
+  public HneiImporter(String filename, String uri, String username, String password, boolean skipFirstRow) {
     this.filename = filename;
     this.serverUri = uri;
     this.username = username;
     this.password = password;
     this.skipFirstRow = skipFirstRow;
     this.toolName = "HneiImporter";
-    this.parser = new HneiRowParser(this.toolName, this.serverUri, null, log);
+    this.parser = new HneiRowParser(this.toolName, this.serverUri, null);
     this.numNewSources = 0;
     this.numExistingSources = 0;
     this.numTotalSources = 0;
@@ -57,7 +53,6 @@ public class HneiImporter extends Importer {
     this.numDaily = 0;
     this.numHourly = 0;
     this.entries = new ArrayList<>();
-    this.allSources = new ArrayList<>();
     this.allNonmonoIncrVals = new ArrayList<>();
     this.importStartTime = 0;
     this.importEndTime = 0;
@@ -69,7 +64,7 @@ public class HneiImporter extends Importer {
    * @param sourceName Name of a source.
    */
   public void setParser(String sourceName) {
-    this.parser = new HneiRowParser(this.toolName, this.serverUri, sourceName, log);
+    this.parser = new HneiRowParser(this.toolName, this.serverUri, sourceName);
   }
 
   /**

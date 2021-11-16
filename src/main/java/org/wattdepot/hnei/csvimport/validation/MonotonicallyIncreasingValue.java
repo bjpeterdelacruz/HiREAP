@@ -1,6 +1,9 @@
 package org.wattdepot.hnei.csvimport.validation;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
 /**
@@ -25,7 +28,7 @@ public class MonotonicallyIncreasingValue implements Validator {
    * @param datas The list of sensor data.
    */
   public void setDatas(List<SensorData> datas) {
-    this.datas = datas;
+    this.datas = new ArrayList<>(datas);
   }
 
   /**
@@ -33,6 +36,7 @@ public class MonotonicallyIncreasingValue implements Validator {
    * 
    * @param data The current sensor data to be processed.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public void setCurrentData(SensorData data) {
     this.currentData = data;
   }

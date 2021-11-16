@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.wattdepot.client.WattDepotClient;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.datainput.DataInputClientProperties;
@@ -59,6 +61,7 @@ public class SensorDataTypeSetter {
    * 
    * @param client WattDepot client.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public void setClient(WattDepotClient client) {
     this.client = client;
   }
@@ -69,7 +72,7 @@ public class SensorDataTypeSetter {
    * @param sources List of WattDepot sources.
    */
   public void setSources(List<Source> sources) {
-    this.sources = sources;
+    this.sources = new ArrayList<>(sources);
   }
 
   /**
@@ -77,6 +80,7 @@ public class SensorDataTypeSetter {
    * 
    * @param startTimestamp Start date.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public void setStartTimestamp(XMLGregorianCalendar startTimestamp) {
     this.startTimestamp = startTimestamp;
   }
@@ -86,6 +90,7 @@ public class SensorDataTypeSetter {
    * 
    * @param endTimestamp End date.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public void setEndTimestamp(XMLGregorianCalendar endTimestamp) {
     this.endTimestamp = endTimestamp;
   }

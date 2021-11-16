@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import javax.xml.datatype.XMLGregorianCalendar;
 import org.wattdepot.client.BadXmlException;
 import org.wattdepot.client.WattDepotClientException;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
@@ -42,7 +41,6 @@ public class EnergyMatrixExporter extends Exporter {
     this.endTimestamp = null;
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     this.sources = null;
-    this.sourceNames = new ArrayList<>();
     this.numSources = 0;
     this.samplingInterval = 0;
     this.formatDateTime = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);

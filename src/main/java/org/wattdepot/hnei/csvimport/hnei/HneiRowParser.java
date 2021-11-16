@@ -1,7 +1,6 @@
 package org.wattdepot.hnei.csvimport.hnei;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -24,8 +23,7 @@ import org.wattdepot.util.tstamp.Tstamp;
  */
 public class HneiRowParser extends RowParser {
 
-  /** Log file for the HneiTabularFileSensor application. */
-  protected Logger log;
+  private static final Logger LOGGER = Logger.getLogger(HneiRowParser.class.getName());
 
   /** Formats dates that are in the format MM/DD/YYYY hh:mm:ss (A.M.|P.M.). */
   protected SimpleDateFormat formatDateTime;
@@ -37,13 +35,13 @@ public class HneiRowParser extends RowParser {
   protected List<Validator> validators;
 
   /** Total number of entries with no readings. */
-  static int numNoReadings = 0;
+  int numNoReadings = 0;
 
   /** Total number of entries with non-numeric data. */
-  protected static int numNonnumericValues = 0;
+  protected int numNonnumericValues = 0;
 
   /** Total number of entries with missing data. */
-  protected static int numBlankValues = 0;
+  protected int numBlankValues = 0;
 
   /**
    * Creates a new HneiRowParser object.
@@ -51,16 +49,12 @@ public class HneiRowParser extends RowParser {
    * @param toolName Name of the program.
    * @param serverUri URI of WattDepot server.
    * @param sourceName Source that is described by the sensor data.
-   * @param log Log file, created in the HneiTabularFileSensor class.
    */
-  public HneiRowParser(String toolName, String serverUri, String sourceName, Logger log) {
+  public HneiRowParser(String toolName, String serverUri, String sourceName) {
     super(toolName, serverUri, sourceName);
     this.formatDateTime = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
     this.formatDate = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
-    this.log = log;
-    this.validators = new ArrayList<>();
-    this.validators.add(new NonblankValue());
-    this.validators.add(new NumericValue());
+    this.validators = List.of(new NonblankValue(), new NumericValue());
   }
 
   /**
@@ -117,20 +111,20 @@ public class HneiRowParser extends RowParser {
   @Override
   public SensorData parseRow(String[] row) {
     if (row == null) {
-      this.log.log(Level.WARNING, "No input row specified.\n");
+      LOGGER.log(Level.WARNING, "No input row specified.\n");
       return null;
     }
 
     if (row.length != 9) {
       String msg = "Row not in specified format:\n" + rowToString(row);
-      this.log.log(Level.WARNING, msg);
+      LOGGER.log(Level.WARNING, msg);
       return null;
     }
 
     if (row[5].equalsIgnoreCase("No Reading") || row[6].equalsIgnoreCase("No Reading")) {
       String msg = "No reading for source: " + row[0] + "\n" + rowToString(row);
       System.err.print(msg);
-      this.log.log(Level.INFO, msg);
+      LOGGER.log(Level.INFO, msg);
       numNoReadings++;
       return null;
     }
@@ -145,7 +139,7 @@ public class HneiRowParser extends RowParser {
           if (!result) {
             String msg = "[" + row[i] + "] " + v.getErrorMessage() + "\n" + rowToString(row);
             System.err.print(msg);
-            this.log.log(Level.WARNING, msg);
+            LOGGER.log(Level.WARNING, msg);
           }
           if (v instanceof NonblankValue && !result) {
             numBlankValues++;
@@ -169,7 +163,7 @@ public class HneiRowParser extends RowParser {
       }
       catch (java.text.ParseException pe) {
         String msg = "Bad timestamp found in input file: " + row[7] + "\n" + rowToString(row);
-        this.log.log(Level.WARNING, msg);
+        LOGGER.log(Level.WARNING, msg);
         return null;
       }
     }
@@ -178,7 +172,7 @@ public class HneiRowParser extends RowParser {
     int energy = Integer.parseInt(row[6]) * 1000; // energy is in kWh
     if (energy < 0) {
       String msg = "[" + energy + "] Energy consumed to date is less than 0!\n" + rowToString(row);
-      this.log.log(Level.SEVERE, msg);
+      LOGGER.log(Level.SEVERE, msg);
       return null;
     }
     Property energyConsumedToDate = new Property(SensorData.ENERGY_CONSUMED_TO_DATE, energy);

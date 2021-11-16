@@ -1,6 +1,5 @@
 package org.wattdepot.hnei.csvimport.hobo;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +38,7 @@ public class HoboImporter extends Importer {
     this.skipFirstRow = skipFirstRow;
     this.log = Logger.getLogger(HoboImporter.class.getName());
     this.toolName = "HoboImporter";
-    this.parser = new HoboRowParser(this.toolName, this.serverUri, null, log);
+    this.parser = new HoboRowParser(this.toolName, this.serverUri, null);
   }
 
   /**
@@ -48,7 +47,7 @@ public class HoboImporter extends Importer {
    * @param sourceName Name of a source.
    */
   public void setParser(String sourceName) {
-    this.parser = new HoboRowParser(this.toolName, this.serverUri, sourceName, log);
+    this.parser = new HoboRowParser(this.toolName, this.serverUri, sourceName);
   }
 
   /**

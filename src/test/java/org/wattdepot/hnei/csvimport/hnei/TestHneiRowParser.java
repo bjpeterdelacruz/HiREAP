@@ -1,16 +1,11 @@
 package org.wattdepot.hnei.csvimport.hnei;
 
-import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
-import static org.wattdepot.datainput.DataInputClientProperties.WATTDEPOT_URI_KEY;
-import java.io.IOException;
 import java.text.ParseException;
-import java.util.logging.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.wattdepot.datainput.DataInputClientProperties;
 import org.wattdepot.resource.sensordata.jaxb.SensorData;
 
 /**
@@ -33,8 +28,7 @@ public class TestHneiRowParser {
    */
   @BeforeClass
   public static void setup() {
-    TestHneiRowParser.parser = new HneiRowParser("TestHneiRowParser", "http://localhost:9001", SOURCE_NAME, null);
-    TestHneiRowParser.parser.log = Logger.getLogger(HneiRowParser.class.getName());
+    TestHneiRowParser.parser = new HneiRowParser("TestHneiRowParser", "http://localhost:9001", SOURCE_NAME);
   }
 
   /**

@@ -37,6 +37,7 @@ public class Entry implements Comparable<Entry> {
    * @param timestamp Timestamp at which reading took place.
    * @param mtuId MTU ID.
    */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public Entry(String sourceName, String reading, XMLGregorianCalendar timestamp, String mtuId) {
     this.sourceName = sourceName;
     this.timestamp = timestamp;

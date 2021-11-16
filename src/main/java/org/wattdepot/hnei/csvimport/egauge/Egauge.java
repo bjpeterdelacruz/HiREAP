@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Egauge {
   /** Gets the value of name attribute. */
-  public String name();
+  String name();
   /** Gets the value of value attribute. */
-  public String value();
+  String value();
 }
